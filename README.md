@@ -1,2 +1,2 @@
-# DEMMosaicker
-mosaic DEMS into tiles
+# setsm_postprocessing
+functions for filtering, stripping and mosaicing setsm-produced DEMs
