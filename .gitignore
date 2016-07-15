@@ -1,0 +1,10 @@
+*.py
+*.pyc
+*.asv
+*.mat
+*.sh
+includeList.txt
+scenes2strips_single.m
+mask_strip.m
+selectTileByName.m
+compileDatabase.m
