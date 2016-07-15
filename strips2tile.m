@@ -149,9 +149,6 @@ while length(db.f) >= 1;
         end
     end
     
-    % add this file name 
-    m.f=[m.f,db.f(i)];
-    
     % if non-nan overlap exists select strip with most overlap to non-nans
     if any(Ndata)
         [m.overlap(1,length(m.f)+1),i]=max(Ndata);
@@ -179,6 +176,9 @@ while length(db.f) >= 1;
         
           N = refStrip2Mosaic( db.f{i},m,db.stripDate(i)-dy0,N);
     end
+    
+    % add this file name 
+    m.f=[m.f,db.f(i)];
     
     C(C == 0 & N > 0)=c;
     
