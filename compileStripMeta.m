@@ -1,5 +1,4 @@
 function [f,creationDate,stripDate,res,x,y,avg_rmse,med_rmse,max_rmse,Nscenes,reg]=compileStripMeta(fdir)
-%fdir='V:/pgc/data/elev/dem/setsm/ArcticDEM/region_31_alaska_central/strips/2m';
 meta_str='meta';
 reg_str='reg';
 disableReg=true; 
