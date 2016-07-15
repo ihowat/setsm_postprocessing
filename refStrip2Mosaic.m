@@ -1,30 +1,72 @@
-function [z,mt,or,dy] = refStrip2Mosaic(metaFile,x,y,z,mt,or,dy,dy0)
+function N =refStrip2Mosaic(metaFile,m,dy0,N,varargin)
 % refStrip2Mosaic add a reference strip to the mosaic
 
-[d,m,o,c,r] = readStrip(metaFile,x,y);
 
-if sum(c)*sum(r) < 100; disp('too little overlap'); return; end
+
+% read this strip data
+[x,y,z,mt,or,c,r] = readStripInTile(metaFile,m.x,m.y);
+
+c=find(c);
+r=find(r);
+
+if length(c)*length(r) < 100; 
+    fprintf('%d pixel overlap is too small, skipping\n',sum(c)*sum(r)); 
+    m.dtrans=[m.dtrans,[NaN;NaN;NaN]];
+    m.rmse=[m.rmse,NaN];
+    return; 
+end
+
+% apply registration if given
+if length(varargin) == 1
+    trans=varargin{1};
+    
+    x = x - trans(2);
+    y = y - trans(3);
+    z = z - trans(1);
+    
+    
+end
 
 % interpolate the first dem to the same grid
-zi = interp2(d.x,d.y',double(d.z),...
-    x(c),y(r),'*linear');
+[z,mt,or] = interpolate2grid(x,y,z,mt,or,m.x(1,c),m.y(r,1));
 
-[mi,oi] = interpolate2grid(m,o,x(c),y(r)',[0;0;0]);
+dy = int16(~isnan(z) .* dy0);
 
-zsub=z(r,c);
-mtsub=mt(r,c);
-orsub=or(r,c);
-dysub=dy(r,c);
+if any(any(N(r,c)))
+    
+    Nsub=N(r,c);
+    Nsub = Nsub + uint8(~isnan(z));
+    N(r,c) = Nsub;
+    clear Nsub
+    
+    zsub=m.z(r,c);
+    n= isnan(z) &  ~isnan(zsub);
+    z(n)=zsub(n);
+    clear zsub
 
-dyi = ~isnan(zi) .* dy0;
+    orsub=m.or(r,c);
+    n= or==0 & orsub ~= 0;
+    or(n)=orsub(n);
+    clear orsub
+    
+    dysub=m.dy(r,c);
+    n= dy==0 & dysub ~= 0;
+    dy(n)=dysub(n);
+    clear dysub
+    
+    mtsub=m.mt(r,c);
+    mt = mt | mtsub;
+    clear mtsub
+    
+else
+    N(r,c) = uint8(~isnan(z));
+end
 
-zi(isnan(zi) & ~isnan(zsub)) = zsub(isnan(zi) & ~isnan(zsub));
 
-oi(oi == 0 & orsub ~= 0) = orsub(oi == 0 & orsub ~= 0);
+m.z(r,c) =  z;
+m.mt(r,c) = mt;
+m.or(r,c) = or;
+m.dy(r,c) = dy;
 
-dyi(dyi == 0 & dysub ~= 0) = dysub(dyi == 0 & dysub ~= 0);
-
-z(r,c) = zi;
-mt(r,c) = mi | mtsub;
-or(r,c) = oi;
-dy(r,c) = int16(dyi);
+m.dtrans= [m.dtrans,zeros(3,1)];
+m.rmse  = [m.rmse,0];    
