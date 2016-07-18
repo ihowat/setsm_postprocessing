@@ -6,7 +6,6 @@ function enviwrite(varargin)
 
 %enviwrite(file,x,y,z,fmt);
 %creates envi ascii data and header files from cartesian x,y,z arrays.
-%keyboard
 minarg = 4;
 maxarg = 12;
 

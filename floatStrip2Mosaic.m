@@ -52,10 +52,7 @@ else
     % co-register strip to mosaic subset
     [~,m.dtrans(:,size(m.dtrans,2)+1), m.rmse(1,length(m.rmse)+1) ] = ...
         coregisterdems(m.x(1,c(co)),m.y(r(ro),1),m.z(r(ro),c(co)),...
-        x(co),y(ro),z(ro,co),m.mt(r(ro),c(co)),mt(ro,co));
-    
-    if m.rmse(1,end) > 10 || any(m.dtrans(:,end) > 10); disp('stopping'); keyboard; end
-    
+        x(co),y(ro),z(ro,co),m.mt(r(ro),c(co)),mt(ro,co));    
     
     % check for coregistration failure
     if isnan(m.rmse(1,end)); return; end;

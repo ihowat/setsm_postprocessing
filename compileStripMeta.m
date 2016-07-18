@@ -84,7 +84,7 @@ for i=1:length(f)
         
         astr='Registration Dataset 1 Name:';
         r=find(~cellfun(@isempty,strfind(c,astr)));
-        if length(r) > 1; disp('multiple datasets'); keyboard; end
+        if length(r) > 1; disp('multiple datasets'); end
         reg.datasets{i} = strrep(c{r},astr,'');
 
         astr='# GCPs=';

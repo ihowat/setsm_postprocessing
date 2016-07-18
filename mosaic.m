@@ -14,10 +14,10 @@ for n=1:length(tiles.I)
     outname=[outdir,'/',tiles.I{n},'_',num2str(res),'m_dem.mat'];
     
          if exist(outname,'file');
-%                fprintf('tile %s exists skipping\n',tiles.I{n})
-%                continue
-                fprintf('tile %s exists deleting\n',tiles.I{n})
-                delete(outname);
+                fprintf('tile %s exists skipping\n',tiles.I{n})
+                continue
+%                 fprintf('tile %s exists deleting\n',tiles.I{n})
+%                 delete(outname);
          end
     
     fprintf('building tile %s: %d of %d\n',tiles.I{n},n,length(tiles.I))
@@ -32,7 +32,7 @@ tilef=dir([outdir,'/*m_dem.mat']);
 tilef={tilef.name};
 tilef = cellfun(@(x) [outdir,'/',x], tilef, 'UniformOutput',false);
 
-alignTiles(tilef,reglist)
+%alignTiles(tilef,reglist)
 
 %%
 i=1;

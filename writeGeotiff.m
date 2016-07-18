@@ -24,7 +24,6 @@ enviwrite(tempfile,x,y(:),z,'format',fmt,'proj',projstr);
 % confirm file write
 if ~(exist(tempfile,'file') && exist([tempfile,'.hdr'],'file'))
     disp('Warning, envi file not written in getImage, stopping')
-    keyboard
 end
 
 system([gdalpath ,'gdal_translate -co bigtiff=if_safer -co compress=lzw -co tiled=yes -a_nodata ',...
