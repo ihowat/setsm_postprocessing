@@ -3,7 +3,7 @@
 *.asv
 *.mat
 *.sh
-includeList.txt
+includeList*
 scenes2strips_single.m
 mask_strip.m
 selectTileByName.m
