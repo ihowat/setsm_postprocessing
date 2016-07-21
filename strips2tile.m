@@ -94,7 +94,7 @@ else %file already exists so try and pick up where it left off
 end
 
 %% determine if reg.txt files exist
-regfiles=strrep(db.f,'meta.txt','reg.txt');
+regfiles=strrep(db.f,'meta.txt','isreg.txt');
 nreg= find( cellfun( @exist, regfiles) == 2);
 
 db.trans=nan(size(db.f,1),3);
@@ -103,7 +103,7 @@ db.p75=nan(size(db.f));
 if ~isempty(nreg)
     regfiles=regfiles(nreg);
   
-    [~,~,~,trans,pctile]=cellfun( @readreg,regfiles,'uniformoutput',0);
+    [~,~,~,trans,pctile]=cellfun( @readisreg,regfiles,'uniformoutput',0);
     pctile=cell2mat(pctile);
     trans=cell2mat(trans);
     p75=pctile(:,6);
