@@ -21,6 +21,10 @@ astr='Median Vertical Residual (m)=';
 r=~cellfun(@isempty,strfind(c,astr));
 md = str2double(strrep(c{r},astr,''));
 
+astr='Translation Vector (dz,dx,dy)(m)=';
+r=~cellfun(@isempty,strfind(c,astr));
+trans = str2num(strrep(c{r},astr,''));
+
 p=50:5:100;
 j=1;
 for j=1:length(p)
