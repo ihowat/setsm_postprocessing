@@ -8,9 +8,16 @@ function W = edgeFeather(M0,M1,buff)
 f0=0; % overlap fraction where back z weight goes to zero
 f1=1; % overlap fraction where back z weight goes to one
 
-
 % crop to just region of overlap
 A= single(M0 & M1);
+
+% if no overlap, send 1/0 mask back
+if ~any(A(:))
+        W=nan(size(M0));
+        W(M0) = 1;
+        W(M1) = 0;
+        return
+end
 
 A(A==0)=NaN;
 [~,rb,cb] = cropnans(A,buff);
@@ -28,7 +35,7 @@ A(bwareaopen(...
 Ar=imresize(A,.1,'nearest');
 
 % interpolation grid
-[C R] = meshgrid(1:size(Ar,2),1:size(Ar,1));
+[C,R] = meshgrid(1:size(Ar,2),1:size(Ar,1));
 
 % pixles on outside of boundary of overlap region
 B = bwboundaries(Ar~=0, 8, 'noholes');
@@ -49,7 +56,6 @@ A=Ar-1;
 A(A < 0) = 0;
 A(A > 1) = 1;
 
-    
 W=single(M0);
 W(rb(1):rb(2),cb(1):cb(2)) = A;
 W(M0 & ~M1) = NaN;
@@ -60,7 +66,6 @@ clear A
 W=(1/(f1-f0)).*W-f0/(f1-f0);
 W(W > 1) = 1;
 W(W < 0) = 0;
-
 
 function [A,r,c] = cropnans(varargin)
 % cropnans crop array of bordering nans
@@ -73,7 +78,6 @@ if nargin == 2; buff=varargin{2}; end
 
 r = [];
 c = [];
-
 
 M = ~isnan(A);
 
