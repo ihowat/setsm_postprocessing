@@ -41,6 +41,16 @@ Ar=imresize(A,.1,'nearest');
 B = bwboundaries(Ar~=0, 8, 'noholes');
 B = cell2mat(B);
 
+if size(B,2) ~= 2;
+    warning('no overlap boundaries returned, no feathering applied');
+    W=nan(size(M0));
+    W(M1) = 0;
+    W(M0) = 1;
+    
+    return
+    
+end
+
 n=sub2ind(size(Ar),B(:,1),B(:,2));
 
 warning off
