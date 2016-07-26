@@ -43,55 +43,69 @@ dy = int16(~isnan(z) .* dy0);
 % check if data exists
 if any(any(Nsub))
     
-    % overlap use feathering
-    dx = m.x(1,2)-m.x(1,1);
-    buff=10*dx+1;
-    W = edgeFeather(Nsub~=0,~isnan(z),buff);
-
-    % make weighted elevation grid
-    zsub=m.z(r,c);
-    A=  zsub.*W + z.*(1-W);
-    n = isnan(zsub) & ~isnan(z);  A(n)= z(n);
-    n = ~isnan(zsub) & isnan(z);  A(n)= zsub(n);
-    z = A;
-    clear A
+    %% overlap use feathering
+    %dx = m.x(1,2)-m.x(1,1);
+    %buff=10*dx+1;
+    %W = edgeFeather(Nsub~=0,~isnan(z),buff);
     
-    Nsub = Nsub + uint8(W==0);
+%     % make weighted elevation grid
+%     zsub=m.z(r,c);
+%     A=  zsub.*W + z.*(1-W);
+%     n = isnan(zsub) & ~isnan(z);  A(n)= z(n);
+%     n = ~isnan(zsub) & isnan(z);  A(n)= zsub(n);
+%     z = A;
+%     clear A
+    
+    % add to N counter array
+    % Nsub = Nsub + uint8(W==0);
+    Nsub(Nsub == 0 & ~isnan(z)) = uint8(1);
     N(r,c)=Nsub;
     clear Nsub
+
+    % merge z by warping edge of z to match zsub   
+    zsub=m.z(r,c);
+    z = edgeWarp(zsub,z);
+    clear zsub
     
     % for the matchtag, just straight combination
     mt = m.mt(r,c) | mt;
     
-    % make weighted ortho grid
-    or = single(or);
-    or(or ==0) = NaN;
-    orsub=single(m.or(r,c));
-    orsub(orsub==0) = NaN;
-    A=  orsub.*W + or.*(1-W);
+%     % make weighted ortho grid
+%     or = single(or);
+%     or(or ==0) = NaN;
+%     orsub=single(m.or(r,c));
+%     orsub(orsub==0) = NaN;
+%     A=  orsub.*W + or.*(1-W);
+%     
+%     A( isnan(orsub) & ~isnan(or))=   or(  isnan(orsub) & ~isnan(or));
+%     A(~isnan(orsub) &  isnan(or))= orsub(~isnan(orsub) &  isnan(or));
+%     A(isnan(A)) = 0; % convert back to uint16
+%     or = uint16(A);
+%     clear A
     
-    A( isnan(orsub) & ~isnan(or))=   or(  isnan(orsub) & ~isnan(or));
-    A(~isnan(orsub) &  isnan(or))= orsub(~isnan(orsub) &  isnan(or));
-    A(isnan(A)) = 0; % convert back to uint16
-    or = uint16(A);
-    clear A
+    orsub=m.or(r,c);
+    or(orsub>0)=orsub(orsub>0);
+    clear orsub
     
     % make weighted dy grid
-    dy = single(dy);
-    dy(dy==0) = NaN;
-    dysub = single(m.dy(r,c));
-    dysub(dysub==0) = NaN;
-    
-    A=  dysub.*W + dy.*(1-W);
-    
-    A( isnan(dysub) & ~isnan(dy))=   dy ( isnan(dysub) & ~isnan(dy));
-    A(~isnan(dysub) &  isnan(dy))= dysub(~isnan(dysub) &  isnan(dy));
-    
-    A(isnan(A)) = 0; % convert back to uint16
-    dy = uint16(A);
-    clear A
-    
-    clear W
+%     dy = single(dy);
+%     dy(dy==0) = NaN;
+%     dysub = single(m.dy(r,c));
+%     dysub(dysub==0) = NaN;
+%     
+%     A=  dysub.*W + dy.*(1-W);
+%     
+%     A( isnan(dysub) & ~isnan(dy))=   dy ( isnan(dysub) & ~isnan(dy));
+%     A(~isnan(dysub) &  isnan(dy))= dysub(~isnan(dysub) &  isnan(dy));
+%     
+%     A(isnan(A)) = 0; % convert back to uint16
+%     dy = uint16(A);
+%     clear A
+%     
+%     clear W
+     dysub = m.dy(r,c);
+     dy(dysub>0)=dysub(dysub>0);
+     clear dysub
     
 else
     N(r,c) = uint8(~isnan(z));
@@ -104,4 +118,9 @@ m.or(r,c) = or;
 m.dy(r,c) = dy;
 
 m.dtrans= [m.dtrans,zeros(3,1)];
-m.rmse  = [m.rmse,0];
+m.rmse  = [m.rmse,0];    
+
+
+
+
+
