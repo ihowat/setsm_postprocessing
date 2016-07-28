@@ -1,4 +1,4 @@
-function strips2tile(db,tilex0, tilex1, tiley0, tiley1,res,outname)
+function strips2tile(db,tilex0, tilex1, tiley0, tiley1,res,outname,varargin)
 % STRIPS2TILE mosaic strips to rectangular tile
 %
 %[x,y,z,mt,or,dy,f,dtrans,rmse] = ...
