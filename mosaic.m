@@ -23,7 +23,7 @@ for n=1:length(tiles.I)
     fprintf('building tile %s: %d of %d\n',tiles.I{n},n,length(tiles.I))
     
     strips2tile(db,tiles.x0(n),tiles.x1(n),tiles.y0(n),tiles.y1(n),res,...
-        outname);
+        outname,'disableReg');
 end
 
 % get list of tiles from current directory
