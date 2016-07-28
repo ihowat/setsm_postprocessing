@@ -18,7 +18,8 @@ function N = addStrip2Mosaic(metaFile,m,dy0,N,dtrans,varargin)
 %
 %       'underprint' Only add new data where there is no existing data
 %
-%   Subfunctions: edgeFeather, edgeWarp, coregistedems, interpolate2grid
+%   Subfunctions: readStripInTile, edgeFeather, edgeWarp, coregistedems, 
+%                 interpolate2grid
 %
 %   Ian Howat, Ohio State University
 %   version 1; 28-Jul-2016 09:50:32
