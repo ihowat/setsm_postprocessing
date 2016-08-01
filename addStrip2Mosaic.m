@@ -85,6 +85,10 @@ if isempty(dtrans)
         m.x(1,c(co)),m.y(r(ro),1),m.z(r(ro),c(co)),...
         x(co),y(ro),z(ro,co),m.mt(r(ro),c(co)),mt(ro,co));
     
+    % coregisterdems returns dtrans values as positive offsets, whereas
+    % the gcp registration are negative, so need to reverse the sign:
+    dtrans=-dtrans;
+    
     % check for coregistration failure
     if isnan(rmse); return; end;
     
