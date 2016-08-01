@@ -83,10 +83,15 @@ while it
     fprintf('rmse= %.3f ',d1)
     
     if d0 - d1 < .001 || isnan(d0)
+        
         fprintf('stopping \n')
         % if fails after first registration attempt, set dx and dy to zero
         % and subtract the median offset
-        if it == 2; p(1)=meddz; d0=d00;  z2out = z2-meddz; end
+        if it == 2
+            fprintf('regression failure, returning median vertical offset: %.3f\n',meddz)
+            p(1)=meddz; d0=d00;
+            z2out = z2-meddz; 
+        end
         break
     end
     
