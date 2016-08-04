@@ -26,8 +26,7 @@ sz = whos(m,'z'); sz = sz.size; % image dimensions info
 z = nan(sz,'single'); % initialize output
 
 %create output file
-f = m.Properties.Source;
-outname=strrep(f,'.mat','_reg.mat');
+outname=strrep(m.Properties.Source,'.mat','_reg.mat');
 
 % cluster coregistraton loop
 i=1;
