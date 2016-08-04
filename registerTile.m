@@ -151,7 +151,7 @@ clear mt
 %% Apply registration to or grid variable
 
 % cluster coregistraton loop
-or = single(sz,'int16'); % initialize output
+or = zeros(sz,'int16'); % initialize output
 for i=1:coregClusters
     
     % make a mask of this cluster
@@ -176,7 +176,7 @@ clear or
 %% Apply registration to dy grid variable
 
 % cluster coregistraton loop
-dy= single(sz,'int16'); % initialize output
+dy= zeros(sz,'int16'); % initialize output
 for i=1:coregClusters
     
     % make a mask of this cluster
