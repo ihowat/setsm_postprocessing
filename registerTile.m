@@ -30,6 +30,10 @@ outname=strrep(m.Properties.Source,'dem.mat','reg_dem.mat');
 
 m1 = matfile(outname,'Writable',true);
 
+%initialize registration offsets/residual output
+dtrans=nan(3,coregClusters);
+dzall=cell(1,coregClusters);
+
 % cluster coregistraton loop
 for i=1:coregClusters
     
@@ -95,7 +99,7 @@ for i=1:coregClusters
     [xsub,ysub,zsub]=pointAreaSubsets(gcp.x(n),gcp.y(n),x,y,m,dd,N);
     
     % send to registration fx
-    [dtrans,dzall] = ...
+    [dtrans(:,i),dzall{i}] = ...
         registerDEM2LIDAR(xsub,ysub,zsub,gcp.x(n),gcp.y(n),gcp.z(n));
         
     clear xsub ysub zsub gcp n
@@ -109,13 +113,12 @@ for i=1:coregClusters
     z(n) = ztemp(n);
     
     clear ztemp n
-    
-    m1.dtrans{i} = dtrans;
-    m1.dzall{i} = dzall;
-    
+
 end
 
 % write to matfile
+m1.dtrans = dtrans;
+m1.dzall = dzall;
 m1.x=x;
 m1.y=y;
 m1.z=z;
