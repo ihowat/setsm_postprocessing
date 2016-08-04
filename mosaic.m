@@ -1,13 +1,21 @@
-function mosaic(db,tiles,res,outdir)
+function mosaic(db,tiles,res,outdir,varargin)
 % MOSAIC upper level function for mosaicking DEM strips to a set of tiles
 %
 %  mosaic(db,tiles,res,outdir)
+%  mosaic(db,tiles,res,outdir,gcp)
 
+%% parse and error check varargin
+if ~isempty(varargin)
+       
+       gcp=varargin{1};
+       
+       if ~isfield(gcp,'x') || ~isfield(gcp,'y') || ~isfield(gcp,'z')
+           error('gcp arg must be structure with fields x,y,z')
+       end
+end
 
 tilef = cellstr([char(tiles.I),...
     repmat(['_',num2str(res),'m_dem.mat'],length(tiles.I),1)]);
-
-gcp=loadGCPFile_is('icesat.mat');
 
 %% Loop through tiles and mosaic
 for n=1:length(tiles.I)
@@ -26,9 +34,13 @@ for n=1:length(tiles.I)
     strips2tile(db,tiles.x0(n),tiles.x1(n),tiles.y0(n),tiles.y1(n),res,...
         outname,'disableReg');
     
-    m = matfile(outname);
-     
-     registerTile(m,gcp);
+     % Apply gcp registration if gcp's provided
+     if exist('gcp','var')
+         fprintf('Apply ground control\n')
+         m = matfile(outname);
+         registerTile(m,gcp);
+        clear m
+     end
 end
 
 % get list of tiles from current directory
