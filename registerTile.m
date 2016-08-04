@@ -28,8 +28,9 @@ z = nan(sz,'single'); % initialize output
 %create output file
 outname=strrep(m.Properties.Source,'dem.mat','reg_dem.mat');
 
+m1 = matfile(outname,'Writable',true);
+
 % cluster coregistraton loop
-i=1;
 for i=1:coregClusters
     
     % make a mask of this cluster
@@ -96,9 +97,13 @@ for i=1:coregClusters
     % send to registration fx
     [dtrans,dzall] = ...
         registerDEM2LIDAR(xsub,ysub,zsub,gcp.x(n),gcp.y(n),gcp.z(n));
+        
+    clear xsub ysub zsub gcp n
     
     %% Apply registration
     ztemp = applyRegistration(dtrans,m,N);
+    
+    clear N
     
     n=isnan(z) & ~isnan(ztemp);
     z(n) = ztemp(n);
@@ -110,12 +115,83 @@ for i=1:coregClusters
     
 end
 
-
-
-m1 = matfile(outname,'Writable',true);
+% write to matfile
 m1.x=x;
 m1.y=y;
 m1.z=z;
 
+clear z
 
+%% Apply registration to mt grid variable
+
+% cluster coregistraton loop
+mt = false(sz); % initialize output
+for i=1:coregClusters
+    
+    % make a mask of this cluster
+    N = C == i+1;
+ 
+    % Apply registration
+    mttemp = applyRegistration(m.dtrans(:,i),m,N,'mt');
+    
+    % add in any matches
+    mt = mt | mttemp;
+    
+    clear mttemp
+    
+end
+
+m1.mt=mt;
+
+clear mt
+
+%% Apply registration to or grid variable
+
+% cluster coregistraton loop
+or = single(sz,'int16'); % initialize output
+for i=1:coregClusters
+    
+    % make a mask of this cluster
+    N = C == i+1;
+ 
+    % Apply registration
+    ortemp = applyRegistration(m.dtrans(:,i),m,N,'or');
+    
+    clear N
+    
+    n= or==0 & ortemp ~= 0;
+    or(n) = ortemp(n);
+    
+    clear ortemp n
+    
+end
+
+m1.or=or;
+
+clear or
+
+%% Apply registration to dy grid variable
+
+% cluster coregistraton loop
+dy= single(sz,'int16'); % initialize output
+for i=1:coregClusters
+    
+    % make a mask of this cluster
+    N = C == i+1;
+ 
+    % Apply registration
+    dytemp = applyRegistration(m.dtrans(:,i),m,N,'dy');
+    
+    clear N
+    
+    n= dy==0 & dytemp ~= 0;
+    dy(n) = dytemp(n);
+    
+    clear dytemp n
+    
+end
+
+m1.dy=dy;
+
+clear dy
 
