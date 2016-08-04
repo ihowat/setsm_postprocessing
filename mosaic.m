@@ -1,4 +1,4 @@
-function mosaic(db,tiles,res,outdir)
+function mosaic(db,tiles,res,outdir,gcp)
 % MOSAIC upper level function for mosaicking DEM strips to a set of tiles
 %
 %  mosaic(db,tiles,res,outdir)
@@ -14,7 +14,7 @@ for n=1:length(tiles.I)
     outname=[outdir,'/',tiles.I{n},'_',num2str(res),'m_dem.mat'];
     
          if exist(outname,'file');
-                fprintf('tile %s exists skipping\n',tiles.I{n})
+                fprintf('tile %s exists\n',tiles.I{n})
                 continue
 %                 fprintf('tile %s exists deleting\n',tiles.I{n})
 %                 delete(outname);
@@ -28,7 +28,7 @@ end
 
 % get list of tiles from current directory
 tilef=dir([outdir,'/*m_dem.mat']);
-[~,reglist] = max([tilef.bytes]); % use tile with most data as reference
+%[~,reglist] = max([tilef.bytes]); % use tile with most data as reference
 tilef={tilef.name};
 tilef = cellfun(@(x) [outdir,'/',x], tilef, 'UniformOutput',false);
 
@@ -38,6 +38,12 @@ tilef = cellfun(@(x) [outdir,'/',x], tilef, 'UniformOutput',false);
 i=1;
 for i=1:length(tilef)
     
+    if ~exist(strrep(tilef{i},'dem.mat','reg_dem.mat'),'file')
+        fprintf('registering tile %s\n',tilef{i});
+        m = matfile(tilef{i});
+        registerTile(m,gcp);
+    end
+   
     fprintf('writing tif %d of %d\n',i,length(tilef))
     
     if exist(strrep(tilef{i},'dem.mat','reg_dem.mat'),'file')
@@ -45,6 +51,8 @@ for i=1:length(tilef)
     else
        fi=tilef{i};
     end
+    
+    fprintf('using mat file %d\n',fi);
     
     load(fi,'x','y');
     % crop buffer tile

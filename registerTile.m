@@ -26,6 +26,7 @@ sz = whos(m,'z'); sz = sz.size; % image dimensions info
 z = nan(sz,'single'); % initialize output
 
 %create output file
+f = m.Properties.Source;
 outname=strrep(f,'.mat','_reg.mat');
 
 % cluster coregistraton loop
@@ -98,7 +99,7 @@ for i=1:coregClusters
         registerDEM2LIDAR(xsub,ysub,zsub,gcp.x(n),gcp.y(n),gcp.z(n));
     
     %% Apply registration
-    ztemp = applyRegistration(dtrans,m,z,N);
+    ztemp = applyRegistration(dtrans,m,N);
     
     n=isnan(z) & ~isnan(ztemp);
     z(n) = ztemp(n);
