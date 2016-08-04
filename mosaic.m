@@ -7,28 +7,31 @@ function mosaic(db,tiles,res,outdir,gcp)
 tilef = cellstr([char(tiles.I),...
     repmat(['_',num2str(res),'m_dem.mat'],length(tiles.I),1)]);
 
-gcp=loadGCPFile_is('icesat.mat');
+%gcp=loadGCPFile_is('icesat.mat');
 
 %% Loop through tiles and mosaic
 for n=1:length(tiles.I)
     
     outname=[outdir,'/',tiles.I{n},'_',num2str(res),'m_dem.mat'];
     
-         if exist(outname,'file');
-                fprintf('tile %s exists\n',tiles.I{n})
-                continue
-%                 fprintf('tile %s exists deleting\n',tiles.I{n})
-%                 delete(outname);
-         end
+    if exist(outname,'file');
+        fprintf('tile dem %s exists\n',tiles.I{n})
+    %                 fprintf('tile %s exists deleting\n',tiles.I{n})
+    %                 delete(outname);
+    else
+        fprintf('building tile %s: %d of %d\n',tiles.I{n},n,length(tiles.I))
+        strips2tile(db,tiles.x0(n),tiles.x1(n),tiles.y0(n),tiles.y1(n),res,...
+            outname,'disableReg');
+    end
     
-    fprintf('building tile %s: %d of %d\n',tiles.I{n},n,length(tiles.I))
-    
-    strips2tile(db,tiles.x0(n),tiles.x1(n),tiles.y0(n),tiles.y1(n),res,...
-        outname,'disableReg');
-    
-    m = matfile(outname);
-     
-     registerTile(m,gcp);
+    if exist(strrep(outname,'dem.mat','reg_dem.mat'),'file');
+        fprintf('tile reg dem %s exists\n',tiles.I{n})
+    else
+        fprintf('registering tile %s: %d of %d\n',tiles.I{n},n,length(tiles.I))
+        m = matfile(outname);
+        registerTile(m,gcp);
+    end
+   
 end
 
 % get list of tiles from current directory
@@ -43,21 +46,15 @@ tilef = cellfun(@(x) [outdir,'/',x], tilef, 'UniformOutput',false);
 i=1;
 for i=1:length(tilef)
     
-    if ~exist(strrep(tilef{i},'dem.mat','reg_dem.mat'),'file')
-        fprintf('registering tile %s\n',tilef{i});
-        m = matfile(tilef{i});
-        registerTile(m,gcp);
-    end
-   
     fprintf('writing tif %d of %d\n',i,length(tilef))
     
-    if exist(strrep(tilef{i},'dem.mat','reg_dem.mat'),'file')
-        fi=strrep(tilef{i},'dem.mat','reg_dem.mat');
-    else
+%     if exist(strrep(tilef{i},'dem.mat','reg_dem.mat'),'file')
+%         fi=strrep(tilef{i},'dem.mat','reg_dem.mat');
+%     else
        fi=tilef{i};
-    end
+%     end
     
-    fprintf('using mat file %d\n',fi);
+    fprintf('source: %s\n',fi);
     
     load(fi,'x','y');
     % crop buffer tile
