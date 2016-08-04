@@ -7,6 +7,7 @@ function mosaic(db,tiles,res,outdir)
 tilef = cellstr([char(tiles.I),...
     repmat(['_',num2str(res),'m_dem.mat'],length(tiles.I),1)]);
 
+gcp=loadGCPFile_is('icesat.mat');
 
 %% Loop through tiles and mosaic
 for n=1:length(tiles.I)
@@ -24,6 +25,10 @@ for n=1:length(tiles.I)
     
     strips2tile(db,tiles.x0(n),tiles.x1(n),tiles.y0(n),tiles.y1(n),res,...
         outname,'disableReg');
+    
+    m = matfile(outname);
+     
+     registerTile(m,gcp);
 end
 
 % get list of tiles from current directory
