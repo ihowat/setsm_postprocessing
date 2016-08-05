@@ -58,7 +58,7 @@ for i=1:coregClusters
     
     % skip if too few
     if length(n) < 4;
-        fprintf('%d overlapping points, too few,skipping\n',sum(nn));
+        fprintf('%d overlapping points, too few,skipping\n',length(n));
         return;
     end
     
@@ -74,7 +74,7 @@ for i=1:coregClusters
     
     % skip if too few
     if length(n) < 4;
-        fprintf('%d overlapping points, too few,skipping\n',sum(nn));
+        fprintf('%d overlapping points, too few,skipping\n',length(n));
         return;
     end
     
