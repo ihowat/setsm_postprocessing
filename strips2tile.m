@@ -13,6 +13,9 @@ function strips2tile(db,tilex0, tilex1, tiley0, tiley1,res,outname,varargin)
 %   Ian Howat, Ohio State University
 %   version 1; 28-Jul-2016 09:50:32 (beta versions preceeded this)
 
+%  version number
+tileVersion='1.0';
+
 % set Y2K as day 0 for the daynumber grid
 dy0 = datenum('jan 1 2000');
 
@@ -240,3 +243,8 @@ while length(db.f) >= 1;
     db = structfun(@(x) ( x(in,:) ), db, 'UniformOutput', false);
     
 end
+
+%% Generate Meta File
+m.version=tileVersion;
+tileMeta(m);
+
