@@ -8,4 +8,6 @@ scenes2strips_single.m
 mask_strip.m
 selectTileByName.m
 compileDatabase.m
+batch_tileMeta.m
+batch_tileRegMeta.m
 *.csv
