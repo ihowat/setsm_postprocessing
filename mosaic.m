@@ -59,11 +59,11 @@ for i=1:length(tilef)
     
     fprintf('writing tif %d of %d\n',i,length(tilef))
     
-%     if exist(strrep(tilef{i},'dem.mat','reg_dem.mat'),'file')
-%         fi=strrep(tilef{i},'dem.mat','reg_dem.mat');
-%     else
-       fi=tilef{i};
-%     end
+    if exist(strrep(tilef{i},'dem.mat','reg_dem.mat'),'file')
+        fi=strrep(tilef{i},'dem.mat','reg_dem.mat');
+    else
+        fi=tilef{i};
+    end
     
     fprintf('source: %s\n',fi);
     

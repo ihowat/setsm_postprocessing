@@ -102,7 +102,7 @@ for i=1:coregClusters
     [dtrans(:,i),dzall{i}] = ...
         registerDEM2LIDAR(xsub,ysub,zsub,gcp.x(n),gcp.y(n),gcp.z(n));
         
-    clear xsub ysub zsub gcp n
+    clear xsub ysub zsub n
     
     %% Apply registration
     ztemp = applyRegistration(dtrans,m,N);
