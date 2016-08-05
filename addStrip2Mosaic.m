@@ -108,7 +108,7 @@ end
 
 % put into file
 m.dtrans=[m.dtrans,dtrans(:)];
-m.rmse=[m.rmse,0];
+m.rmse=[m.rmse,rmse];
 
 
 %% Data Merge
