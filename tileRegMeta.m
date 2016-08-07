@@ -22,7 +22,7 @@ outfile=strrep(f,'.mat','.txt');
 
 % test if exists, skip if does
 if exist(outfile,'file'); 
-    fprintf('%s exists, skipping\n',f);
+    fprintf('%s exists, skipping\n',outfile);
     return;
 end
 

@@ -22,7 +22,7 @@ for n=1:length(tiles.I)
     
     outname=[outdir,'/',tiles.I{n},'_',num2str(res),'m_dem.mat'];
     
-    if exist(outname,'file');
+    if exist(outname,'file')
         fprintf('tile dem %s exists\n',tiles.I{n})
     %                 fprintf('tile %s exists deleting\n',tiles.I{n})
     %                 delete(outname);
@@ -32,15 +32,17 @@ for n=1:length(tiles.I)
             outname,'disableReg');
     end
     
-    if exist(strrep(outname,'dem.mat','reg_dem.mat'),'file');
-        fprintf('tile reg dem %s exists\n',tiles.I{n});
-    else
-        % Apply gcp registration if gcp's provided
-        if exist('gcp','var');
-            fprintf('appling ground control\n');
-            m = matfile(outname);
-            registerTile(m,gcp);
-            clear m
+    if exist(outname,'file')
+        if exist(strrep(outname,'dem.mat','reg_dem.mat'),'file')
+            fprintf('tile reg dem %s exists\n',tiles.I{n});
+        else
+            % Apply gcp registration if gcp's provided
+            if exist('gcp','var')
+                fprintf('appling ground control\n');
+                m = matfile(outname);
+                registerTile(m,gcp);
+                clear m
+            end
         end
     end
 end
