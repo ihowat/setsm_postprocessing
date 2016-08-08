@@ -37,6 +37,8 @@ dzall=cell(1,coregClusters);
 % cluster coregistraton loop
 for i=1:coregClusters
     
+    fprintf('Registering coregistered cluster %d of %d\n',i,coregClusters);
+      
     % make a mask of this cluster
     N = C == i+1;
     
@@ -131,6 +133,8 @@ clear z
 mt = false(sz); % initialize output
 for i=1:coregClusters
     
+     if any(isnan(m.dtrans(:,i))); continue; end
+     
     % make a mask of this cluster
     N = C == i+1;
  
@@ -153,6 +157,8 @@ clear mt
 % cluster coregistraton loop
 or = zeros(sz,'int16'); % initialize output
 for i=1:coregClusters
+    
+    if any(isnan(m.dtrans(:,i))); continue; end
     
     % make a mask of this cluster
     N = C == i+1;
@@ -179,6 +185,8 @@ clear or
 dy= zeros(sz,'int16'); % initialize output
 for i=1:coregClusters
     
+    if any(isnan(m.dtrans(:,i))); continue; end
+     
     % make a mask of this cluster
     N = C == i+1;
  
