@@ -18,7 +18,7 @@ else error('input arg must be a filename or valid matfile handle')
 end
 
 % make outname
-outfile=strrep(f,'.mat','.txt');
+outfile=strrep(f,'_dem.mat','.txt');
 
 % test if exists, skip if does
 if exist(outfile,'file'); 
