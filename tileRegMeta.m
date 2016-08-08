@@ -34,7 +34,7 @@ sensors={'GLA14_rel34'};
 
 %% Create meta file and write universal info
 fid=fopen(outfile,'w');
-fprintf(fid,'DEM Fileame: %s\n',f);
+fprintf(fid,'DEM Filename: %s\n',f);
 for j=1:length(sensors); fprintf(fid,'Registration Dataset %d Name: %s\n',j,sensors{j});end    
     
 %% Read and format strip info
@@ -42,7 +42,7 @@ dzall=m.dzall;
 dtrans=m.dtrans;
 
 for i=1:length(dzall)
-    fprintf(fid,'Statistics for Coregistration Cluster %d:\n',length(dzall));
+    fprintf(fid,'Statistics for Coregistration Cluster %d:\n',i);
 
     % find points used in registration
     nn = abs(dzall{i} - nanmedian(dzall{i})) < nanstd(dzall{i});
