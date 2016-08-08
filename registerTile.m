@@ -8,6 +8,8 @@ function registerTile(m,gcp)
 %   subfuncs: polyCropGCPs, pointAreaSubsets, registerDEM2LIDAR, 
 %   applyRegistration
 
+maxGcps=1000; % maximum number of gcps to use. Will sample gcp vector evenly to give the closest integer N > maxGcps.
+
 %% Check for multiple coregistration clusters
 
 % fastest is to look for a zero dtrans's
@@ -81,7 +83,6 @@ for i=1:coregClusters
     end
     
     %subsample GCPs to near maximum # for speed/memory
-    maxGcps=100;
     if length(n) > maxGcps
         n=n(1:floor(length(n)/ maxGcps):length(n));
     end
