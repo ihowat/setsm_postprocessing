@@ -48,10 +48,11 @@ for n=1:length(tiles.I)
 end
 
 % get list of tiles from current directory
-tilef=dir([outdir,'/*m_dem.mat']);
-%[~,reglist] = max([tilef.bytes]); % use tile with most data as reference
-tilef={tilef.name};
-tilef = cellfun(@(x) [outdir,'/',x], tilef, 'UniformOutput',false);
+tilef=dir([outdir,'/*m_dem_reg.mat']);
+tilef = cellfun(@(x) [outdir,'/',x], {tilef.name}, 'UniformOutput',false);
+
+% blend tile edges
+batchMergeTileBuffer(tilef);
 
 %alignTiles(tilef,reglist)
 
