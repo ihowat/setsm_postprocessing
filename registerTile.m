@@ -1,4 +1,4 @@
-function registerTile(m,gcp)
+function registerTile(m,gcp,sensors)
 % registerTile register tiles to ground control
 %
 %   registerTile(m,gcp) registers the DEM tile mosaic z in matlab file
@@ -207,4 +207,4 @@ m1.dy=dy;
 
 clear dy
 
-tileRegMeta(m1)
+tileRegMeta(m1,sensors)
