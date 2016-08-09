@@ -64,7 +64,7 @@ for i=1:coregClusters
     % skip if too few
     if length(n) < 4;
         fprintf('%d overlapping points, too few,skipping\n',length(n));
-        return;
+        continue;
     end
     
     % find gcp's over these pixels
@@ -80,7 +80,7 @@ for i=1:coregClusters
     % skip if too few
     if length(n) < 4;
         fprintf('%d overlapping points, too few,skipping\n',length(n));
-        return;
+       continue;
     end
     
     %subsample GCPs to near maximum # for speed/memory
@@ -105,7 +105,9 @@ for i=1:coregClusters
     % send to registration fx
     [dtrans(:,i),dzall{i}] = ...
         registerDEM2LIDAR(xsub,ysub,zsub,gcp.x(n),gcp.y(n),gcp.z(n));
-        
+    
+    if any(isnan(dtrans(:,i))); continue; end
+    
     clear xsub ysub zsub n
     
     %% Apply registration
@@ -119,6 +121,9 @@ for i=1:coregClusters
     clear ztemp n
 
 end
+
+% check for failure
+if ~any(~isnan(dtrans(:))); fprintf('registration failed\n'); return; end
 
 % write to matfile
 m1.dtrans = dtrans;
