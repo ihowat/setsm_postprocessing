@@ -47,17 +47,31 @@ for n=1:length(tiles.I)
     end
 end
 
+
+%% Align unregistered tiles
+
+% find unregistered tiles by intersect/removing with registered list
+f=dir([outdir,'/*m_dem.mat']);
+f=cellfun(@(x) [outdir,'/',x], {f.name}, 'UniformOutput',false);
+
+freg=dir([outdir,'/*m_dem_reg.mat']);
+freg=cellfun(@(x) [outdir,'/',x], {freg.name}, 'UniformOutput',false);
+
+freg=strrep(freg,'_reg','');
+[~,IA]=intersect(f,freg);
+f(IA)=[];
+
+batchAlignTile(f,freg);
+ 
+
+%% Blend tile edges
 % get list of tiles from current directory
 tilef=dir([outdir,'/*m_dem_reg.mat']);
 tilef = cellfun(@(x) [outdir,'/',x], {tilef.name}, 'UniformOutput',false);
 
-% blend tile edges
 batchMergeTileBuffer(tilef);
 
-%alignTiles(tilef,reglist)
-
-%%
-i=1;
+%% Crop Buffers and Write Tiles To Geotiffs
 for i=1:length(tilef)
     
     fprintf('writing tif %d of %d\n',i,length(tilef))
