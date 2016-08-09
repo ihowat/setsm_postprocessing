@@ -41,7 +41,7 @@ while ~isempty(f)
         j=1;
         for j=1:4
             
-            n = find(tr(i)+A(j,1) == trreg && tc(i)+A(j,2) == tcreg);
+            n = find(tr(i)+A(j,1) == trreg & tc(i)+A(j,2) == tcreg);
             if ~isempty(n)
                 nreg(i,j) = n;
             end
