@@ -120,7 +120,7 @@ m1.rmse   = rmse;
 C=m0.C;
 
 % Apply registration to z grid variable
-z= nan(sz); % initialize output
+z= nan(sz0); % initialize output
 for i=1:size(dtrans,2)
     
     if any(isnan(dtrans(:,i))); continue; end
@@ -146,7 +146,7 @@ clear z
 % Apply registration to mt grid variable
 
 % cluster coregistraton loop
-mt = false(sz); % initialize output
+mt = false(sz0); % initialize output
 for i=1:size(dtrans,2)
     
     if any(isnan(m.dtrans(:,i))); continue; end
@@ -173,7 +173,7 @@ clear mt
 %% Apply registration to or grid variable
 
 % cluster coregistraton loop
-or = zeros(sz,'int16'); % initialize output
+or = zeros(sz0,'int16'); % initialize output
 for i=1:size(dtrans,2)
     
     if any(isnan(m.dtrans(:,i))); continue; end
@@ -200,7 +200,7 @@ clear or
 %% Apply registration to dy grid variable
 
 % cluster coregistraton loop
-dy= zeros(sz,'int16'); % initialize output
+dy= zeros(sz0,'int16'); % initialize output
 for i=1:size(dtrans,2)
     
     if any(isnan(m.dtrans(:,i))); continue; end
