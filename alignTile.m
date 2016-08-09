@@ -129,7 +129,7 @@ for i=1:size(dtrans,2)
     N = C == i+1;
  
     % apply registration
-    ztemp = applyRegistration(dtrans(:,i),m,N);
+    ztemp = applyRegistration(dtrans(:,i),m0,N);
     clear N
     
     n=isnan(z) & ~isnan(ztemp);
@@ -155,7 +155,7 @@ for i=1:size(dtrans,2)
     N = C == i+1;
  
     % Apply registration
-    mttemp = applyRegistration(m.dtrans(:,i),m,N,'mt');
+    mttemp = applyRegistration(m.dtrans(:,i),m0,N,'mt');
     
     clear N
     
@@ -182,7 +182,7 @@ for i=1:size(dtrans,2)
     N = C == i+1;
  
     % Apply registration
-    ortemp = applyRegistration(m.dtrans(:,i),m,N,'or');
+    ortemp = applyRegistration(m.dtrans(:,i),m0,N,'or');
     
     clear N
     
@@ -209,7 +209,7 @@ for i=1:size(dtrans,2)
     N = C == i+1;
  
     % Apply registration
-    dytemp = applyRegistration(m.dtrans(:,i),m,N,'dy');
+    dytemp = applyRegistration(m.dtrans(:,i),m0,N,'dy');
     
     clear N
     
