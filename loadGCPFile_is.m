@@ -26,6 +26,7 @@ switch ext
         gcp = structfun(@(x) ( x(n) ), gcp, 'UniformOutput', false);
         clear n
         
+        gcp.dataset='GLA14_rel34';
         
     otherwise
         error('gcp file must be .csv or .mat')
