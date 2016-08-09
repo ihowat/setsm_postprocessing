@@ -52,7 +52,16 @@ for i=1:length(int);
         intColBuff=int(j,1)+buff(j,1):int(j,2)+buff(j,2);
         
         % extract subset from unregistered tile with buffer and add offset
-        z0 = single(m.z(intRowBuff,intColBuff));
+        try
+            z0 = single(m.z(intRowBuff,intColBuff));
+        catch
+            fprintf('error in interp subset index\n')
+            fprintf('row range: %d, %d\n',int(i,1),int(i,2))
+            fprintf('row buffer:%d, %d\n',buff(i,1),buff(i,2))
+            fprintf('col range: %d, %d\n',int(j,1),int(j,2))
+            fprintf('col buffer:%d, %d\n',buff(j,1),buff(j,2))
+            error('')
+        end
         
         % apply coregistration cluster mask
         z0(~N(intRowBuff,intColBuff)) = NaN;
