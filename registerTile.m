@@ -1,9 +1,10 @@
-function registerTile(m,gcp,sensors)
+function registerTile(m,gcp)
 % registerTile register tiles to ground control
 %
 %   registerTile(m,gcp) registers the DEM tile mosaic z in matlab file
 %   handle m (with m.z as elevation) to the gcp points in structure gcp,
-%   which has fields gcp.x, gcp.y and gcp.z.
+%   which has fields gcp.x, gcp.y and gcp.z. Optional field dataset is the 
+%   name/source of the gcp dataset
 % 
 %   subfuncs: polyCropGCPs, pointAreaSubsets, registerDEM2LIDAR, 
 %   applyRegistration
@@ -207,4 +208,10 @@ m1.dy=dy;
 
 clear dy
 
-tileRegMeta(m1,sensors)
+if isfield(gcp,'dataset')
+    dataset=gcp.dataset;
+else 
+    dataset='unknown';
+end
+    
+tileRegMeta(m1,dataset)
