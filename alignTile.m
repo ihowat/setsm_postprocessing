@@ -106,7 +106,7 @@ if ~any(~isnan(rmse));
 end
 
 %% create output file
-outname=strrep(m0.Properties.Source,'.mat','_reg.mat');
+outname=strrep(m0.Properties.Source,'dem.mat','_reg_dem.mat');
 
 clear m1
 m1 = matfile(outname,'Writable',true);
