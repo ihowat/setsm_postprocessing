@@ -63,7 +63,7 @@ while ~isempty(f)
     n=n(1);
     
     nreg=nreg(n,nreg(n,:) ~= 0);
-    fprintf('registering %s to %s, %s, %s, %s',f{n},freg{nreg}); fprintf('/n');
+    fprintf('registering %s to %s, %s, %s, %s',f{n},freg{nreg}); fprintf('\n');
     
     [outFlag,outname] = alignTile({f{n},freg{nreg}});
     
