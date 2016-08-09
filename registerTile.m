@@ -121,7 +121,7 @@ end
 
 % write to matfile
 m1.dtrans = dtrans;
-m1.dzall = dzall;
+m1.dzall  = dzall;
 m1.x=x;
 m1.y=y;
 m1.z=z;
@@ -134,13 +134,13 @@ clear z
 mt = false(sz); % initialize output
 for i=1:coregClusters
     
-     if any(isnan(m.dtrans(:,i))); continue; end
+    if any(isnan(dtrans(:,i))); continue; end
      
     % make a mask of this cluster
     N = C == i+1;
  
     % Apply registration
-    mttemp = applyRegistration(m.dtrans(:,i),m,N,'mt');
+    mttemp = applyRegistration(dtrans(:,i),m,N,'mt');
     
     % add in any matches
     mt = mt | mttemp;
@@ -159,13 +159,13 @@ clear mt
 or = zeros(sz,'int16'); % initialize output
 for i=1:coregClusters
     
-    if any(isnan(m.dtrans(:,i))); continue; end
+    if any(isnan(dtrans(:,i))); continue; end
     
     % make a mask of this cluster
     N = C == i+1;
  
     % Apply registration
-    ortemp = applyRegistration(m.dtrans(:,i),m,N,'or');
+    ortemp = applyRegistration(dtrans(:,i),m,N,'or');
     
     clear N
     
@@ -186,13 +186,13 @@ clear or
 dy= zeros(sz,'int16'); % initialize output
 for i=1:coregClusters
     
-    if any(isnan(m.dtrans(:,i))); continue; end
+    if any(isnan(dtrans(:,i))); continue; end
      
     % make a mask of this cluster
     N = C == i+1;
  
     % Apply registration
-    dytemp = applyRegistration(m.dtrans(:,i),m,N,'dy');
+    dytemp = applyRegistration(dtrans(:,i),m,N,'dy');
     
     clear N
     
