@@ -54,14 +54,14 @@ end
 f=dir([outdir,'/*m_dem.mat']);
 f=cellfun(@(x) [outdir,'/',x], {f.name}, 'UniformOutput',false);
 
-freg=dir([outdir,'/*m_dem_reg.mat']);
+freg=dir([outdir,'/*m_reg_dem.mat']);
 freg=cellfun(@(x) [outdir,'/',x], {freg.name}, 'UniformOutput',false);
 
 freg=strrep(freg,'_reg','');
 [~,IA]=intersect(f,freg);
 f(IA)=[];
 
-batchAlignTile(f,freg);
+%batchAlignTile(f,freg);
  
 
 %% Blend tile edges
@@ -69,7 +69,7 @@ batchAlignTile(f,freg);
 tilef=dir([outdir,'/*m_dem_reg.mat']);
 tilef = cellfun(@(x) [outdir,'/',x], {tilef.name}, 'UniformOutput',false);
 
-batchMergeTileBuffer(tilef);
+%batchMergeTileBuffer(tilef);
 
 %% Crop Buffers and Write Tiles To Geotiffs
 for i=1:length(tilef)
