@@ -17,6 +17,9 @@ elseif isvalid(f) % not a string, is it a valid file handle?
 else error('input arg must be a filename or valid matfile handle')
 end
 
+% if sensors is passed as a string, change it to cellstr for consistency
+if ~iscell(sensors); sensors={sensors}; end
+
 % make outname
 outfile=strrep(f,'_dem.mat','.txt');
 
