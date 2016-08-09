@@ -11,7 +11,7 @@ freg=freg(:)';
 
 while ~isempty(f)
     
-    fprintf('s% unregistered tiles, %s registered tiles\n',length(f),length(freg));
+    fprintf('%d unregistered tiles, %d registered tiles\n',length(f),length(freg));
     
     % get file names for row/col extract
     [~,fname]=cellfun(@fileparts, f, 'UniformOutput',false);
