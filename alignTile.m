@@ -149,13 +149,13 @@ clear z
 mt = false(sz0); % initialize output
 for i=1:size(dtrans,2)
     
-    if any(isnan(m.dtrans(:,i))); continue; end
+    if any(isnan(dtrans(:,i))); continue; end
 
     % make a mask of this cluster
     N = C == i+1;
  
     % Apply registration
-    mttemp = applyRegistration(m.dtrans(:,i),m0,N,'mt');
+    mttemp = applyRegistration(dtrans(:,i),m0,N,'mt');
     
     clear N
     
@@ -176,13 +176,13 @@ clear mt
 or = zeros(sz0,'int16'); % initialize output
 for i=1:size(dtrans,2)
     
-    if any(isnan(m.dtrans(:,i))); continue; end
+    if any(isnan(dtrans(:,i))); continue; end
     
     % make a mask of this cluster
     N = C == i+1;
  
     % Apply registration
-    ortemp = applyRegistration(m.dtrans(:,i),m0,N,'or');
+    ortemp = applyRegistration(dtrans(:,i),m0,N,'or');
     
     clear N
     
@@ -203,13 +203,13 @@ clear or
 dy= zeros(sz0,'int16'); % initialize output
 for i=1:size(dtrans,2)
     
-    if any(isnan(m.dtrans(:,i))); continue; end
+    if any(isnan(dtrans(:,i))); continue; end
     
     % make a mask of this cluster
     N = C == i+1;
  
     % Apply registration
-    dytemp = applyRegistration(m.dtrans(:,i),m0,N,'dy');
+    dytemp = applyRegistration(dtrans(:,i),m0,N,'dy');
     
     clear N
     
