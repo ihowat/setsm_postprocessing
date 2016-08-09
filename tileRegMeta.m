@@ -1,4 +1,4 @@
-function tileRegMeta(f)
+function tileRegMeta(f,sensors)
 % tileRegMeta: write meta file for ArcticDEM mosaic tile registration stats
 %
 %   tileRegMeta(f) where f is either the filename or matfile handle of the
@@ -28,9 +28,6 @@ end
 
 %% double check to make sure this isnt an unregfile sent here by mistake
 if isempty(whos(m,'dzall')); error('oops, I think you sent an unregistered tile here by mistake'); end
-
-sensors={'GLA14_rel34'};
-
 
 %% Create meta file and write universal info
 fid=fopen(outfile,'w');
