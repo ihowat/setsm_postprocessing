@@ -66,12 +66,14 @@ f(IA)=[];
 
 %% Blend tile edges
 % get list of tiles from current directory
-tilef=dir([outdir,'/*m_dem_reg.mat']);
+tilef=dir([outdir,'/*m_reg_dem.mat']);
 tilef = cellfun(@(x) [outdir,'/',x], {tilef.name}, 'UniformOutput',false);
 
 %batchMergeTileBuffer(tilef);
 
 %% Crop Buffers and Write Tiles To Geotiffs
+tilef=dir([outdir,'/*m_dem.mat']);
+tilef = cellfun(@(x) [outdir,'/',x], {tilef.name}, 'UniformOutput',false);
 for i=1:length(tilef)
     
     fprintf('writing tif %d of %d\n',i,length(tilef))
