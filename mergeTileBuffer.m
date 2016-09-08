@@ -29,6 +29,10 @@ elseif isvalid(f1) % not a string, is it a valid file handle?
 else error('input arg must be a filename or valid matfile handle')
 end
 
+% make sure writeable
+m0.Properties.Writable = true;
+m1.Properties.Writable = true;
+
 %% crop tiles to buffer
 c0 = m0.x >= min(m1.x) & m0.x <= max(m1.x);
 r0 = m0.y >= min(m1.y) & m0.y <= max(m1.y);
