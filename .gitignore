@@ -11,4 +11,5 @@ compileDatabase.m
 batch_tileMeta.m
 batch_tileRegMeta.m
 batch_batchAlignTile.m
+batch_batchMergeTileBuffer.m
 *.csv

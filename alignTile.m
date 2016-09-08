@@ -106,7 +106,7 @@ if ~any(~isnan(rmse));
 end
 
 %% create output file
-outname=strrep(m0.Properties.Source,'dem.mat','_reg_dem.mat');
+outname=strrep(m0.Properties.Source,'_dem.mat','_reg_dem.mat');
 
 clear m1
 m1 = matfile(outname,'Writable',true);
@@ -120,6 +120,8 @@ m1.rmse   = rmse;
 C=m0.C;
 
 % Apply registration to z grid variable
+
+fprintf('Regridding z\n');
 z= nan(sz0); % initialize output
 for i=1:size(dtrans,2)
     
@@ -145,6 +147,7 @@ clear z
 
 % Apply registration to mt grid variable
 
+fprintf('Regridding mt\n');
 % cluster coregistraton loop
 mt = false(sz0); % initialize output
 for i=1:size(dtrans,2)
@@ -172,6 +175,7 @@ clear mt
 
 %% Apply registration to or grid variable
 
+fprintf('Regridding or\n');
 % cluster coregistraton loop
 or = zeros(sz0,'int16'); % initialize output
 for i=1:size(dtrans,2)
@@ -199,6 +203,7 @@ clear or
 
 %% Apply registration to dy grid variable
 
+fprintf('Regridding dy\n');
 % cluster coregistraton loop
 dy= zeros(sz0,'int16'); % initialize output
 for i=1:size(dtrans,2)
@@ -224,6 +229,7 @@ m1.dy=dy;
 
 clear dy
 
+fprintf('Building metadata\n');
 tileRegMeta(m1,{'Neighbor Align'})
 
 outFlag=true;
