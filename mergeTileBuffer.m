@@ -29,7 +29,6 @@ elseif isvalid(f1) % not a string, is it a valid file handle?
 else error('input arg must be a filename or valid matfile handle')
 end
 
-        
 %% crop tiles to buffer
 c0 = m0.x >= min(m1.x) & m0.x <= max(m1.x);
 r0 = m0.y >= min(m1.y) & m0.y <= max(m1.y);
@@ -86,7 +85,6 @@ else
     
 end
 
-
 %% merge z
 z0= m0.z(r0(1):r0(2),c0(1):c0(2));
 z1= m1.z(r1(1):r1(2),c1(1):c1(2));
@@ -119,7 +117,7 @@ or1= m1.or(r1(1):r1(2),c1(1):c1(2));
 or0=single(or0);
 or1=single(or1);
 
-or=(or.*W0)+(or.*(1-W0));
+or=(or0.*W0)+(or1.*(1-W0));
 
 n= or0 == 0 & or1 ~= 0;
 or(n)=or1(n);
@@ -139,7 +137,7 @@ dy1= m1.dy(r1(1):r1(2),c1(1):c1(2));
 dy0=single(dy0);
 dy1=single(dy1);
 
-dy=(dy.*W0)+(dy.*(1-W0));
+dy=(dy0.*W0)+(dy1.*(1-W0));
 
 n= dy0 == 0 & dy1 ~= 0;
 dy(n)=dy1(n);
