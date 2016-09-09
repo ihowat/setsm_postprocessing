@@ -111,6 +111,10 @@ outname=strrep(m0.Properties.Source,'_dem.mat','_reg_dem.mat');
 clear m1
 m1 = matfile(outname,'Writable',true);
 
+m1.x=m0.x;
+m1.y=m0.y;
+
+
 m1.dtrans = dtrans;
 m1.rmse   = rmse;
 
