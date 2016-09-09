@@ -5,6 +5,8 @@ function mergeTileBuffer(f0,f1)
 % handles of neighboring tiles.
 
 %% first test if input args are either valid filenames or mat file handles
+fprintf('Merging tile %s with %s\n', f0, f1)
+
 if isstr(f0) % it's a string, might be a filename
     if exist(f0,'file') % yup its a file
         m0 = matfile(f0); % load it
