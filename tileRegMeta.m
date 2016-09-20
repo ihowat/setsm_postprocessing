@@ -1,8 +1,9 @@
 function tileRegMeta(f,sensors)
 % tileRegMeta: write meta file for ArcticDEM mosaic tile registration stats
 %
-%   tileRegMeta(f) where f is either the filename or matfile handle of the
-%   tile matfile.
+%   tileRegMeta(f,sensors) where f is either the filename or matfile handle of the
+%   tile matfile. Sensors is a cellstr of sensor tags. If sensors ={'neigbor align'}
+%   a truncated format will be used.
 
 %% first test if input arg is either a valid filename or mat file handle
 if isstr(f) % it's a string, might be a filename
@@ -27,6 +28,29 @@ outfile=strrep(f,'_dem.mat','.txt');
 if exist(outfile,'file'); 
     fprintf('%s exists, skipping\n',outfile);
     return;
+end
+
+%% Alternate Write for Neighbor Align Tile
+if length(sensors)==1;
+    if strcmp(sensors{1},'Neighbor Align') == 1;
+        
+        %% Create meta file and write universal info
+        fid=fopen(outfile,'w');
+        fprintf(fid,'DEM Filename: %s\n',f);
+        fprintf(fid,'Registration Dataset %d Name: %s\n',j,sensors{j});end
+
+    for i=1:length(m.rmse{i})
+        fprintf(fid,'Statistics for Coregistration Cluster %d:\n',i);
+        fprintf(fid,'# GCPs=NaN\n');
+        fprintf(fid,'Mean Vertical Residual (m)=%.3f\n',m.rmse{i});
+        fprintf(fid,'Median Vertical Residual (m)=NaN\n');
+        fprintf(fid,'Translation Vector (dz,dx,dy)(m)= %.3f, %.3f, %.3f \n',m.dtrans(:,i)');
+        fprintf(fid,'Vertical Deviation Percentiles(m):\n');
+        fprintf(fid,'NaN\n');
+        fprintf(fid,'\n');
+    end
+    fclose(fid);
+    return
 end
 
 %% double check to make sure this isnt an unregfile sent here by mistake
