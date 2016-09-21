@@ -32,25 +32,27 @@ end
 
 %% Alternate Write for Neighbor Align Tile
 if length(sensors)==1;
-    if strcmp(sensors{1},'Neighbor Align') == 1;
+    if strcmp(sensors{1},'Neighbor Align') == 1
+        j=1;
         
         %% Create meta file and write universal info
         fid=fopen(outfile,'w');
         fprintf(fid,'DEM Filename: %s\n',f);
-        fprintf(fid,'Registration Dataset %d Name: %s\n',j,sensors{j});end
+        fprintf(fid,'Registration Dataset %d Name: %s\n',j,sensors{j});
 
-    for i=1:length(m.rmse{i})
-        fprintf(fid,'Statistics for Coregistration Cluster %d:\n',i);
-        fprintf(fid,'# GCPs=NaN\n');
-        fprintf(fid,'Mean Vertical Residual (m)=%.3f\n',m.rmse{i});
-        fprintf(fid,'Median Vertical Residual (m)=NaN\n');
-        fprintf(fid,'Translation Vector (dz,dx,dy)(m)= %.3f, %.3f, %.3f \n',m.dtrans(:,i)');
-        fprintf(fid,'Vertical Deviation Percentiles(m):\n');
-        fprintf(fid,'NaN\n');
-        fprintf(fid,'\n');
-    end
+        for i=1:length(m.rmse{i})
+            fprintf(fid,'Statistics for Coregistration Cluster %d:\n',i);
+            fprintf(fid,'# GCPs=NaN\n');
+            fprintf(fid,'Mean Vertical Residual (m)=%.3f\n',m.rmse{i});
+            fprintf(fid,'Median Vertical Residual (m)=NaN\n');
+            fprintf(fid,'Translation Vector (dz,dx,dy)(m)= %.3f, %.3f, %.3f \n',m.dtrans(:,i)');
+            fprintf(fid,'Vertical Deviation Percentiles(m):\n');
+            fprintf(fid,'NaN\n');
+            fprintf(fid,'\n');
+        end
     fclose(fid);
     return
+    end
 end
 
 %% double check to make sure this isnt an unregfile sent here by mistake
