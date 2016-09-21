@@ -1,7 +1,7 @@
 function [gcp]=loadGCPFile_is(gcpfile)
 % loadGCPFile_is load icesat csv file into structure
 
-[~,~,ext]=fileparts(gcpfile);
+[~,name,ext]=fileparts(gcpfile);
 fprintf('loading gcp file: %s\n',gcpfile)
 switch ext
     case '.csv'
@@ -26,7 +26,7 @@ switch ext
         gcp = structfun(@(x) ( x(n) ), gcp, 'UniformOutput', false);
         clear n
         
-        gcp.dataset='GLA14_rel34';
+        gcp.dataset=name;
         
     otherwise
         error('gcp file must be .csv or .mat')
