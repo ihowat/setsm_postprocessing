@@ -40,10 +40,10 @@ if length(sensors)==1;
         fprintf(fid,'DEM Filename: %s\n',f);
         fprintf(fid,'Registration Dataset %d Name: %s\n',j,sensors{j});
 
-        for i=1:length(m.rmse{i})
+        for i=1:length(m.rmse)
             fprintf(fid,'Statistics for Coregistration Cluster %d:\n',i);
             fprintf(fid,'# GCPs=NaN\n');
-            fprintf(fid,'Mean Vertical Residual (m)=%.3f\n',m.rmse{i});
+            fprintf(fid,'Mean Vertical Residual (m)=%.3f\n',m.rmse(:,i));
             fprintf(fid,'Median Vertical Residual (m)=NaN\n');
             fprintf(fid,'Translation Vector (dz,dx,dy)(m)= %.3f, %.3f, %.3f \n',m.dtrans(:,i)');
             fprintf(fid,'Vertical Deviation Percentiles(m):\n');
