@@ -33,7 +33,7 @@ if ~isempty(varargin); mergeMethod=varargin{1}; end
 [x,y,z,mt,or,c,r] = readStripInTile(metaFile,m.x,m.y);
 
 % check for competely masked file
-if isempty(x);
+if isempty(x)
     m.dtrans=[m.dtrans,[NaN;NaN;NaN]];
     m.rmse=[m.rmse,NaN];
     return;
@@ -43,7 +43,7 @@ end
 c=find(c);
 r=find(r);
 
-if length(c)*length(r) < 1000;
+if length(c)*length(r) < 1000
     fprintf('%d pixel overlap is too small, skipping\n',sum(c)*sum(r));
     m.dtrans=[m.dtrans,[NaN;NaN;NaN]];
     m.rmse=[m.rmse,NaN];
@@ -56,7 +56,7 @@ end
 Nsub=N(r,c);
 
 %quit if too little new pixel added
-if sum(Nsub(:)==0 & ~isnan(z(:))) < 1000;
+if sum(Nsub(:)==0 & ~isnan(z(:))) < 1000
     disp('redundant coverage, skipping');
     m.dtrans=[m.dtrans,[NaN;NaN;NaN]];
     m.rmse=[m.rmse,NaN];
