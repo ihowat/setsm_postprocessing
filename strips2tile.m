@@ -340,7 +340,7 @@ while length(meta.f) >= 1
                 mask=cell(1,2);
             end
             
-            [meta.dtrans(n(i),:),meta.rmse(n(i))] = coregrister2tile(meta.f{n(i)},m,N,'mask',mask);
+            [meta.dtrans(n(i),:),meta.rmse(n(i))] = coregister2tile(meta.f{n(i)},m,N,'mask',mask);
             
             if isnan(meta.rmse(n(i))); meta.overlap(n(i)) = 0; end
             
