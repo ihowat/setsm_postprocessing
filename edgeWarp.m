@@ -1,4 +1,4 @@
-function z0 = edgeWarp(z0,z1,varargin)
+function [z0,exitFlag] = edgeWarp(z0,z1,varargin)
 % EDGEWARP Merge two DEMS, forcing vertical edge alignment
 %
 %W = edgeWarp(z0,z1,buff) where z0 and z1 are equally-sized arrays
@@ -7,6 +7,8 @@ function z0 = edgeWarp(z0,z1,varargin)
 %ovlap, to the full offset at the edge of z1. The larger buff, the wider
 %the region of warping and the smoother the transition will be for larger
 %offsets. Treats NaNs as nodata.
+
+exitFlag=false; % exitFlag will set true if 100% overlap exists between z0 and z1
 
 % set default buffer size or set to varargin
 buff=51;
@@ -25,6 +27,14 @@ end
 
 % define BW array of warp region
 warpRegion=imdilate(A,ones(buff)) & ~A & ~isnan(z1);
+
+% if 100% overlap, warn and return z0
+if ~any(warpRegion(:))
+    warning(...
+        'no edge to warp,z1 lies completely inside of z0, retuning z0 and setting exitFlag to 1');
+    exitFlag=true;
+    return
+end
 
 % define BW of boundary pixels around warp region for interpolation
 B = imdilate(warpRegion,ones(11)) & ~warpRegion;
