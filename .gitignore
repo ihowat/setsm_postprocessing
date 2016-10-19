@@ -14,4 +14,6 @@ batch_batchAlignTile.m
 batch_batchMergeTileBuffer.m
 mosaicStrips.m
 writeTileToTif.m
+compileDatabaseRema.m
+selectTileByName_Antarctic.m
 *.csv
