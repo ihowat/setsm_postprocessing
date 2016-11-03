@@ -73,7 +73,7 @@ switch lower(proj)
         proj_info = '31, 6378137.0, 6356752.3, 70.000000, -45.000000, 0, 0, WGS-84, Polar Stereo North, units=Meters';
 
      case 'polar stereo south';   
-        proj_info = '31, 637813.0, 635674.5, -70.000000, 0.000000, 0, 0, WGS-84, Polar Stereo South, units=Meters';
+        proj_info = '31, 637813.0, 635674.5, -71.000000, 0.000000, 0, 0, WGS-84, Polar Stereo South, units=Meters';
         
     case 'bamber'
          proj_info = '31, 6378137.0, 6356752.3, 70.000000, -39.000000, 1, 1, WGS-84, bamber, units=Meters';
