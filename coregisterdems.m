@@ -13,6 +13,9 @@ y1=y1(:);
 x2=x2(:)';
 y2=y2(:);
 
+if length(x1) < 3 || length(y1) < 3 || length(x1) < 3 || length(y1) < 3
+    error('minnimum array dimension is 3')
+end
 
 interpflag=true;
 if (length(x1) == length(x2)) && (length(y1) == length(y2))
@@ -21,13 +24,12 @@ if (length(x1) == length(x2)) && (length(y1) == length(y2))
 	end
 end
 
-if length(varargin) == 2;
+if length(varargin) == 2
     
     m1=varargin{1};
     m2=varargin{2};
     
 end
-
 
 rx = x1(2)-x1(1); % coordinate spacing
 p = [0;0;0]; % initial trans variable

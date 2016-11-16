@@ -63,6 +63,8 @@ if ~isempty(varargin)
 
 end
 
+fprintf('Using merge method: %s\n',mergeMethod)
+
 %% Initialize new mosaick file if not exists
 if ~exist(outname,'file')
     
@@ -234,6 +236,18 @@ if ~isfield(meta,'gridPointInd')
         % locate grid pixels within footprint polygon
         BW = roipoly(x, y, N, meta.x{i}, meta.y{i});
         
+        % if mask exists, apply it
+        if isfield(meta,'maskPolyx')
+            mask=[meta.maskPolyx{i}(:) meta.maskPolyy{i}(:)];
+            
+            for j=1:size(mask,1)
+                if ~isempty(mask{j,1}) && ~isempty(mask{j,2})
+                    BW(roipoly(x,y,N,mask{j,1},mask{j,2}))=0;
+                end
+            end
+            
+        end
+   
         % convert BW mask to col-wise indices and save to cell
         meta.gridPointInd{i}=find(BW);
         
@@ -435,3 +449,4 @@ end
 %% Generate Meta File
 m.version=tileVersion;
 tileMeta(m);
+

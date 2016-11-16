@@ -79,9 +79,15 @@ co= find(sum(A) ~= 0,1,'first'):find(sum(A) ~= 0,1,'last');
 ro= find(sum(A,2) ~= 0,1,'first'):find(sum(A,2) ~= 0,1,'last');
 
 % co-register strip to mosaic subset
+try
 [~,dtrans,rmse] = coregisterdems(...
     m.x(1,c(co)),m.y(r(ro),1),m.z(r(ro),c(co)),...
     x(co),y(ro),z(ro,co),m.mt(r(ro),c(co)),mt(ro,co));
+catch
+    
+    fprintf('coregistration failure, skipping\n');
+    return;
+end
 
 % coregisterdems returns dtrans values as positive offsets, whereas
 % the gcp registration are negative, so need to reverse the sign:

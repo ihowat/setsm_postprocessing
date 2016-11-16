@@ -1,4 +1,24 @@
-function [xi,yi,z,mt,or,c,r] = readStripInTile(metaFile,x,y)
+function [xi,yi,z,mt,or,c,r] = readStripInTile(metaFile,x,y,varargin)
+
+% parse input args
+for i=1:2:length(varargin)
+    
+    switch lower(varargin{i})    
+        case 'mask'
+            
+            mask=varargin{i+1};
+            
+            if ~iscell(mask) || size(mask,2) ~= 2
+                error('input variable "mask" must be a cell array with two columns (x,y)')
+            end
+
+        otherwise
+            
+            error('Unknown input arguments')
+    end
+end
+
+
 % readStrip read the strip and crop to a defined grid
 buff=0;
 
@@ -20,7 +40,20 @@ z(z < -100 | z == 0 | z == -NaN ) = NaN;
 % check for blank DEM
 M = ~isnan(z);
 
-if ~any(M(:)); 
+
+%% Apply mask if exists
+if any(M(:)) && exist('mask','var')
+    
+    fprintf('applying mask\n')
+    for i=1:size(mask,1)
+        if ~isempty(mask{i,1}) && ~isempty(mask{i,2})
+            M(roipoly(xi,yi,M,mask{i,1},mask{i,2}))=0;
+        end
+    end
+    z(~M) = nan;
+end
+
+if ~any(M(:))
     xi=[];
     yi=[];
     z=[];
