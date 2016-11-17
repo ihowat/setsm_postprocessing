@@ -1,12 +1,35 @@
-function W = edgeFeather(M0,M1,buff)
+function W = edgeFeather(M0,M1,varargin)
 % EDGEFEATHER get weights for merging two images with edge feathering
 %
 %W = edgeFeather(M0,M1,buff) where M0 and M1 are equally sized BW images
 %with ones for data and zeros for no data. buff is the cutline buffer for
 %merging - greater == means more overlap used for feather
 
+buff=0;
 f0=0; % overlap fraction where back z weight goes to zero
 f1=1; % overlap fraction where back z weight goes to one
+
+maxInterpPixels = 1e6;
+
+% parse input args
+for i=1:2:length(varargin)
+    
+    switch lower(varargin{i})
+        
+        case 'buffer'
+            
+            buff=varargin{i+1};
+            
+        case 'overlaprange'
+            
+            f0=varargin{i+1}(1);
+            f1=varargin{i+1}(2);
+                 
+        otherwise
+            
+            error('Unknown input arguments')
+    end
+end
 
 % crop to just region of overlap
 A= single(M0 & M1);
@@ -19,6 +42,7 @@ if ~any(A(:))
         return
 end
 
+% crop to area of overlap
 A(A==0)=NaN;
 [~,rb,cb] = cropnans(A,buff);
 
@@ -31,8 +55,13 @@ A(bwareaopen(...
     M0(rb(1):rb(2),cb(1):cb(2)) & ~M1(rb(1):rb(2),cb(1):cb(2)),...
     1000)) =2 ;  % data in back and nodata in front = 2
 
+
 % do weight interpolation on low res grid for speed
-Ar=imresize(A,.1,'nearest');
+if numel(A) <= maxInterpPixels; maxInterpPixels=numel(A); end
+Ar=imresize(A,maxInterpPixels./numel(A),'nearest');
+%Ar=imresize(A,.1,'nearest');
+
+fprintf('%d pixels\n',numel(Ar));
 
 % interpolation grid
 [C,R] = meshgrid(1:size(Ar,2),1:size(Ar,1));
@@ -41,7 +70,7 @@ Ar=imresize(A,.1,'nearest');
 B = bwboundaries(Ar~=0, 8, 'noholes');
 B = cell2mat(B);
 
-if size(B,2) ~= 2;
+if size(B,2) ~= 2
     warning('no overlap boundaries returned, no feathering applied');
     W=nan(size(M0));
     W(M1) = 0;
