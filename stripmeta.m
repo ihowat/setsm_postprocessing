@@ -54,7 +54,7 @@ end
 fid=fopen(outfile,'w');
 
 fprintf(fid,'Strip Metadata \n');
-fprintf(fid,'Ceation Date: %s\n',datestr(now));
+fprintf(fid,'Creation Date: %s\n',datestr(now));
 stripdate=dir(transfile); stripdate=stripdate.date;
 fprintf(fid,'Strip creation date: %s\n',stripdate);
 fprintf(fid,'Strip projection (proj4): %s\n',projstr);

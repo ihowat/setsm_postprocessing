@@ -68,8 +68,7 @@ for i=1:length(fdem)
     end
     
     n=n(nn); clear nn % reduce index to fast crop selection
-     
-    
+   
     if isfield(gcp,'t');
         %% Month selection
         % In order to reduce seasonal variability in height, select gcps within
@@ -96,6 +95,9 @@ for i=1:length(fdem)
         n=n(nn); clear nn % crop index to selection
         fprintf('%d points within %d month(s), performing registration\n',...
             length(n),month_range);
+    else
+        fprintf('%d overlapping points found, performing registration\n',length(n));
+        month_range=12;
     end
     
     %% Registration with subsetting
