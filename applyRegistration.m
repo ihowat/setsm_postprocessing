@@ -4,9 +4,9 @@ function z = applyRegistration(dtrans,m,N,varargin)
 
 % parse/error check gridVar argument
 gridVar='z'; %default
-if ~isempty(varargin);
+if ~isempty(varargin)
     gridVar=varargin{1};
-    if ~isstr(gridVar);
+    if ~ischar(gridVar)
         error('grid variable argument must be a string');
     end
 end
@@ -27,6 +27,14 @@ int(1:end-1,2)=int(1:end-1,2)-1;
 % need to add pixel buffer to int to account for shifts, scaling with dtrans
 buff=max(ceil(abs(dtrans(2:3)./res)));
 buff=[[0 buff];repmat([-buff buff],size(int,1)-2,1);[-buff 0]];
+
+if any(isnan(buff(:)))
+    fprintf('nan detected in applyRegistration buffer, send these outputs to Ian:\n')
+    varinfo.size(2)
+    dtrans
+    res    
+    error('')
+end
 
 %% nested interpolation loops with interpolation dependent on grid variable
 
