@@ -28,7 +28,9 @@ function [N,returnFlag] = addStrip2Mosaic(metaFile,m,dy0,N,dtrans,rmse,varargin)
 %                 interpolate2grid
 %
 %   Ian Howat, Ohio State University
-%   version 1; 28-Jul-2016 09:50:32
+%   version 1.0; 28-Jul-2016 09:50:32
+%   version 1.1; 06-Dec-2016 14:29:02
+%   - changed to NaNs in dtrans triggers coregistration
 
 % Set Defaults
 mergeMethod='feather';
@@ -123,7 +125,7 @@ A= Nsub ~= 0 & ~isnan(z); % overlapping coverage mask
 if ~any(A(:)) && isempty(dtrans); dtrans=[0;0;0]; end
  
 % if dtrans is empty and there's overlap, then apply coregistration
-if isempty(dtrans)
+if isempty(dtrans) || any(isnan(dtrans))
     
     if sum(A(:)) < minOverlapPixels
         fprintf('%d pixel overlap is too small, skipping\n',sum(A(:)));
@@ -285,3 +287,4 @@ m.rmse=[m.rmse,rmse];
 
 N(r,c)=~isnan(m.z(r,c));
 returnFlag=true;
+
