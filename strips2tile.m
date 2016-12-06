@@ -27,8 +27,11 @@ function strips2tile(meta,tilex0, tilex1, tiley0, tiley1,res,outname,varargin)
 %	- added redundant data check & skip
 %   - faster existing data search using gridPointInd field
 %   - allows for use of a qc rank list
+%   Version 2.1; 06-Dec-2016 14:22:22
+%   - fixed bug in which disableCoregTest resuted in no coregistration in
+%   addStrip2Mosiac
 
-tileVersion='2.0';
+tileVersion='2.1';
 
 %% Set Parameters & Parse args
 % set Y2K as day 0 for the daynumber grid
@@ -136,7 +139,6 @@ else %file already exists so try and pick up where it left off
     fprintf('reading existing file and trying to pick up where it left off\n')
     m = matfile(outname,'Writable',true);
     
-    
     if length(m.rmse) - length(m.f) == 1
         rmse=m.rmse; rmse(end) = []; m.rmse=rmse; rmse = [];
         dtrans=m.dtrans; dtrans(:,end) = []; m.dtrans=dtrans; dtrans = [];
@@ -161,48 +163,63 @@ if ~disableReg % check for disable registration argument
     regfiles=strrep(meta.f,'meta.txt','reg.txt');
     nreg= find( cellfun( @exist, regfiles) == 2);
     
-    meta.trans=nan(size(meta.f,1),3);
-    meta.p75=nan(size(meta.f));
+    meta.dtrans=nan(size(meta.f,1),3);
+    meta.rmse=nan(size(meta.f));
     
     if ~isempty(nreg)
         regfiles=regfiles(nreg);
         
-        [~,~,~,trans,pctile]=cellfun( @readreg,regfiles,'uniformoutput',0);
+        [~,~,~,dtrans,pctile]=cellfun( @readreg,regfiles,'uniformoutput',0);
         pctile=cell2mat(pctile);
-        trans=cell2mat(trans);
+        dtrans=cell2mat(dtrans);
         p75=pctile(:,6);
         
-        meta.trans(nreg,:)=trans;
-        meta.p75(nreg)=p75;
+        meta.dtrans(nreg,:)=dtrans;
+        meta.rmse(nreg)=p75;
     end
     
     %filter out data over 4m std
-    meta.p75(meta.p75 > 4) = NaN;
+    meta.dtrans(meta.rmse > 4,:) = NaN;
+    meta.rmse(meta.rmse > 4) = NaN;
     
     % sort database by p75
-    [~,n] = sort(meta.p75,'ascend');
+    [~,n] = sort(meta.rmse,'ascend');
     meta = structfun(@(x) ( x(n,:) ), meta, 'UniformOutput', false);
     
-    nreg=find(~isnan(meta.p75));
+    nreg=find(~isnan(meta.rmse));
     
     %% Add Registered Strips as Anchors
-    for i=1:length(nreg)
+    if ~isempty(nreg)
         
-        m.overlap=[m.overlap,0];
+        for i=1:length(nreg)
+            
+            m.overlap=[m.overlap,0];
+            
+            fprintf('adding anchor strip %d of %d: %s\n',i,length(nreg),meta.f{i})
+            if isfield(meta,'maskPolyx')
+                mask=[meta.maskPolyx{i}(:) meta.maskPolyy{i}(:)];
+            else
+                mask=cell(1,2);
+            end
+            N = addStrip2Mosaic( meta.f{i},m,meta.stripDate(i)-dy0,N,...
+                meta.dtrans(i,:)',meta.rmse(i),...
+                'mergeMethod','underprint',...
+                'mask',mask);
+
+            % add this file name
+            m.f=[m.f,meta.f(i)];
+            m.N = N;
+            
+        end
+
+        % remove these files from the meta struct
+        in=length(nreg)+1:length(meta.f);
+        meta = structfun(@(x) ( x(in,:) ), meta, 'UniformOutput', false);
         
-        fprintf('adding anchor strip %d of %d: %s\n',i,length(nreg),meta.f{i})
+        C(N ~= 0)=int16(1);
+        m.C = C;
         
-        N = addStrip2Mosaic( meta.f{i},m,meta.stripDate(i)-dy0,N,meta.trans(i,:),'warp');
-        
-        % add this file name
-        m.f=[m.f,meta.f(i)];
-        
-        m.N = N;
     end
-    
-    % remove these files from the meta struct
-    in=length(nreg)+1:length(meta.f);
-    meta = structfun(@(x) ( x(in,:) ), meta, 'UniformOutput', false);
 
 end
 
@@ -268,7 +285,7 @@ end
 % new data coverage, with enough overlap to coregister to exisiting data.
 
 if ~isfield(meta,'rmse'); meta.rmse=nan(size(meta.f));end
-if ~isfield(meta,'dtrans'); meta.dtrans=zeros(length(meta.f),3); end
+if ~isfield(meta,'dtrans'); meta.dtrans=nan(length(meta.f),3); end
 if ~isfield(meta,'overlap'); meta.overlap=zeros(size(meta.f)); end % number existing data points overlapping file
 
 while length(meta.f) >= 1
@@ -389,8 +406,7 @@ while length(meta.f) >= 1
             % get the top selection index
             i = A(j,end);
             
-            % if non-nan overlap exists select strip with most new coverage while
-            % having enough overlap to co-register.
+            % if meta.rmse isnan, then this is a new cluster.
             if isnan(meta.rmse(i)) 
                 meta.rmse(i)=0;
                 meta.dtrans(i,:) = [0,0,0];
@@ -449,4 +465,3 @@ end
 %% Generate Meta File
 m.version=tileVersion;
 tileMeta(m);
-
