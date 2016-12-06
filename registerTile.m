@@ -8,6 +8,9 @@ function registerTile(m,gcp)
 % 
 %   subfuncs: polyCropGCPs, pointAreaSubsets, registerDEM2LIDAR, 
 %   applyRegistration
+%   
+%   Ian Howat, Ohio State, ihowat@gmail.com
+%   version 1.0 06-Dec-2016 14:49:11
 
 maxGcps=1000; % maximum number of gcps to use. Will sample gcp vector evenly to give the closest integer N > maxGcps.
 
@@ -17,7 +20,7 @@ maxGcps=1000; % maximum number of gcps to use. Will sample gcp vector evenly to 
 coregClusters=sum(sum(m.dtrans==0)==3);
 
 % if no un-co-registered data, return
-if coregClusters == 0; 
+if coregClusters == 0
     fprintf('All data is registered, skipping\n');
     return
 end
@@ -62,9 +65,9 @@ for i=1:coregClusters
     n=polyCropGCPs(gcp,xv,yv,'rectangle');
     
     % skip if too few
-    if length(n) < 4;
+    if length(n) < 4
         fprintf('%d overlapping points, too few,skipping\n',length(n));
-        continue;
+        continue
     end
     
     % find gcp's over these pixels
@@ -78,9 +81,9 @@ for i=1:coregClusters
     n = n(nn);
     
     % skip if too few
-    if length(n) < 4;
+    if length(n) < 4
         fprintf('%d overlapping points, too few,skipping\n',length(n));
-       continue;
+       continue
     end
     
     %subsample GCPs to near maximum # for speed/memory
@@ -111,7 +114,7 @@ for i=1:coregClusters
     clear xsub ysub zsub n
     
     %% Apply registration
-    ztemp = applyRegistration(dtrans,m,N);
+    ztemp = applyRegistration(dtrans(:,i),m,N);
     
     clear N
     

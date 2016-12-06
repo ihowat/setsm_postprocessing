@@ -2,6 +2,14 @@ function z = applyRegistration(dtrans,m,N,varargin)
 %   z = applyRegistration(dtrans,m,z,N)
 %   z = applyRegistration(dtrans,m,z,gridVar)
 
+%check dtrans
+if numel(dtrans) ~= 3
+    error('dtrans must be a 3 element vector')
+end
+if any(isnan(dtrans))
+    error('dtrans contains NaNs')
+end
+
 % parse/error check gridVar argument
 gridVar='z'; %default
 if ~isempty(varargin)
@@ -28,14 +36,6 @@ int(1:end-1,2)=int(1:end-1,2)-1;
 buff=max(ceil(abs(dtrans(2:3)./res)));
 buff=[[0 buff];repmat([-buff buff],size(int,1)-2,1);[-buff 0]];
 
-if any(isnan(buff(:)))
-    fprintf('nan detected in applyRegistration buffer, send these outputs to Ian:\n')
-    varinfo.size(2)
-    dtrans
-    res    
-    error('')
-end
-
 %% nested interpolation loops with interpolation dependent on grid variable
 
 % initialize output
@@ -49,27 +49,18 @@ switch gridVar
 end
 
 % subset interpolation loop
-for i=1:length(int);
+for i=1:length(int)
     
     % make subset row vector with buffer
     intRowBuff=int(i,1)+buff(i,1):int(i,2)+buff(i,2);
     
-    for j=1:length(int);
+    for j=1:length(int)
         
         % make subset column vector with buffer
         intColBuff=int(j,1)+buff(j,1):int(j,2)+buff(j,2);
         
         % extract subset from unregistered tile with buffer and add offset
-        try
-            z0 = single(m.z(intRowBuff,intColBuff));
-        catch
-            fprintf('error in interp subset index\n')
-            fprintf('row range: %d, %d\n',int(i,1),int(i,2))
-            fprintf('row buffer:%d, %d\n',buff(i,1),buff(i,2))
-            fprintf('col range: %d, %d\n',int(j,1),int(j,2))
-            fprintf('col buffer:%d, %d\n',buff(j,1),buff(j,2))
-            error('')
-        end
+        z0 = single(m.z(intRowBuff,intColBuff));
         
         % apply coregistration cluster mask
         z0(~N(intRowBuff,intColBuff)) = NaN;
@@ -136,3 +127,7 @@ for i=1:length(int);
         
     end
 end
+
+
+
+
