@@ -29,13 +29,13 @@ i=1;
 for i=1:length(f);
     
     % this row_col string
-    si=[num2str(tr(i)),'_',num2str(tc(i))];
+    si=[num2str(tr(i),'%02d'),'_',num2str(tc(i),'%02d')];
     
     j=1;
     for j=1:4
         
         % that row_col string
-        sj=[num2str(tr(i)+A(j,1)),'_',num2str(tc(i)+A(j,2))];
+        sj=[num2str(tr(i)+A(j,1),'%02d'),'_',num2str(tc(i)+A(j,2),'%02d')];
         
         % make filename
         fj=strrep(f{i},si,sj);
