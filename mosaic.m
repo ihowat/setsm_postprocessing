@@ -57,11 +57,11 @@ f=cellfun(@(x) [outdir,'/',x], {f.name}, 'UniformOutput',false);
 freg=dir([outdir,'/*m_reg_dem.mat']);
 freg=cellfun(@(x) [outdir,'/',x], {freg.name}, 'UniformOutput',false);
 
-freg=strrep(freg,'_reg','');
-[~,IA]=intersect(f,freg);
+% remove unregistered files that already have registered files
+[~,IA]=intersect(f,strrep(freg,'_reg',''));
 f(IA)=[];
 
-%batchAlignTile(f,freg);
+batchAlignTile(f,freg);
  
 
 %% Blend tile edges
