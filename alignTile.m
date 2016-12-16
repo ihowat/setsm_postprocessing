@@ -1,4 +1,10 @@
 function [outFlag,outname]=alignTile(f)
+% alignTile Aligns unregistered tile to registered neigbors
+%
+% [outFlag,outname]=alignTile(f) where f is a cellstr of path/files with
+% f{1} the floating file to be aligned and f{2:end} the registered files to
+% align it to. outFlag returns true if successful, with output file name.
+% If fail, outFlag will be false and outname will be empty.
 
 % set out flag
 outFlag=false; 
@@ -6,7 +12,7 @@ outname=[];
 
 %% first test if input args are either valid filenames or mat file handles
 nfiles=length(f);
-for i=1:nfiles;
+for i=1:nfiles
     
     if ischar(f{i}) % it's a string, might be a filename
         if exist(f{i},'file') % yup its a file
@@ -17,7 +23,8 @@ for i=1:nfiles;
     elseif isvalid(f{i}) % not a string, is it a valid file handle?
         m = f{i}; % yes, so set m to f and get the filename for f
         f{i} = m.Properties.Source;
-    else error('input arg must be a filename or valid matfile handle')
+    else
+        error('input arg must be a filename or valid matfile handle')
     end
     
     eval(['f',num2str(i-1),'=f{i};']);
@@ -29,8 +36,11 @@ end
 info0=whos(m0,'z');
 sz0=info0.size;
 
+dtrans=cell(1,nfiles-1);
+rmse=cell(1,nfiles-1);
+
 %% Coregister to each neighbor
-for i=2:nfiles;
+for i=2:nfiles
 
     eval(['m=m',num2str(i-1),';']);
 
@@ -66,7 +76,7 @@ for i=2:nfiles;
     y1 =  m.y(r1(1):r1(2),1);
     z1 =  m.z(r1(1):r1(2),c1(1):c1(2));
     mt1=  m.mt(r0(1):r0(2),c0(1):c0(2));
-       
+    
     % cluster coregistraton loop
     for j=1:coregClusters
     
@@ -83,7 +93,14 @@ for i=2:nfiles;
     clear m r0 c0 r1 c1 C0 x0 y0 z0 mt0 x1 y1 z1 mt1 mt0c
  
 end
-   
+
+% check to see if no overlap = all empty dtrans cells
+if ~any(cellfun(@isempty,dtrans))
+    fprintf('unable to align: no overlap \n'); 
+    return
+end
+    
+    
 % take average dtrans for each cluster
 for i=1:size(dtrans,1)
     dtrans{i,1} = nanmean([dtrans{i,:}],2);
@@ -100,7 +117,7 @@ dtrans = [dtrans{:}];
 rmse=rmse';
 rmse = [rmse{:}];
 
-if ~any(~isnan(rmse)); 
+if ~any(~isnan(rmse)) 
     fprintf('coregistration failure\n'); 
     return
 end
