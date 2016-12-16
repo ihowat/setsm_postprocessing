@@ -70,16 +70,17 @@ while ~isempty(f)
     
     [outFlag,outname] = alignTile({f{n},freg{nreg}});
     
+    
     if outFlag
         f(n)=[];
         freg=[freg {outname}];
         failCount = 0;
     else
+        fprintf('%d failed tiles, %d unregistered tiles left\n',failCount, length(f))
         if failCount >= length(f)
             fprintf('%d tiles cannot be registered, quitting\n',length(f));
             break
         end
-        
         failCount=failCount + 1; 
     end
     
