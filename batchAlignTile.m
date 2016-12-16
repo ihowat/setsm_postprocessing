@@ -24,12 +24,12 @@ while ~isempty(f)
     
     % tile row/col index from filename
     tc = char(fname(:));
-    tr= str2double(tc(:,1:2));
-    tc= str2double(tc(:,4:5));
+    tr= str2num(tc(:,1:2));
+    tc= str2num(tc(:,4:5));
     
     tcreg = char(fregname(:));
-    trreg= str2double(tcreg(:,1:2));
-    tcreg= str2double(tcreg(:,4:5));
+    trreg= str2num(tcreg(:,1:2));
+    tcreg= str2num(tcreg(:,4:5));
     
     % get up/down/right/left neighbors
     A = [[0 1];[1 0];[-1 0];[0 -1]];
@@ -37,10 +37,11 @@ while ~isempty(f)
     % for each unregistered file, get neighboring registered files
     nreg=zeros(length(f),4);
     for i = 1:length(f)
-        j=1;
+   
         for j=1:4
-            
-            n = find(tr(i)+A(j,1) == trreg & tc(i)+A(j,2) == tcreg);
+        
+                n = find(tr(i)+A(j,1) == trreg & tc(i)+A(j,2) == tcreg);
+                
             if ~isempty(n)
                 nreg(i,j) = n;
             end
