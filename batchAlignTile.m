@@ -37,7 +37,7 @@ while ~isempty(f)
     % for each unregistered file, get neighboring registered files
     nreg=zeros(length(f),4);
     for i = 1:length(f)
-        
+        j=1;
         for j=1:4
             
             n = find(tr(i)+A(j,1) == trreg & tc(i)+A(j,2) == tcreg);
