@@ -63,7 +63,8 @@ while ~isempty(f)
     
     % select tile with most registered  neighbors (or first in list of tie).
     [~,n]=max(Nreg);
-    n=n(1);
+    
+    n=n(1 + failCount);
     
     nreg=nreg(n,nreg(n,:) ~= 0);
     fprintf('registering %s to %s, %s, %s, %s',f{n},freg{nreg}); fprintf('\n');
