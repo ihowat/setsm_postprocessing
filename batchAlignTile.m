@@ -9,6 +9,9 @@ function batchAlignTile(f,freg)
 f=f(:)';
 freg=freg(:)';
 
+% count fails to detect when no more tiles can be aligned.
+failCount = 0;
+
 while ~isempty(f)
     
     fprintf('%d unregistered tiles, %d registered tiles\n',length(f),length(freg));
