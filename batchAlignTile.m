@@ -24,12 +24,12 @@ while ~isempty(f)
     
     % tile row/col index from filename
     tc = char(fname(:));
-    tr= str2num(tc(:,1:2));
-    tc= str2num(tc(:,4:5));
+    tr= str2double(tc(:,1:2));
+    tc= str2double(tc(:,4:5));
     
     tcreg = char(fregname(:));
-    trreg= str2num(tcreg(:,1:2));
-    tcreg= str2num(tcreg(:,4:5));
+    trreg= str2double(tcreg(:,1:2));
+    tcreg= str2double(tcreg(:,4:5));
     
     % get up/down/right/left neighbors
     A = [[0 1];[1 0];[-1 0];[0 -1]];
@@ -38,7 +38,6 @@ while ~isempty(f)
     nreg=zeros(length(f),4);
     for i = 1:length(f)
         
-        j=1;
         for j=1:4
             
             n = find(tr(i)+A(j,1) == trreg & tc(i)+A(j,2) == tcreg);
@@ -53,9 +52,9 @@ while ~isempty(f)
     Nreg=sum(nreg ~= 0,2);
     
     % make surge there are neighbors
-    if ~any(Nreg);
+    if ~any(Nreg)
         fprintf('%d unregistered tiles remain with no registered neigbors\n',length(f));
-        return
+        break
     end
     
     % select tile with most registered  neighbors (or first in list of tie).
@@ -67,15 +66,15 @@ while ~isempty(f)
     
     [outFlag,outname] = alignTile({f{n},freg{nreg}});
     
-    if outFlag;
+    if outFlag
         f(n)=[];
-        freg={freg{:},outname};
+        freg=[freg {outname}];
         failCount = 0;
     else
         failCount=failCount + 1;
         if failCount == length(f)
             fprintf('%d tiles cannot be registered, quitting\n',length(f));
-            return
+            break
         end
             
     end
