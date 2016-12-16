@@ -75,12 +75,12 @@ while ~isempty(f)
         freg=[freg {outname}];
         failCount = 0;
     else
-        failCount=failCount + 1;
-        if failCount == length(f)
+        if failCount >= length(f)
             fprintf('%d tiles cannot be registered, quitting\n',length(f));
             break
         end
-            
+        
+        failCount=failCount + 1; 
     end
     
 end
