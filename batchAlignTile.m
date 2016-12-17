@@ -9,12 +9,9 @@ function batchAlignTile(f,freg)
 f=f(:)';
 freg=freg(:)';
 
-% count fails to detect when no more tiles can be aligned.
-failCount = 0;
-
 while ~isempty(f)
     
-    fprintf('%d unregistered tiles, %d registered tiles\n',length(f),length(freg));
+    fprintf('%d unregistered tiles, %d registered tiles, %d failed to register\n',length(f),length(freg),failCount);
     
     % get file names for row/col extract
     [~,fname]=cellfun(@fileparts, f, 'UniformOutput',false);
@@ -43,7 +40,7 @@ while ~isempty(f)
    
         for j=1:4
         
-                n = find(tr(i)+A(j,1) == trreg & tc(i)+A(j,2) == tcreg);
+            n = find(tr(i)+A(j,1) == trreg & tc(i)+A(j,2) == tcreg);
                 
             if ~isempty(n)
                 nreg(i,j) = n;
@@ -61,30 +58,40 @@ while ~isempty(f)
         break
     end
     
-    % select tile with most registered  neighbors (or first in list of tie).
-    [~,n]=max(Nreg);
+    % rank tiles in descending order of number of neighboring registered tiles
+    [~,n]=sort(Nreg,'descend');
     
-    n=n(1 + failCount);
+    % initialize fail counter
+    failCount=0
     
-    nreg=nreg(n,nreg(n,:) ~= 0);
-    fprintf('registering %s to %s, %s, %s, %s',f{n},freg{nreg}); fprintf('\n');
+    % sequentially attempt each file by n, breaking if successful or all fail.
+    while failCount < length(f)
     
-    [outFlag,outname] = alignTile({f{n},freg{nreg}});
+        % extract this n
+        n1=n(1 + failCount);
+        nreg1=nreg(n,nreg(n,:) ~= 0);
     
+        fprintf('registering %s to %s, %s, %s, %s',f{n1},freg{nreg1}); fprintf('\n');
+        
+        % try to coregister
+        [outFlag,outname] = alignTile({f{n1},freg{nreg1}});
     
-    if outFlag
-        f(n)=[];
-        freg=[freg {outname}];
-        failCount = 0;
-    else
-        fprintf('%d failed tiles, %d unregistered tiles left\n',failCount, length(f))
-        if failCount >= length(f)
-            fprintf('%d tiles cannot be registered, quitting\n',length(f));
+        % outFlag = true is success, so update lists, break and redo neignbor search
+        if outFlag
+            f(n1)=[]; % remove this file from the unreg list 
+            freg=[freg {outname}]; % add this file to the reg list
             break
-        end
-        failCount=failCount + 1; 
+        else % if coreg failed update count and try the next one in the n list
+            failCount=failCount + 1; 
+            fprintf('%d failed tiles, %d unregistered tiles left\n',failCount, length(f))
+        end  
     end
     
+    % if all remaining unreg tiles failed, quit
+    if failCount >= length(f)
+        fprintf('%d tiles cannot be registered, quitting\n',length(f));
+        break
+    end
 end
 
 
