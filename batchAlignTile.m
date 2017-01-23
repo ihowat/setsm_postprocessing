@@ -9,6 +9,9 @@ function batchAlignTile(f,freg)
 f=f(:)';
 freg=freg(:)';
 
+% initialize fail counter
+failCount=0;
+
 while ~isempty(f)
     
     fprintf('%d unregistered tiles, %d registered tiles, %d failed to register\n',length(f),length(freg),failCount);
@@ -62,7 +65,7 @@ while ~isempty(f)
     [~,n]=sort(Nreg,'descend');
     
     % initialize fail counter
-    failCount=0
+    failCount=0;
     
     % sequentially attempt each file by n, breaking if successful or all fail.
     while failCount < length(f)
