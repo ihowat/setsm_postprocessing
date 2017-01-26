@@ -84,7 +84,7 @@ while it
     
     fprintf('rmse= %.3f ',d1)
     
-    if d0 - d1 < .001 || isnan(d0)
+    if d0 - d1 < .001 || isnan(d0) || isinf(d1) || isnan(d0)
         
         fprintf('stopping \n')
         % if fails after first registration attempt, set dx and dy to zero
