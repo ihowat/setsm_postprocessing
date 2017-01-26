@@ -41,8 +41,8 @@ for i=1:length(f)
     try
         [x,y,z,o,m,me,md] = loaddata(demFile,matchFile,orthoFile,edgeMaskFile,...
                              dataMaskFile);
-    catch
-        fprintf('data read error, skipping \n'); 
+    catch ME
+        fprintf('%s %s: data read error, skipping \n',ME.identifier,ME.message); 
         continue; 
     end
                          
