@@ -22,8 +22,9 @@ while ~isempty(f)
     
     % make sure no reg'd unregs
     [~,ia]=intersect(fname,fregname);
-    fname(ia)=[];
-    f(ia)=[];
+    if ~isempty(ia)
+        error('unregistered and registerd file lists not unique'); 
+    end
     
     % tile row/col index from filename
     tc = char(fname(:));
@@ -55,7 +56,7 @@ while ~isempty(f)
     % count number of registered files
     Nreg=sum(nreg ~= 0,2);
     
-    % make surge there are neighbors
+    % make sure there are neighbors
     if ~any(Nreg)
         fprintf('%d unregistered tiles remain with no registered neigbors\n',length(f));
         break
@@ -72,7 +73,8 @@ while ~isempty(f)
     
         % extract this n
         n1=n(1 + failCount);
-        nreg1=nreg(n,nreg(n,:) ~= 0);
+        nreg1=nreg(n1,:);
+        nreg1(nreg1 == 0) = [];
     
         fprintf('registering %s to %s, %s, %s, %s',f{n1},freg{nreg1}); fprintf('\n');
         
@@ -96,12 +98,3 @@ while ~isempty(f)
         break
     end
 end
-
-
-
-
-
-
-
-
-    
