@@ -368,7 +368,8 @@ if exist(edgeMaskFile,'file')
     me=d.z;
     clear d;
 else
-    error('No edgeMaskFile Found')
+     warning('No edgeMaskFile found, no mask applied')
+     me=ones(sz,'logical');
 end
 
 if exist(dataMaskFile,'file')
@@ -377,7 +378,8 @@ if exist(dataMaskFile,'file')
     if any(szd ~= sz); error('datamaskfile wrong dimensions'); end
     md=d.z;
 else
-    error('No dataMaskFile Found')
+     warning('No dataMaskFile found, no mask applied')
+     md=ones(sz,'logical');
 end
 
 z(z < -100 | z == 0 | z == -NaN ) = NaN;
