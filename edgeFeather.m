@@ -75,9 +75,7 @@ if size(B,2) ~= 2
     W=nan(size(M0));
     W(M1) = 0;
     W(M0) = 1;
-    
     return
-    
 end
 
 n=sub2ind(size(Ar),B(:,1),B(:,2));
@@ -86,7 +84,15 @@ warning off
 F = scatteredInterpolant(C(n),R(n),double(Ar(n)));
 warning on
 
-Ar(Ar==0)=F(C(Ar==0),R(Ar==0));
+try
+    Ar(Ar==0)=F(C(Ar==0),R(Ar==0));
+catch
+    warning('interpolation failed, no feathering applied');
+    W=nan(size(M0));
+    W(M1) = 0;
+    W(M0) = 1;
+    return
+end
 
 Ar=imresize(Ar,size(A),'bilinear');
 Ar(A==1 & Ar ~=1)=1;
