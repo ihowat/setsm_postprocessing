@@ -75,7 +75,7 @@ for i=2:nfiles
     x1 =  m.x(1,c1(1):c1(2));
     y1 =  m.y(r1(1):r1(2),1);
     z1 =  m.z(r1(1):r1(2),c1(1):c1(2));
-    mt1=  m.mt(r0(1):r0(2),c0(1):c0(2));
+    %mt1=  m.mt(r0(1):r0(2),c0(1):c0(2));
     
     % cluster coregistraton loop
     for j=1:coregClusters
@@ -86,7 +86,7 @@ for i=2:nfiles
         mt0c= mt0 & (C0 == j+1);
      
         % co-register floating tile to reference tile
-        [~,dtrans{j,i-1},rmse{j,i-1}] = coregisterdems(x0, y0, z0, x1, y1, z1);
+        [~,dtrans{j,i-1},rmse{j,i-1}] = coregisterdems(x0, y0, z0, x1, y1, z1, mt0c););
 
     end
     
