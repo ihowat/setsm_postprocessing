@@ -159,7 +159,7 @@ for i=1:length(fdem)
     dzptiles=prctile(abs(dzall),ptiles);
 
     fid=fopen(outfile,'w');
-    fprintf(fid,'DEM Fileame: %s\n',fdem{i});
+    fprintf(fid,'DEM Filename: %s\n',fdem{i});
     j=1; for j=1:length(sensor); fprintf(fid,'Registration Dataset %d Name: %s\n',j,sensor{j});end
     fprintf(fid,'GCP Month Range (+/- months)=%d\n',month_range);
     fprintf(fid,'# GCPs=%d\n',sum(nn));

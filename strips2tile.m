@@ -30,8 +30,10 @@ function strips2tile(meta,tilex0, tilex1, tiley0, tiley1,res,outname,varargin)
 %   Version 2.1; 06-Dec-2016 14:22:22
 %   - fixed bug in which disableCoregTest resuted in no coregistration in
 %   addStrip2Mosiac
+%   Version 2.2: 01-Feb-2017 17:00:00
+%   - added dtrans limit to coregisterdems.m
 
-tileVersion='2.1';
+tileVersion='2.2';
 
 %% Set Parameters & Parse args
 % set Y2K as day 0 for the daynumber grid
