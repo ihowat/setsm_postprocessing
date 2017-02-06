@@ -95,11 +95,11 @@ for i=2:nfiles
 end
 
 % check to see if no overlap = all empty dtrans cells
-if ~any(cellfun(@isempty,dtrans))
+emptyCheck=cellfun(@isempty,dtrans);
+if ~any(~emptyCheck)
     fprintf('unable to align: no overlap \n'); 
     return
 end
-    
     
 % take average dtrans for each cluster
 for i=1:size(dtrans,1)
