@@ -16,5 +16,6 @@ mosaicStrips.m
 writeTileToTif.m
 compileDatabaseRema.m
 selectTileByName_Antarctic.m
+convertQcDataToTxt.m
 loadQcData.m
 *.csv
