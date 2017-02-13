@@ -1,9 +1,16 @@
-regionnum='21';
-res='2';
-demdir=dir(['/data2/ArcticDEM/region_',regionnum,'*']);
-demdir=['/data2/ArcticDEM/',demdir(1).name,'/tif_results/',res,'m'];
+% batch_mask: batch script for priducing edgemask and datamask files 
+% from DEM scene pairs.
 
-demdir='/data/nga/Egypt/new/results';
+% Ian Howat, ihowa@gmail.com, Ohio State University
+
+%% ArcticDEM input directory settings
+updir='/data2/ArcticDEM'; %location of region directory
+regionnum='30'; % ArcticDEM region #
+res='2'; % DEM resolution
+
+%% load file names
+demdir=dir([updir,'/region_',regionnum,'*']);
+demdir=[updir,'/',demdir(1).name,'/tif_results/',res,'m'];
 
 fprintf('working: %s\n',demdir);
 
@@ -11,7 +18,6 @@ f = dir([demdir,'/*_matchtag.tif']);
 
 fdate=[f.datenum];
 f={f.name};
-
 
 %% Update Mode - will only reprocess masks older than the matchtag file
 fedge = dir([demdir,'/*_edgemask.tif']);
@@ -71,10 +77,26 @@ for i=1:1:length(f)
         
     m1.z=edgeMask(m.z,'n',n,'Pmin',Pmin,'Amin',Amin,'crop',crop);
     
-    if m.Tinfo.GeoDoubleParamsTag(1) > 0;
-        projstr='polar stereo north';
+    if isfield(m.Tinfo,'GeoDoubleParamsTag')
+        
+        if m.Tinfo.GeoDoubleParamsTag(1) > 0
+            projstr='polar stereo north';
+        else
+            projstr='polar stereo south';
+        end
+        
     else
-        projstr='polar stereo south';
+        
+        projstr=m.Tinfo.GeoAsciiParamsTag;
+        a=findstr( projstr, 'Zone');  
+        b=findstr( projstr, ',');
+        c = findstr( projstr,'Northern Hemisphere');
+      
+        if ~isempty(c)
+            projstr=[projstr(a+4:b-1),' North']; 
+        else
+            projstr=[projstr(a+4:b-1),' South'];
+        end
     end
     
     writeGeotiff(OutEdgeMaskName,m.x,m.y,m1.z,1,0,projstr)

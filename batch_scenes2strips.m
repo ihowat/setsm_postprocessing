@@ -1,17 +1,20 @@
-regionnum='21';
-res='2m';
-demdir=dir(['/data2/ArcticDEM/region_',regionnum,'*']);
-demdir=['/data2/ArcticDEM/',demdir(1).name,'/tif_results/',res];
+% batch_scenes2strips: batch script for mosaicking scene into strip DEMs 
+
+% Ian Howat, ihowa@gmail.com, Ohio State University
+
+%% ArcticDEM input directory settings
+updir='/data2/ArcticDEM'; %location of region directory
+regionnum='30'; % ArcticDEM region #
+res='2'; % DEM resolution
+
+%% load file names
+res = [res,'m'];
+demdir=dir([updir,'/region_',regionnum,'*']);
+demdir=[updir,'/',demdir(1).name,'/tif_results/',res];
+
 outdir=strrep(demdir,'tif_results','strips');
 
-%demdir=['/data1/ArcticDEM/region_06_greenland_northwest_grit_2m/tif_results/2m']
-demdir=['/data/nga/Egypt/new/results/'];
-outdir=['/data/nga/Egypt/new/results/strips'];
 fprintf('%s\n',demdir)
-
-% demdir=['/data/nga/Arctic/Greenland/SETSM_DEMs/ellyn/v2'];
-%demdir=['/data2/NGA_tests_v2/Thule/tif_results/8m'];
-%demdir=['/data2/ArcticDEM/region_32_alaska_aleutians_set2/tif_results/2m'];
 
 if ~exist(outdir,'dir'); mkdir(outdir); end
 
@@ -55,11 +58,11 @@ for i=strt:inc:length(unique_stripids)
     missingflag=0;
     j=1;
     for j=1:length(n)
-       if ~exist(strrep([demdir,'/',f{n(j)}],'dem.tif','matchtag.tif'),'file');
+       if ~exist(strrep([demdir,'/',f{n(j)}],'dem.tif','matchtag.tif'),'file')
            fprintf('matchtag file for %s missing, skipping this strip\n',f{n(j)});
            missingflag=1;
        end
-       if ~exist(strrep([demdir,'/',f{n(j)}],'dem.tif','ortho.tif'),'file');
+       if ~exist(strrep([demdir,'/',f{n(j)}],'dem.tif','ortho.tif'),'file')
            fprintf('ortho file for %s missing, skipping this strip\n',f{n(j)});
            missingflag=1;
        end
@@ -86,28 +89,30 @@ for i=strt:inc:length(unique_stripids)
         OutDemName=[outdir,'/',scene{1}(1:48),'seg',num2str(seg),'_',res];
     
         save([OutDemName,'_trans.mat'],'scene','trans','rmse')
-         
-%         if exist([OutDemName,'_dem.tif'],'file'); 
-%             fprintf('%s exists, skipping \n',OutDemName);
-%             continue; 
-%         end
-%         
-%         if exist([OutDemName,'_trans.mat'],'file');
-%             load([OutDemName,'_trans.mat'])
-%             [x,y,z,m,o,trans,rmse]=scenes2strips_v2(demdir,fn{j},trans);
-%         else
-%             
-%             [x,y,z,m,o,trans,rmse]=scenes2strips_v2(demdir,fn{j});
-%         
-%             scene=fn{j};
-%             save([OutDemName,'_trans.mat'],'scene','trans','rmse')
-%         end
         
         d=readGeotiff([demdir,'/',scene{1}],'MapInfoOnly');
-        if d.Tinfo.GeoDoubleParamsTag(1) > 0;
-            projstr='polar stereo north';
+        
+        
+        if isfield(d.Tinfo,'GeoDoubleParamsTag')
+            
+            if d.Tinfo.GeoDoubleParamsTag(1) > 0
+                projstr='polar stereo north';
+            else
+                projstr='polar stereo south';
+            end
+            
         else
-            projstr='polar stereo south';
+            
+            projstr=d.Tinfo.GeoAsciiParamsTag;
+            a=findstr( projstr, 'Zone');
+            b=findstr( projstr, ',');
+            c = findstr( projstr,'Northern Hemisphere');
+            
+            if ~isempty(c)
+                projstr=[projstr(a+4:b-1),' North'];
+            else
+                projstr=[projstr(a+4:b-1),' South'];
+            end
         end
         
         writeGeotiff([OutDemName,'_dem.tif'],x,y,z,4,-9999,projstr);
