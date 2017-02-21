@@ -39,6 +39,7 @@ maxrmse=inf;
 minNewPixels=100;
 minOverlapPixels=100;
 returnFlag = false;
+addErrorFlag=false;
 
 % parse input args
 for i=1:2:length(varargin)
@@ -73,6 +74,14 @@ for i=1:2:length(varargin)
         case 'minoverlappixels'
             
             minOverlapPixels=varargin{i+1};
+            
+        case 'adderrors'
+            
+            addErrorFlag=varargin{i+1};
+            
+            if ~islogical(addErrorFlag)
+                error('addErrorFlag must be logical')
+            end
             
         otherwise
             
@@ -152,8 +161,10 @@ if isempty(dtrans) || any(isnan(dtrans))
         m.dtrans=[m.dtrans,[NaN;NaN;NaN]];
         m.rmse=[m.rmse,NaN];
         
-        return;
-    end;
+        return
+    end    
+    
+    coregFlag=true;
     
 end
 
@@ -175,9 +186,6 @@ end
 % if no overlap, set to underprint
 if ~any(A(:));  mergeMethod = 'underprint'; end
 
-% make date grid
-dy=~isnan(z).*dy0;
-
 switch mergeMethod
     
     case 'underprint'
@@ -187,7 +195,21 @@ switch mergeMethod
         zsub = m.z(r,c);
         zsub(n)=z(n);
         m.z(r,c)=zsub;
-        clear z zsub
+        clear zsub
+        
+        vars = whos(m);
+        if ismember('ze', {vars.name})
+            zesub=m.ze(r,c);
+            if addErrorFlag
+                nn = ~isnan(zesub) & ~isnan(z);
+                zesub(n)= sqrt(rmse.^2 + nanmean(zesub(nn)).^2);
+            else
+                zesub(n)=rmse;
+            end
+            m.ze(r,c) = zesub;
+            clear ze zesub
+        end
+        clear z
 
         orsub=m.or(r,c);
         orsub(n)=or(n);
@@ -198,6 +220,8 @@ switch mergeMethod
         dysub(n)=dy0;
         m.dy(r,c) = dysub;
         clear dy dysub        
+        
+      
         
     case 'feather'
         
@@ -218,8 +242,32 @@ switch mergeMethod
         
         % put strip subset back into full array
         m.z(r,c) = A;
-        clear A z
+        clear A zsub
         
+        % ze
+        vars = whos(m);
+        if ismember('ze', {vars.name})
+            
+             zesub=m.ze(r,c);
+             
+             % make error grid
+             if addErrorFlag
+                 nn = ~isnan(zesub) & ~isnan(z);
+                 ze=~isnan(z).*sqrt(rmse.^2 + nanmean(zesub(nn)).^2);
+             else
+                 ze=~isnan(z).*rmse;
+             end
+             ze(isnan(z)) = NaN; 
+             
+            A=  zesub.*W + ze.*(1-W);
+            
+            A( isnan(zesub) & ~isnan(ze))=   ze ( isnan(zesub) & ~isnan(ze));
+            A(~isnan(zesub) &  isnan(ze))= zesub(~isnan(zesub) &  isnan(ze));
+            
+            m.ze(r,c) = A;
+            clear A ze zesub
+        end
+
         % make weighted ortho grid
         or = single(or);
         or(or ==0) = NaN;
@@ -232,9 +280,10 @@ switch mergeMethod
         A(isnan(A)) = 0; % convert back to uint16
         A = uint16(A);
         m.or(r,c) = A;
-        clear A or
+        clear A or orsub
         
         % make weighted dy grid
+        dy=~isnan(z).*dy0;
         dy = single(dy);
         dy(dy==0) = NaN;
         dysub = single(m.dy(r,c));
@@ -248,7 +297,8 @@ switch mergeMethod
         A(isnan(A)) = 0; % convert back to uint16
         A = uint16(A);
         m.dy(r,c) = A;
-        clear A dy
+        clear A dy dysub
+        
         
         clear W
         
@@ -263,16 +313,33 @@ switch mergeMethod
             returnFlag=true;
             return;
         end
-     
+
+        n = find(Nsub == 0 & ~isnan(z));
+        vars = whos(m);
+        if ismember('ze', {vars.name})
+            
+            zesub=m.ze(r,c);
+            if addErrorFlag
+                nn = ~isnan(zesub) & ~isnan(z);
+                zesub(n)= sqrt(rmse.^2 + nanmean(zesub(nn)).^2);
+            else
+                zesub(n)=rmse;
+            end
+            m.ze(r,c) = zesub;
+            clear ze zesub
+        end
+
+        clear z
+        
         orsub=m.or(r,c);
-        orsub(orsub == 0)=or(orsub == 0);
+        orsub(n)=or(n);
         m.or(r,c) = orsub;
-        clear orsub
+        clear or orsub
         
         dysub=m.dy(r,c);
-        dysub(dysub == 0)=dy(dysub == 0);
+        dysub(n)=dy0;
         m.dy(r,c) = dysub;
-        clear dysub
+        clear dy dysub        
         
 end
 
