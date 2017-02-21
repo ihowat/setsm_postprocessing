@@ -1,4 +1,4 @@
-function strips2tile(meta,tilex0, tilex1, tiley0, tiley1,res,outname,varargin)
+function strips2tile(varargin)
 % STRIPS2TILE mosaic strips to rectangular tile
 %
 %[x,y,z,mt,or,dy,f,dtrans,rmse] = ...
@@ -15,25 +15,27 @@ function strips2tile(meta,tilex0, tilex1, tiley0, tiley1,res,outname,varargin)
 %       'disableCoregTest' disables the coregistraiton optimization test
 %       to save time
 %       'mergeMethod','methodstring', specifies the mergeing method as
-%       'feather' (default), 'underprint' or 'warp'.
+%       'feather' (default), 'underprint' or 'warp'. See addStrip2Mosaic
+%       for descriptions.
+%       'mergeMethodReg','methodstring', specifies the mergeing method for 
+%       registered strips.'feather' (default), 'underprint' or 'warp'.
 %
-%   subfunctions: readreg, addStrip2Mosaic 
+%   subfunctions: stripSearch,regStrips2Tile,initializeTile,readreg,addStrip2Mosaic
+%
+% Procedure description: Strips are added to the mosaic to form
+% 'coregistration clusters'. Strips with a priori registration are assigned
+% a cluster number of 1, as are any strips that are coregistered to that
+% cluster. Strips without a priori registration and that cannot be
+% coregistered to cluster 1 will be added as a new cluster, starting at #2.
+% Thus each cluster # represents a group of coregistered strips, with C=1
+% being absolute (reference to a priori control), and C>=2 being relative
+% (internally coregistered). Therefore, any subsequent transformation
+% shoudl be applied individually to each cluster. 
 %
 %   Ian Howat, Ohio State University
-%   Version 1.0; 28-Jul-2016 09:50:32 (beta versions preceeded this)
-%   Version 2.0; 8-Oct-2016 15:19:52
-%   - preferentially stacks in order of best coregistration fit (if
-%     disabled, sorts by quality rank and then new data coverage)
-%	- added redundant data check & skip
-%   - faster existing data search using gridPointInd field
-%   - allows for use of a qc rank list
-%   Version 2.1; 06-Dec-2016 14:22:22
-%   - fixed bug in which disableCoregTest resuted in no coregistration in
-%   addStrip2Mosiac
-%   Version 2.2: 01-Feb-2017 17:00:00
-%   - added dtrans limit to coregisterdems.m
+%   Version 3.0; 10-Feb-2017 13:56:01
 
-tileVersion='2.2';
+tileVersion='3.0';
 
 %% Set Parameters & Parse args
 % set Y2K as day 0 for the daynumber grid
@@ -48,249 +50,80 @@ disableCoregTest=false;
 % default merging method
 mergeMethod='feather';
 
-% test varargin for flags
-if ~isempty(varargin)
-    if any(strcmpi('disableReg',varargin))
-        fprintf('GCP registration disabled\n')
-        disableReg=true;
-    end
-    
-    if any(strcmpi('disableCoregTest',varargin))
-        fprintf('Coregistration testing disabled\n')
-        disableCoregTest=true;
-    end
-    
-    
-    if any(strcmpi('mergeMethod',varargin))
-        n=find(strcmpi('mergeMethod',varargin));
-        mergeMethod=varargin{n+1};
-    end
+% default merging method for registered files
+mergeMethodReg='underprint';
 
+if nargin >= 7 % number of argins needs for creating a new mosaic from scratch
+    
+    meta    = varargin{1};
+    tilex0  = varargin{2};
+    tilex1  = varargin{3};
+    tiley0  = varargin{4};
+    tiley1  = varargin{5};
+    res     = varargin{6};
+    outname = varargin{7};
+
+    % test varargin for flags
+    if ~isempty(varargin)
+        if any(strcmpi('disableReg',varargin))
+            fprintf('GCP registration disabled\n')
+            disableReg=true;
+        end
+        
+        if any(strcmpi('disableCoregTest',varargin))
+            fprintf('Coregistration testing disabled\n')
+            disableCoregTest=true;
+        end
+        
+        
+        if any(strcmpi('mergeMethod',varargin))
+            n=find(strcmpi('mergeMethod',varargin));
+            mergeMethod=varargin{n+1};
+        end
+        
+        if any(strcmpi('mergeMethodReg',varargin))
+            n=find(strcmpi('mergeMethodReg',varargin));
+            mergeMethodReg=varargin{n+1};
+        end
+        
+    end
+    
+else
+    error('incorrect number of input arguments')
 end
 
-fprintf('Using merge method: %s\n',mergeMethod)
+fprintf('Using registered strip merge method: %s\n',mergeMethodReg)
+fprintf('Using floating strip merge method: %s\n',mergeMethod)
 
-%% Initialize new mosaick file if not exists
-if ~exist(outname,'file')
-    
-    % intialize outputs
-    x=[]; y=[]; z=[]; mt=[];  or=[];  dy=[];  f=[];  dtrans=[];  rmse=[];
-    
-    % make tile boundary polygon
-    tilevx = [tilex0;tilex0;tilex1;tilex1;tilex0];
-    tilevy = [tiley0;tiley1;tiley1;tiley0;tiley0];
-    
-    %% Search for strips within this tile
-    
-    % quick search: find strips within range of this tile. This does not
-    % account for background area of around strips but just pairs them down to
-    % speed the poly intersection loop
-    n = meta.xmax > tilex0 & meta.xmin < tilex1 & ...
-        meta.ymax > tiley0 & meta.ymin < tiley1;
-    
-    % if no overlap, return
-    if ~any(n); fprintf('no strip overlap\n'); return; end
-    
-    % par down database structure to possible overlapping tiles
-    meta = structfun(@(x) ( x(n) ), meta, 'UniformOutput', false);
-    
-    % search for all strip footprints overlapping this tile
-    n=zeros(size(meta.f));
-    for i=1:length(n)
-        n(i) = any(inpolygon(meta.x{i},meta.y{i},tilevx,tilevy)) | ...
-            any(inpolygon(tilevx,tilevy,meta.x{i},meta.y{i}));
-    end
-    
-    % if no overlap, return
-    if ~any(n); fprintf('no strip overlap'); return; end
-    
-    % remove files with no overlap
-    meta = structfun(@(x) ( x(logical(n)) ), meta, 'UniformOutput', false);
-    
-    %% Mosaic Grid Definition and Initialization
-    
-    % define mosaic coorinate grid. Add a 100-pixel buffer for aligning/merging
-    % the tiles
-    x = tilex0-100*res: res:tilex1+100*res;
-    y = tiley1+100*res:-res:tiley0-100*res;
-    y = y(:);
-    
-    % make output file
-    save(outname,'x','y','-v7.3');
-    m = matfile(outname,'Writable',true);
-    
-    % initialize mosaic grids
-    m.z = nan(length(y),length(x),'single'); % elevation data grid
-    m.or =zeros(length(y),length(x),'int16'); % ortho imagery grid
-    m.mt = zeros(length(y),length(x),'uint8'); % matchtag data grid
-    m.dy = zeros(length(y),length(x),'int16'); % strip index grid
-    C = zeros(length(y),length(x),'int16'); % coregistration cluster grid
-    m.C=C;
-    N= zeros(length(y),length(x),'uint8'); % pixel data count
-    m.N=N;
-    
-    % initialize mosaic meta data variables
-    m.f= []; m.overlap=[]; m.rmse=[]; m.dtrans=[];
-    
-    % initialize cluster counter
-    c=1;
+% Filter strips not overlapping this tile
+meta = stripSearch(meta,tilex0,tilex1,tiley0,tiley1);
+if isempty(meta); return; end
 
-%% Attempt to restart if output file exists
-else %file already exists so try and pick up where it left off
-    % WARNING not tested - may not pick up where you want it to
-    fprintf('reading existing file and trying to pick up where it left off\n')
-    m = matfile(outname,'Writable',true);
-    
-    if length(m.rmse) - length(m.f) == 1
-        rmse=m.rmse; rmse(end) = []; m.rmse=rmse; rmse = [];
-        dtrans=m.dtrans; dtrans(:,end) = []; m.dtrans=dtrans; dtrans = [];
-    elseif  length(m.rmse) - length(m.f) > 1
-         error('variable sizes in the existing mosaic file not reconcileable')
-    end
-     
-    % remove already added files
-    [~,IA]= intersect(meta.f,m.f);
-    in=1:length(meta.f); in(IA)=[];
-    meta = structfun(@(x) ( x(in,:) ), meta, 'UniformOutput', false);
-    
-    x=m.x;
-    y=m.y;
-    N=m.N;
-    C=m.C;
-    c=max(C(:));  
-end
+% Initialize/Restart Mosaic
+[x,y,c,C,N,m,meta] = initializeTile(...
+    meta,tilex0,tilex1,tiley0,tiley1,res,outname,tileVersion,disableReg,...
+    disableCoregTest,mergeMethod,mergeMethodReg);
 
-%% Compile Registration Data
+% Add Registered Strips
 if ~disableReg % check for disable registration argument
-    regfiles=strrep(meta.f,'meta.txt','reg.txt');
-    nreg= find( cellfun( @exist, regfiles) == 2);
-    
-    meta.dtrans=nan(size(meta.f,1),3);
-    meta.rmse=nan(size(meta.f));
-    
-    if ~isempty(nreg)
-        regfiles=regfiles(nreg);
-        
-        [~,~,~,dtrans,pctile]=cellfun( @readreg,regfiles,'uniformoutput',0);
-        pctile=cell2mat(pctile);
-        dtrans=cell2mat(dtrans);
-        p75=pctile(:,6);
-        
-        meta.dtrans(nreg,:)=dtrans;
-        meta.rmse(nreg)=p75;
-    end
-    
-    %filter out data over 4m std
-    meta.dtrans(meta.rmse > 4,:) = NaN;
-    meta.rmse(meta.rmse > 4) = NaN;
-    
-    % sort database by p75
-    [~,n] = sort(meta.rmse,'ascend');
-    meta = structfun(@(x) ( x(n,:) ), meta, 'UniformOutput', false);
-    
-    nreg=find(~isnan(meta.rmse));
-    
-    %% Add Registered Strips as Anchors
-    if ~isempty(nreg)
-        
-        for i=1:length(nreg)
-            
-            m.overlap=[m.overlap,0];
-            
-            fprintf('adding anchor strip %d of %d: %s\n',i,length(nreg),meta.f{i})
-            if isfield(meta,'maskPolyx')
-                mask=[meta.maskPolyx{i}(:) meta.maskPolyy{i}(:)];
-            else
-                mask=cell(1,2);
-            end
-            N = addStrip2Mosaic( meta.f{i},m,meta.stripDate(i)-dy0,N,...
-                meta.dtrans(i,:)',meta.rmse(i),...
-                'mergeMethod','underprint',...
-                'mask',mask);
-
-            % add this file name
-            m.f=[m.f,meta.f(i)];
-            m.N = N;
-            
-        end
-
-        % remove these files from the meta struct
-        in=length(nreg)+1:length(meta.f);
-        meta = structfun(@(x) ( x(in,:) ), meta, 'UniformOutput', false);
-        
-        C(N ~= 0)=int16(1);
-        m.C = C;
-        
-    end
-
+    [meta,m,N,C] = regStrips2Tile(meta,m,N,C,mergeMethodReg,dy0);
 end
 
-%% Add dummy qc field if doesnt exist
-if ~isfield(meta,'qc'); meta.qc = ones(size(meta.f)); end;
-
-%% Build Grid Point Index Field
-% make a cell for each file containing the col-wise indices of the data
-% points on the tile grid. This is used search for new or existing data on
-% the grid within each search iteration.
-
-% first make sure does not exist in case we're saving this info
-if ~isfield(meta,'gridPointInd')
-    
-    fprintf('calculating tile pixel coverage for each strip\n');
-    
-    % initialize output field  
-    meta.gridPointInd=cell(size(meta.f));
-    
-    % can be slow, so we'll use a counter
-    count = 0;
-    
-    % file loop
-    for i=1:length(meta.f)
-        
-        % counter
-        if i>1 for p=1:count fprintf('\b'); end; %delete line before
-            count = fprintf('strip %d of %d',i,size(meta.f,1));
-        end
-        
-        % locate grid pixels within footprint polygon
-        BW = roipoly(x, y, N, meta.x{i}, meta.y{i});
-        
-        % if mask exists, apply it
-        if isfield(meta,'maskPolyx')
-            mask=[meta.maskPolyx{i}(:) meta.maskPolyy{i}(:)];
-            
-            for j=1:size(mask,1)
-                if ~isempty(mask{j,1}) && ~isempty(mask{j,2})
-                    BW(roipoly(x,y,N,mask{j,1},mask{j,2}))=0;
-                end
-            end
-            
-        end
-   
-        % convert BW mask to col-wise indices and save to cell
-        meta.gridPointInd{i}=find(BW);
-        
-        % get rid of mask
-        clear BW
-    end
-    
-    % clear counter line
-    for p=1:count fprintf('\b'); end;
-    
-    % make another field with the number of data points
-    meta.gridPointN=cellfun(@length,meta.gridPointInd);
-
-end
+% Build Grid Point Index Field
+meta = buildGridPointInd(meta,x,y,N);
 
 %% Sequential Floating Strip Addition Loop
 % Sequentially add strips to the mosaic by selecting the file with the most
 % new data coverage, with enough overlap to coregister to exisiting data.
 
+% add dummy fields to if dont exist
+if ~isfield(meta,'qc'); meta.qc = ones(size(meta.f)); end;
 if ~isfield(meta,'rmse'); meta.rmse=nan(size(meta.f));end
 if ~isfield(meta,'dtrans'); meta.dtrans=nan(length(meta.f),3); end
 if ~isfield(meta,'overlap'); meta.overlap=zeros(size(meta.f)); end % number existing data points overlapping file
 
 while length(meta.f) >= 1
+    
     
     fprintf('%d strips remaining\n',length(meta.f));
     
@@ -342,13 +175,10 @@ while length(meta.f) >= 1
         if any(redundantFlag)
             
             % append redundant file records to ouput
-            m.f=[m.f,meta.f(redundantFlag)'];
-            m.dtrans=[m.dtrans,nan(3,sum(redundantFlag))];
-            m.rmse=[m.rmse,nan(1,sum(redundantFlag))];
-            m.overlap = [m.overlap,meta.overlap(redundantFlag)'];
+            [m,meta] = appendRedundant(m,meta,redundantFlag);
             
             % remove redundant files from lists
-            meta = structfun(@(x) ( x(~redundantFlag,:) ), meta, 'UniformOutput', false);
+             meta = structfun(@(x) ( x(~redundantFlag,:) ), meta, 'UniformOutput', false);
             
              fprintf('%d redundant files removed\n',sum(redundantFlag));
              
@@ -405,6 +235,8 @@ while length(meta.f) >= 1
         j=1;
         while ~skipFlag && (j <= size(A,1))
             
+             addErrors = true;
+            
             % get the top selection index
             i = A(j,end);
             
@@ -412,7 +244,8 @@ while length(meta.f) >= 1
             if isnan(meta.rmse(i)) 
                 meta.rmse(i)=0;
                 meta.dtrans(i,:) = [0,0,0];
-                c=c+1; 
+                c=c+1;
+                addErrors=false;
             end
             
             if isfield(meta,'maskPolyx')
@@ -428,8 +261,9 @@ while length(meta.f) >= 1
             
             [N,skipFlag] = addStrip2Mosaic( meta.f{i},m,meta.stripDate(i)-dy0,N,meta.dtrans(i,:)',meta.rmse(i),...
                 'mergeMethod',mergeMethod,...
-                'mask',mask);
-            
+                'mask',mask,...
+                'addErrors',addErrors);
+  
             j=j+1;
         end
         
@@ -444,8 +278,18 @@ while length(meta.f) >= 1
         % add this file name
         m.f=[m.f,meta.f(i)];
         
-        % add overlap
-        m.overlap = [m.overlap,meta.overlap(i)];
+        % add meta data
+        m.overlap   = [m.overlap,meta.overlap(i)];
+        m.stripDate = [m.stripDate,meta.stripDate(i)];
+        m.qcflag    = [m.qcflag,meta.qc(i)];
+        m.maskPolyx = [m.maskPolyx,meta.maskPolyx(i)];
+        m.maskPolyy = [m.maskPolyy,meta.maskPolyy(i)];
+        
+        if meta.rmse(i) == 0
+            m.reg=[m.reg,{'N'}];
+        else
+            m.reg=[m.reg,{'A'}];
+        end
         
         % remove this file from the meta struct
         in=1:length(meta.f); in(i)=[];
@@ -465,5 +309,17 @@ while length(meta.f) >= 1
 end
 
 %% Generate Meta File
-m.version=tileVersion;
 tileMeta(m);
+
+function [m,meta] = appendRedundant(m,meta,redundantFlag)
+
+% append redundant file records to ouput
+m.f=[m.f,meta.f(redundantFlag)'];
+m.reg=[m.reg,repmat({'-'},1,sum(redundantFlag))];
+m.dtrans=[m.dtrans,nan(3,sum(redundantFlag))];
+m.rmse=[m.rmse,nan(1,sum(redundantFlag))];
+m.overlap = [m.overlap,meta.overlap(redundantFlag)'];
+m.qcflag = [m.qcflag,meta.qc(redundantFlag)'];
+m.maskPolyx =  [m.maskPolyx,meta.maskPolyx(redundantFlag)'];
+m.maskPolyy =  [m.maskPolyy,meta.maskPolyy(redundantFlag)'];
+m.stripDate = [m.stripDate,meta.stripDate(redundantFlag)'];
