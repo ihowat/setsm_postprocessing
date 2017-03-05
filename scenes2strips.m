@@ -382,7 +382,7 @@ else
      md=ones(sz,'logical');
 end
 
-z(z < -100 | z == 0 | z == -NaN ) = NaN;
+z(z < -100 | z == 0 | z == -NaN | isinf(z) ) = NaN;
 
 
 function [x,y,z,o,m] =  applyMasks(x,y,z,o,m,me,md)
