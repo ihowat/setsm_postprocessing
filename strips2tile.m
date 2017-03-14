@@ -3,7 +3,7 @@ function strips2tile(varargin)
 %
 %[x,y,z,mt,or,dy,f,dtrans,rmse] = ...
 %           strips2tile(meta,tilex0, tilex1, tiley0, tiley1,res,outname)
-%   
+%
 % where meta is the database structure, tilex and tiley are the coordinate
 % ranges of the tile, res is the tile resolution in m and outname is the
 % tile output file name.
@@ -17,7 +17,7 @@ function strips2tile(varargin)
 %       'mergeMethod','methodstring', specifies the mergeing method as
 %       'feather' (default), 'underprint' or 'warp'. See addStrip2Mosaic
 %       for descriptions.
-%       'mergeMethodReg','methodstring', specifies the mergeing method for 
+%       'mergeMethodReg','methodstring', specifies the mergeing method for
 %       registered strips.'feather' (default), 'underprint' or 'warp'.
 %
 %   subfunctions: stripSearch,regStrips2Tile,initializeTile,readreg,addStrip2Mosaic
@@ -30,7 +30,7 @@ function strips2tile(varargin)
 % Thus each cluster # represents a group of coregistered strips, with C=1
 % being absolute (reference to a priori control), and C>=2 being relative
 % (internally coregistered). Therefore, any subsequent transformation
-% shoudl be applied individually to each cluster. 
+% shoudl be applied individually to each cluster.
 %
 %   Ian Howat, Ohio State University
 %   Version 3.0; 10-Feb-2017 13:56:01
@@ -53,7 +53,7 @@ mergeMethod='feather';
 % default merging method for registered files
 mergeMethodReg='underprint';
 
-if nargin >= 7 % number of argins needs for creating a new mosaic from scratch
+if nargin >= 7 % number of argins needed for creating a new mosaic from scratch
     
     meta    = varargin{1};
     tilex0  = varargin{2};
@@ -62,7 +62,7 @@ if nargin >= 7 % number of argins needs for creating a new mosaic from scratch
     tiley1  = varargin{5};
     res     = varargin{6};
     outname = varargin{7};
-
+    
     % test varargin for flags
     if ~isempty(varargin)
         if any(strcmpi('disableReg',varargin))
@@ -97,6 +97,8 @@ fprintf('Using floating strip merge method: %s\n',mergeMethod)
 
 % Filter strips not overlapping this tile
 meta = stripSearch(meta,tilex0,tilex1,tiley0,tiley1);
+
+% if all meta cleared, return
 if isempty(meta); return; end
 
 % Initialize/Restart Mosaic
@@ -116,6 +118,9 @@ meta = buildGridPointInd(meta,x,y,N);
 % Sequentially add strips to the mosaic by selecting the file with the most
 % new data coverage, with enough overlap to coregister to exisiting data.
 
+minNewPixels = 1000/res;
+minOverlapPixels = 1000/res;
+
 % add dummy fields to if dont exist
 if ~isfield(meta,'qc'); meta.qc = ones(size(meta.f)); end;
 if ~isfield(meta,'rmse'); meta.rmse=nan(size(meta.f));end
@@ -124,14 +129,14 @@ if ~isfield(meta,'overlap'); meta.overlap=zeros(size(meta.f)); end % number exis
 
 while length(meta.f) >= 1
     
-    
     fprintf('%d strips remaining\n',length(meta.f));
     
     % loop through files and record number of nan and non-nan mosaic grid
     % points overlap each strip.
-  
+    
     % only find overlapping data if any data exists in the tile
     meta.coregTestFlag=false(size(meta.f)); % flag which files have updated overlap to retest coregistration
+    
     if any(N(:))
         
         % subset the DEMs to those that just overlap the rectangle of
@@ -162,7 +167,7 @@ while length(meta.f) >= 1
             meta.gridPointN(n(i)) = sum(~Nsub);
             
         end
-     
+        
         % flag which files have updated overlap to retest coregistration
         meta.coregTestFlag = meta.overlap ~= overlap;
         
@@ -178,13 +183,13 @@ while length(meta.f) >= 1
             [m,meta] = appendRedundant(m,meta,redundantFlag);
             
             % remove redundant files from lists
-             meta = structfun(@(x) ( x(~redundantFlag,:) ), meta, 'UniformOutput', false);
+            meta = structfun(@(x) ( x(~redundantFlag,:) ), meta, 'UniformOutput', false);
             
-             fprintf('%d redundant files removed\n',sum(redundantFlag));
-             
+            fprintf('%d redundant files removed\n',sum(redundantFlag));
+            
             if isempty(meta.overlap); break; end
         end
-
+        
     end
     
     
@@ -214,7 +219,7 @@ while length(meta.f) >= 1
         meta.rmse(meta.overlap == 0)= NaN;
     end
     
-    % while loop attempts to add data and will repeat if addition failure 
+    % while loop attempts to add data and will repeat if addition failure
     % results in meta data deletion, so that resorting of the data rank is
     % needed. Could probably be removed with a different indexing scheme.
     addFlag = false;
@@ -222,7 +227,7 @@ while length(meta.f) >= 1
         
         % buid selection array - need to invert meta.gridPointN account since ascending.
         A = [meta.rmse,double(meta.qc),max(meta.gridPointN)-meta.gridPointN,meta.overlap,(1:length(meta.f))'];
-       
+        
         % sort each row in priority order of columns
         A = sortrows(A);
         
@@ -235,13 +240,13 @@ while length(meta.f) >= 1
         j=1;
         while ~skipFlag && (j <= size(A,1))
             
-             addErrors = true;
+            addErrors = true;
             
             % get the top selection index
             i = A(j,end);
             
             % if meta.rmse isnan, then this is a new cluster.
-            if isnan(meta.rmse(i)) 
+            if isnan(meta.rmse(i))
                 meta.rmse(i)=0;
                 meta.dtrans(i,:) = [0,0,0];
                 c=c+1;
@@ -261,9 +266,11 @@ while length(meta.f) >= 1
             
             [N,skipFlag] = addStrip2Mosaic( meta.f{i},m,meta.stripDate(i)-dy0,N,meta.dtrans(i,:)',meta.rmse(i),...
                 'mergeMethod',mergeMethod,...
+                'minNewPixels',minNewPixels,...
+                'minOverlapPixels',minOverlapPixels,...
                 'mask',mask,...
                 'addErrors',addErrors);
-  
+            
             j=j+1;
         end
         
@@ -272,7 +279,7 @@ while length(meta.f) >= 1
         if ~skipFlag
             % clear meta.f to break outer loop
             meta.f=[];
-            break; 
+            break;
         end
         
         % add this file name

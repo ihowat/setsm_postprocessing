@@ -40,6 +40,7 @@ minNewPixels=100;
 minOverlapPixels=100;
 returnFlag = false;
 addErrorFlag=false;
+refineRegFlag=false;
 
 % parse input args
 for i=1:2:length(varargin)
@@ -80,7 +81,15 @@ for i=1:2:length(varargin)
             addErrorFlag=varargin{i+1};
             
             if ~islogical(addErrorFlag)
-                error('addErrorFlag must be logical')
+                error('addError argument must be logical')
+            end
+            
+        case 'refinereg'
+            
+            refineRegFlag=varargin{i+1};
+            
+            if ~islogical(refineRegFlag)
+                error('refineReg argument must be logical')
             end
             
         otherwise
@@ -133,8 +142,9 @@ A= Nsub ~= 0 & ~isnan(z); % overlapping coverage mask
 % if no dtrans given, but there's no overlap to coregister, then set 0
 if ~any(A(:)) && isempty(dtrans); dtrans=[0;0;0]; end
  
-% if dtrans is empty and there's overlap, then apply coregistration
-if isempty(dtrans) || any(isnan(dtrans))
+% if dtrans is empty or regRefineFlag and there's overlap, then apply 
+% coregistration
+if isempty(dtrans) || any(isnan(dtrans)) || refineRegFlag 
     
     if sum(A(:)) < minOverlapPixels
         fprintf('%d pixel overlap is too small, skipping\n',sum(A(:)));
@@ -145,10 +155,14 @@ if isempty(dtrans) || any(isnan(dtrans))
     co= find(sum(A) ~= 0,1,'first'):find(sum(A) ~= 0,1,'last');
     ro= find(sum(A,2) ~= 0,1,'first'):find(sum(A,2) ~= 0,1,'last');
     
+    % set dtrans to zeros if this is a new adjustment
+    if ~refineRegFlag; dtrans = zeros(3,1); end
+    
     % co-register strip to mosaic subset
     [~,dtrans,rmse] = coregisterdems(...
         m.x(1,c(co)),m.y(r(ro),1),m.z(r(ro),c(co)),...
-        x(co),y(ro),z(ro,co),m.mt(r(ro),c(co)),mt(ro,co));
+        x(co)+dtrans(2),y(ro)+dtrans(3),z(ro,co)+dtrans(1),...
+        m.mt(r(ro),c(co)),mt(ro,co));
     
     % coregisterdems returns dtrans values as positive offsets, whereas
     % the gcp registration are negative, so need to reverse the sign:
@@ -179,7 +193,6 @@ if any(dtrans ~= 0)
     [z,mt,or] = interpolate2grid(x,y,z,mt,or,m.x(1,c),m.y(r,1));
     
 end
-
 
 %% Data Merge
 
