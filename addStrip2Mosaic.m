@@ -156,17 +156,23 @@ if isempty(dtrans) || any(isnan(dtrans)) || refineRegFlag
     ro= find(sum(A,2) ~= 0,1,'first'):find(sum(A,2) ~= 0,1,'last');
     
     % set dtrans to zeros if this is a new adjustment
-    if ~refineRegFlag; dtrans = zeros(3,1); end
+    if ~refineRegFlag; 
+        dtrans0 = zeros(3,1); 
+    else
+        dtrans0=dtrans;
+    end
     
     % co-register strip to mosaic subset
     [~,dtrans,rmse] = coregisterdems(...
         m.x(1,c(co)),m.y(r(ro),1),m.z(r(ro),c(co)),...
-        x(co)+dtrans(2),y(ro)+dtrans(3),z(ro,co)+dtrans(1),...
+        x(co)+dtrans0(2),y(ro)+dtrans0(3),z(ro,co)+dtrans0(1),...
         m.mt(r(ro),c(co)),mt(ro,co));
     
     % coregisterdems returns dtrans values as positive offsets, whereas
     % the gcp registration are negative, so need to reverse the sign:
     dtrans=-dtrans;
+    
+    dtrans = dtrans + dtrans0;
     
     % check for coregistration failure
     if isnan(rmse) || rmse > maxrmse
