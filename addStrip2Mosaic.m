@@ -172,7 +172,7 @@ if isempty(dtrans) || any(isnan(dtrans)) || refineRegFlag
     % the gcp registration are negative, so need to reverse the sign:
     dtrans=-dtrans;
     
-    dtrans = dtrans + dtrans0;
+    dtrans = dtrans(:) + dtrans0(:);
     
     % check for coregistration failure
     if isnan(rmse) || rmse > maxrmse
