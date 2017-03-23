@@ -17,4 +17,7 @@ writeTileToTif.m
 compileDatabaseRema.m
 selectTileByName_Antarctic.m
 loadQcData.m
+convertQcDataToTxt.m
+mosaicStripsRebuild.m
+selectTileByNameRebuild.m
 *.csv
