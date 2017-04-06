@@ -2,9 +2,10 @@
 
 % Ian Howat, ihowa@gmail.com, Ohio State University
 
+
 %% ArcticDEM input directory settings
-updir='/data2/ArcticDEM'; %location of region directory
-regionnum='30'; % ArcticDEM region #
+updir='/data4/ArcticDEM'; %location of region directory
+regionnum='31'; % ArcticDEM region #
 res='2'; % DEM resolution
 
 %% load file names
@@ -12,13 +13,15 @@ res = [res,'m'];
 demdir=dir([updir,'/region_',regionnum,'*']);
 demdir=[updir,'/',demdir(1).name,'/tif_results/',res];
 
-outdir=strrep(demdir,'tif_results','strips');
 
 fprintf('%s\n',demdir)
 
 if ~exist(outdir,'dir'); mkdir(outdir); end
 
-f = dir([demdir,'/*_dem.tif']);
+% CHECK FOR NEW MASK VERSION
+f = dir([demdir,'/*_mask.tif']);
+
+%f = dir([demdir,'/*_dem.tif']);
 
 stripids=char(f.name);
 s=find(stripids(1,:)=='_');
@@ -27,6 +30,9 @@ stripids =cellstr(stripids);
 unique_stripids =unique(stripids);
 
 f={f.name};
+
+% SET FROM MASK TO DEM NAMES
+f = strrep(f,'_mask.tif','_dem.tif');
 
 strt=1;
 inc=1;
