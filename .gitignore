@@ -20,4 +20,6 @@ loadQcData.m
 convertQcDataToTxt.m
 mosaicStripsRebuild.m
 selectTileByNameRebuild.m
+selectTileByNameRebuild_Antarctic.m
+strips2tileRebuild.m
 *.csv
