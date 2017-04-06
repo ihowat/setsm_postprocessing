@@ -1,4 +1,4 @@
-function [X,Y,Z,M,O,trans,rmse,f]=scenes2strips(demdir,f)
+function [X,Y,Z,M,O,trans,rmse,f]=scenes2strips(varargin)
 %SCENES2STRIPS merge scenes into strips
 %
 %   [x,y,z,m,o,trans,rmse,f]=scenes2strips(demdir,f) merges the
@@ -15,6 +15,17 @@ function [X,Y,Z,M,O,trans,rmse,f]=scenes2strips(demdir,f)
 %
 % Version 3.0, Ian Howat, Ohio State University, 2015
 
+maskFlag=true;
+
+demdir=varargin{1};
+f=varargin{2};
+
+if nargin > 2
+   if any(strcmpi(varargin,'nomask'))
+        maskFlag = false;
+   end
+end
+    
 
 %% Order Scenes in north-south or east-west direction by aspect ratio
 fprintf('ordering %d scenes\n',length(f))
@@ -33,16 +44,24 @@ for i=1:length(f)
     matchFile= strrep(demFile,'dem.tif','matchtag.tif');
     orthoFile= strrep(demFile,'dem.tif','ortho.tif');
     %shadeFile= strrep(demFile,'dem.tif','dem_shade.tif');
-    edgeMaskFile=  strrep(demFile,'dem.tif','edgemask.tif');
-    dataMaskFile=  strrep(demFile,'dem.tif','datamask.tif');
+%     edgeMaskFile=  strrep(demFile,'dem.tif','edgemask.tif');
+%     dataMaskFile=  strrep(demFile,'dem.tif','datamask.tif');
 
+     edgeMaskFile=  [];
+     dataMaskFile=  [];
+
+    if maskFlag
+     edgeMaskFile=  strrep(demFile,'dem.tif','mask.tif');
+     dataMaskFile=  strrep(demFile,'dem.tif','mask.tif');
+    end
+    
     fprintf('scene %d of %d: %s\n',i,length(f),demFile)
     
     try
-        [x,y,z,o,m,me,md] = loaddata(demFile,matchFile,orthoFile,edgeMaskFile,...
-                             dataMaskFile);
-    catch ME
-        fprintf('%s %s: data read error, skipping \n',ME.identifier,ME.message); 
+            [x,y,z,o,m,me,md] = loaddata(demFile,matchFile,orthoFile,...
+                edgeMaskFile,dataMaskFile);
+    catch
+        fprintf('data read error, skipping \n'); 
         continue; 
     end
                          
@@ -50,7 +69,7 @@ for i=1:length(f)
     if  ~any(md(:)); fprintf('no data, skipping \n'); continue; end; 
     
     %Apply Masks
-    [x,y,z,o,m] =  applyMasks(x,y,z,o,m,me,md);
+    [x,y,z,o,m] =  applyMasks(x,y,z,o,m,md);
      
     dx = x(2)-x(1);
     dy = y(2)-y(1);
@@ -80,7 +99,7 @@ for i=1:length(f)
      y=[y(1)+dx.*(buff:-1:1),y,y(end)-dx.*(1:buff)];
      
     % expand strip coverage to encompass new scene
-    if x(1) < X(1);
+    if x(1) < X(1)
         X1=x(1):dx:X(1)-dx;
         X=[X1,X];
         Z=[nan(size(Z,1),length(X1)),Z];
@@ -88,7 +107,7 @@ for i=1:length(f)
         O=[zeros(size(O,1),length(X1)),O];
         clear X1
     end
-    if x(end) > X(end);
+    if x(end) > X(end)
         X1=X(end)+dx:dx:x(end);
         X=[X,X1];
         Z=[Z,nan(size(Z,1),length(X1))];
@@ -96,7 +115,7 @@ for i=1:length(f)
         O=[O,zeros(size(O,1),length(X1))];
         clear X1
     end
-    if y(1) > Y(1);
+    if y(1) > Y(1)
         Y1=y(1):-dx:Y(1)+dx;
         Y=[Y1,Y];
         Z=[nan(length(Y1),size(Z,2));Z];
@@ -104,7 +123,7 @@ for i=1:length(f)
         O=[zeros(length(Y1),size(O,2));O];
         clear Y1
     end
-    if y(end) < Y(end);
+    if y(end) < Y(end)
         Y1=Y(end)-dx:-dx:y(end);
         Y=[Y,Y1];
         Z=[Z;nan(length(Y1),size(Z,2))];
@@ -133,7 +152,7 @@ for i=1:length(f)
     A= single( ~isnan(Zsub) & ~isnan(z));
     
     %check for segment break
-    if sum(A(:)) <= 1000;
+    if sum(A(:)) <= 1000
         f=f(1:i-1);
         trans = trans(:,1:i-1);
         rmse  = rmse(1:i-1);
@@ -158,7 +177,7 @@ for i=1:length(f)
          % data in strip and no data in scene is a two
          
     %check for segment break
-    if sum(A(:)~=0) <= 1000;
+    if sum(A(:)~=0) <= 1000
         f=f(1:i-1);
         trans = trans(:,1:i-1);
         rmse  = rmse(1:i-1);
@@ -172,7 +191,7 @@ for i=1:length(f)
     
     Ar=imresize(A,.1,'nearest');
     
-    [C R] = meshgrid(1:size(Ar,2),1:size(Ar,1));
+    [C, R] = meshgrid(1:size(Ar,2),1:size(Ar,1));
     
     % pixles on outside of boundary of overlap region
     B = bwboundaries(Ar~=0, 8, 'noholes');
@@ -218,17 +237,20 @@ for i=1:length(f)
  
     %% Coregistration
  
-    % coregister this scene to the strip mosaic
+    P0 = DataDensityMap(Msub(r(1):r(2),c(1):c(2))) > 0.9;
+    P1 = DataDensityMap(m(r(1):r(2),c(1):c(2))) > 0.9;
+    
+    
+    % coregister this scene to the strip mosaic, only use areas with > 95%
     [~,trans(:,i),rmse(i)] = ...
             coregisterdems(Xsub(c(1):c(2)),Ysub(r(1):r(2)),...
             Zsub(r(1):r(2),c(1):c(2)),...
             x(c(1):c(2)),y(r(1):r(2)),...
             z(r(1):r(2),c(1):c(2)),...
-            Msub(r(1):r(2),c(1):c(2)),...
-            m(r(1):r(2),c(1):c(2)));
+            P0,P1);
     
     %check for segment break
-    if isnan(rmse(i));
+    if isnan(rmse(i)) || (rmse(i) > 1)
         fprintf('Unable to coregister, breaking segment\n')
         f=f(1:i-1);
         trans = trans(:,1:i-1);
@@ -313,7 +335,7 @@ end
 %crop to data
 if exist('Z','var') && any(~isnan(Z(:)))
     [Z,rcrop,ccrop] = cropnans(Z);
-    if ~isempty(rcrop);
+    if ~isempty(rcrop)
         X = X(ccrop(1):ccrop(2));
         Y = Y(rcrop(1):rcrop(2));
         M = M(rcrop(1):rcrop(2),ccrop(1):ccrop(2));
@@ -333,7 +355,7 @@ sz=size(z);
 
 d=readGeotiff(matchFile);
 szd=size(d.z);
-if any(szd ~= sz);
+if any(szd ~= sz)
     m = interp2(d.x,d.y,single(d.z),...
         x(:)',y(:),'*nearest');
     m(isnan(m)) = 0; % convert back to uint16
@@ -347,7 +369,7 @@ o=zeros(size(z));
 if exist(orthoFile,'file')
     d=readGeotiff(orthoFile);
     szd=size(d.z);
-    if any(szd ~= sz);
+    if any(szd ~= sz)
         d.z = single(d.z);
         d.z(isnan(d.z)) = NaN; % set border to NaN so wont be interpolated
         o = interp2(d.x,d.y,d.z,...
@@ -360,38 +382,44 @@ if exist(orthoFile,'file')
     clear d
 end
 
-
-if exist(edgeMaskFile,'file')
-    d=readGeotiff(edgeMaskFile);
-    szd=size(d.z);
-    if any(szd ~= sz); error('edgemaskfile wrong dimensions'); end
-    me=d.z;
-    clear d;
+if ~isempty(edgeMaskFile)
+    if exist(edgeMaskFile,'file')
+        d=readGeotiff(edgeMaskFile);
+        szd=size(d.z);
+        if any(szd ~= sz); error('edgemaskfile wrong dimensions'); end
+        me=d.z;
+        clear d;
+    else
+        error('No edgeMaskFile Found')
+    end
 else
-     warning('No edgeMaskFile found, no mask applied')
-     me=ones(sz,'logical');
+    me = true(sz);
 end
 
-if exist(dataMaskFile,'file')
-    d=readGeotiff(dataMaskFile);
-    szd=size(d.z);
-    if any(szd ~= sz); error('datamaskfile wrong dimensions'); end
-    md=d.z;
+
+if ~isempty(dataMaskFile)
+    if exist(dataMaskFile,'file')
+        d=readGeotiff(dataMaskFile);
+        szd=size(d.z);
+        if any(szd ~= sz); error('datamaskfile wrong dimensions'); end
+        md=d.z;
+    else
+        error('No dataMaskFile Found')
+    end
 else
-     warning('No dataMaskFile found, no mask applied')
-     md=ones(sz,'logical');
+    md = true(sz);
 end
 
 z(z < -100 | z == 0 | z == -NaN ) = NaN;
 
-
-function [x,y,z,o,m] =  applyMasks(x,y,z,o,m,me,md)
+function [x,y,z,o,m] =  applyMasks(x,y,z,o,m,md)
 
 z(~md) = NaN;
 m(~md) = 0;
-o(~me) = 0;
+%o(~me) = 0; Note no longer mask the ortho
 
-if any(~isnan(z(:)));
+
+if any(~isnan(z(:)))
     [z,rcrop,ccrop] = cropnans(z);
     x = x(ccrop(1):ccrop(2));
     y = y(rcrop(1):rcrop(2));
