@@ -23,7 +23,7 @@ res = varargin{2};
 res0 = m0.x(1,2)-m0.x(1,1);
 
 % make outname
-outname=strrep(m0.Properties.Source,'.mat','_rebuild.mat');
+outname=m0.Properties.Source;
 outname=strrep(outname,['_',num2str(res0),'m_'],['_',num2str(res),'m_']);
 
 % get tile boundarys
@@ -100,7 +100,7 @@ if ~disableReg && any(strcmp(reg,'R'))
         
         if ~strcmpi(reg{i},'R'); continue; end
         
-        fprintf('adding anchor strip %d of %d: %s\n',i,length(reg),f{i})
+        fprintf('adding anchor strip: %s\n',f{i})
         if exist('maskPolyx','var')
             mask=[maskPolyx{i}(:) maskPolyy{i}(:)];
         else
@@ -165,7 +165,7 @@ for i=1:length(m0.rmse)
         
     end
     
-    fprintf('adding strip: %s\n',f{i})
+    fprintf('adding strip %d of %d: %s\n',i,length(f),f{i})
     fprintf(...
         'quality: %d, coreg. RSME: %.2f, co.cluster: %d\n',...
         m0.qcflag(1,i),rmse,c)
