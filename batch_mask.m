@@ -4,45 +4,81 @@
 % Ian Howat, ihowa@gmail.com, Ohio State University
 
 %% ArcticDEM input directory settings
-updir='/data4/ArcticDEM'; %location of region directory
-regionnum='31'; % ArcticDEM region #
+updir='/data2/ArcticDEM'; %location of region directory
+regionnum='19'; % ArcticDEM region #
 res='2'; % DEM resolution
 
 %% load file names
-demDir=dir([updir,'/region_',regionnum,'*']);
-demDir=[updir,'/',demDir(1).name,'/tif_results/',res,'m'];
+demdir=dir([updir,'/region_',regionnum,'*']);
+demdir=[updir,'/',demdir(1).name,'/tif_results/',res,'m'];
 
-fprintf('working: %s\n',demDir);
+fprintf('working: %s\n',demdir);
 
-demFiles = dir([demDir,'/*_dem.tif']);
-demDates = [demFiles.datenum];
-demFiles = {demFiles.name};
-demFiles = cellfun( @(x) [demDir,'/',x], demFiles, 'uniformoutput', false);
+f = dir([demdir,'/*_matchtag.tif']);
+
+fdate=[f.datenum];
+f={f.name};
 
 %% Update Mode - will only reprocess masks older than the matchtag file
-maskFiles = dir([demdir,'/*_mask.tif']);
+fedge = dir([demdir,'/*_edgemask.tif']);
 
-if ~isempty(maskFiles)
+if ~isempty(fedge)
+    fedgeDate=[fedge.datenum];
+    fedge={fedge.name};
+    [~,IA,IB] = intersect(f,strrep(fedge,'edgemask.tif','matchtag.tif'));
+    n= fedgeDate(IB) - fdate(IA) >= -6.9444e-04;
+    f(IA(n))=[];
     
-    maskDates=[maskFiles.datenum];
-    maskFiles={maskFiles.name};
-    maskFiles = cellfun( @(x) [demDir,'/',x], maskFiles, 'uniformoutput', false);
-    [~,IA,IB] = intersect(demFiles,strrep(maskFiles,'mask.tif','dem.tif'));
-    n= maskDates(IB) - demDates(IA) >= -6.9444e-04;
-    demFiles(IA(n))=[];
-    
-    clear demDates maskFiles maskDates
+    clear fdate fedge fedgeDate
 end
 
 i=1;
-for i=1:1:length(demFiles)
+for i=1:1:length(f)
     
-    demFile = demFiles{i};
-    OutMaskName = strrep(demFile,'dem.tif','mask.tif');
-    fprintf('processing %d of %d: %s \n',i,length(demFiles),demFile)
+    matchFile = [demdir,'/',f{i}];
+    orthoFile = strrep(matchFile,'matchtag.tif','ortho.tif');
     
- 	m = mask(demFile);
-%     
+    fprintf('processing %d of %d: %s \n',i,length(f),matchFile)
+    OutEdgeMaskName= strrep(matchFile,'matchtag.tif','edgemask.tif');
+    OutDataMaskName= strrep(matchFile,'matchtag.tif','datamask.tif');
+    
+    m=readGeotiff(matchFile);
+    
+    fprintf('making %s \n',OutEdgeMaskName)
+    
+    %find SETSM version
+    metaFileName=strrep(matchFile,'matchtag.tif','meta.txt');
+    if ~exist(metaFileName,'file')
+        disp('no meta file, assumimg SETSM version > 2.0');
+        setsmVersion=3;
+    else
+        c=textread(metaFileName,'%s','delimiter','\n');
+        r=find(~cellfun(@isempty,strfind(c,'SETSM Version='))); 
+        if ~isempty(r)
+		setsmVersion=deblank(strrep(c{r(1)},'SETSM Version=',''));
+        else; setsmVersion='2.03082016'; end
+	fprintf('Using settings for SETSM Version = %s\n',setsmVersion)
+        setsmVersion=str2num(setsmVersion);
+    end
+    
+    if setsmVersion < 2.01292016
+        n= floor(21*2/m.info.map_info.dx);
+        Pmin=0.8;
+        Amin=2000/m.info.map_info.dx;
+        crop=n;
+    else
+        n= floor(101*2/m.info.map_info.dx);
+        Pmin=0.99;
+        Amin=2000/m.info.map_info.dx;
+        crop=n;
+    end
+    
+    % get water mask
+    M0 = entropyMask(orthoFile);
+      
+   
+    m1.z=edgeMask(m.z,'n',n,'Pmin',Pmin,'Amin',Amin,'crop',crop,'m0',M0);
+    
     if isfield(m.Tinfo,'GeoDoubleParamsTag')
         
         if m.Tinfo.GeoDoubleParamsTag(1) > 0
@@ -65,7 +101,32 @@ for i=1:1:length(demFiles)
         end
     end
     
-    writeGeotiff(OutMaskName,m.x,m.y,m.z,1,0,projstr)
+    writeGeotiff(OutEdgeMaskName,m.x,m.y,m1.z,1,0,projstr)
+    
+    m.z(~m1.z)=uint8(0);
+    
+    clear m1
+
+    fprintf('making %s \n',OutDataMaskName)
+    
+    if setsmVersion <= 2.0
+        
+        n= floor(21*2/m.info.map_info.dx);
+        Pmin=0.3;
+        Amin=1000;
+        Amax=10000;
+        
+    else
+        n= floor(101*2/m.info.map_info.dx);
+        Pmin=0.90; 
+        Amin=1000;
+        Amax=1000;
+        
+    end
+    
+    m.z=DataDensityMask(m.z,'n',n,'Pmin',Pmin,'Amin',Amin,'Amax',Amax);
+   
+    writeGeotiff(OutDataMaskName,m.x,m.y,m.z,1,0,projstr)
     
 end
 
