@@ -6,6 +6,7 @@
 includeList*
 scenes2strips_single.m
 mask_strip.m
+mask_strip_v2.m
 selectTileByName.m
 compileDatabase.m
 batch_tileMeta.m
