@@ -39,6 +39,8 @@ for i = 2:2:length(varargin)
             crop=varargin{i+1};
         case 'cf'
             cf=varargin{i+1};
+        case 'm0'
+            M0=varargin{i+1};
     end
 end
 
@@ -46,7 +48,12 @@ end
 P = DataDensityMap(m,n); % data density map is the fraction of pixels in
                          % the kernel containing data points.
 
-M=P>=Pmin; % data density threshold for masking
+if exist('M0','var')
+    M=P>=Pmin | M0; % data density threshold for masking
+else
+    M=P>=Pmin; % data density threshold for masking
+end
+
 
 if ~any(M(:)); return; end
 
