@@ -1,4 +1,4 @@
-function scenes2strips_single(demdir,stripid,res)
+function scenes2strips_single_noentropy(demdir,stripid,res)
 
 % change this
 res=[res,'m'];
@@ -55,7 +55,7 @@ end
 if missingflag==1; return; end
 
 %% run filtering
-mask_strip_rema(demdir,stripid);
+mask_strip_noentropy(demdir,stripid);
 
 %% build strip segments
 seg=1;

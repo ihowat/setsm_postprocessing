@@ -8,8 +8,8 @@ def main():
     parser.add_argument("src", help="source directory")
     parser.add_argument("res", choices=['2','8'], help="resolution of target dems (2 or 8)")
     
-    parser.add_argument("--rema", action='store_true', default=False,
-            help="use REMA-specific filter")
+    parser.add_argument("--no-entropy", action='store_true', default=False,
+            help="use filter without entropy protection")
     parser.add_argument("--lib-path", default=matlab_scripts,
             help="path to referenced Matlab functions (default={}".format(matlab_scripts))
     parser.add_argument("--pbs", action='store_true', default=False,
@@ -73,8 +73,8 @@ def main():
                 
                 ## if pbs, submit to scheduler
                 if args.pbs:
-                    if args.rema:
-                        script = 'scenes2strips_single_rema'
+                    if args.no_entropy:
+                        script = 'scenes2strips_single_noentropy'
                     else:
                         script = 'scenes2strips_single'
                     job_name = 's2s{:04g}'.format(i)
@@ -94,8 +94,8 @@ def main():
                 
                 ## else run matlab
                 else:
-                    if args.rema:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); addpath('{}'); scenes2strips_single_rema('{}','{}','{}'); exit" """.format(
+                    if args.no_entropy:
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); addpath('{}'); scenes2strips_single_noentropy('{}','{}','{}'); exit" """.format(
                             scriptdir,
                             args.lib_path,
                             src,
