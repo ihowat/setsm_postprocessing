@@ -51,8 +51,8 @@ for i=1:length(f)
      dataMaskFile=  [];
 
     if maskFlag
-     edgeMaskFile=  strrep(demFile,'dem.tif','mask.tif');
-     dataMaskFile=  strrep(demFile,'dem.tif','mask.tif');
+     edgeMaskFile=  strrep(demFile,'dem.tif','edgemask.tif');
+     dataMaskFile=  strrep(demFile,'dem.tif','datamask.tif');
     end
     
     fprintf('scene %d of %d: %s\n',i,length(f),demFile)
