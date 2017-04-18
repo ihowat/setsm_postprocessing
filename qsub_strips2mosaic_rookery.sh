@@ -21,13 +21,14 @@ echo $p3
 echo $p4
 echo $p5
 echo $p6
+echo $p7
 
-if [ -z $p6 ]; then
-    cmd="addpath('${p1}'); ${p2}('${p3}','${p4}',${p5}); exit"
+if [ -z $p7 ]; then
+    cmd="addpath('${p1}'); addpath('${p6}'); ${p2}('${p3}','${p4}',${p5}); exit"
     echo $cmd
     time matlab -nojvm -nodisplay -nosplash -r "${cmd}"
 else
-    cmd="addpath('${p1}'); ${p2}('${p3}','${p4}',${p5},'${p6}'); exit"
+    cmd="addpath('${p1}'); addpath('${p6}'); ${p2}('${p3}','${p4}',${p5},'${p7}'); exit"
     echo $cmd
     time matlab -nojvm -nodisplay -nosplash -r "${cmd}"
 fi

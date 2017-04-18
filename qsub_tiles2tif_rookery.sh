@@ -18,7 +18,8 @@ module load matlab/2016b
 echo $p1
 echo $p2
 echo $p3
+echo $p4
 
-cmd="addpath('${p1}'); writeTileToTif('${p2}','${p3}'); exit"
+cmd="addpath('${p1}'); addpath('${p4}'); writeTileToTif('${p2}','${p3}'); exit"
 echo $cmd
 time matlab -nojvm -nodisplay -nosplash -r "${cmd}"

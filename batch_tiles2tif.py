@@ -1,4 +1,6 @@
 import os, string, sys, argparse, glob, subprocess
+matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing'
+
 #### TODO add projstring to passed args
 def main():
     
@@ -11,6 +13,8 @@ def main():
     
     parser.add_argument("--rerun", action='store_true', default=False,
             help="run script even if target dem already exists")
+    parser.add_argument("--lib-path", default=matlab_scripts,
+            help="path to referenced Matlab functions (default={}".format(matlab_scripts))
     parser.add_argument("--pbs", action='store_true', default=False,
             help="submit tasks to PBS")
     parser.add_argument("--qsubscript",
@@ -61,14 +65,26 @@ def main():
                     i+=1
                     if args.pbs:
                         job_name = 't2t_{}'.format(tile)
-                        cmd = r'qsub -N {} -v p1={},p2={},p3="{}" {}'.format(job_name, scriptdir, matfile, projstr, qsubpath)
+                        cmd = r'qsub -N {} -v p1={},p2={},p3="{}",p4={} {}'.format(
+                            job_name,
+                            scriptdir,
+                            matfile,
+                            projstr,
+                            args.lib_path,
+                            qsubpath
+                        )
                         print cmd
                         if not args.dryrun:
                             subprocess.call(cmd, shell=True)
                     
                     ## else run matlab
                     else:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); writeTileToTif('{}','{}'); exit" """.format(scriptdir, matfile, projstr)
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); addpath('{}'); writeTileToTif('{}','{}'); exit" """.format(
+                            scriptdir,
+                            args.lib_path,
+                            matfile,
+                            projstr
+                        )
                         print "{}, {}".format(i, cmd)
                         if not args.dryrun:
                             subprocess.call(cmd, shell=True)

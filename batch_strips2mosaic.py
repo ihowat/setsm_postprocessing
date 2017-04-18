@@ -1,4 +1,6 @@
 import os, string, sys, argparse, glob, subprocess
+matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing'
+
 
 def main():
     
@@ -13,6 +15,9 @@ def main():
     parser.add_argument("--gcpfile", help="csv file of GCP points (must have x, y, and z, no headers)")
     parser.add_argument("--rerun", action='store_true', default=False,
                         help="run script even if target dem already exists")
+    parser.add_argument("--lib-path", default=matlab_scripts,
+                        help="path to referenced Matlab functions (default={}".format(matlab_scripts))
+    
     parser.add_argument("--pbs", action='store_true', default=False,
             help="submit tasks to PBS")
     parser.add_argument("--qsubscript",
@@ -74,9 +79,28 @@ def main():
                 if args.pbs:
                     job_name = 'mos_{}'.format(tile)
                     if args.gcpfile:
-                        cmd = r'qsub -N {} -v p1={},p2={},p3={},p4={},p5={},p6={} {}'.format(job_name, scriptdir, matlab_script, dstdir, tile, args.res, args.gcpfile, qsubpath)
+                        cmd = r'qsub -N {} -v p1={},p2={},p3={},p4={},p5={},p6={},p7={} {}'.format(
+                            job_name,
+                            scriptdir,
+                            matlab_script,
+                            dstdir,
+                            tile,
+                            args.res,
+                            args.lib_path,
+                            args.gcpfile,
+                            qsubpath
+                        )
                     else:
-                        cmd = r'qsub -N {} -v p1={},p2={},p3={},p4={},p5={} {}'.format(job_name, scriptdir, matlab_script, dstdir, tile, args.res, qsubpath)
+                        cmd = r'qsub -N {} -v p1={},p2={},p3={},p4={},p5={},p6={} {}'.format(
+                            job_name,
+                            scriptdir,
+                            matlab_script,
+                            dstdir,
+                            tile,
+                            args.res,
+                            args.lib_path,
+                            qsubpath
+                        )
                     print cmd
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)
@@ -85,9 +109,24 @@ def main():
                 else:
                     #cmd = """matlab -nodisplay -nosplash -r "addpath('{}'); parpool(4); selectTileByName('{}',{}); exit" """.format(scriptdir, tile, args.res)
                     if args.gcpfile:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); {}('{}','{}',{},'{}'); exit" """.format(scriptdir, matlab_script, dstdir, tile, args.res, args.gcpfile)
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); addpath('{}'); {}('{}','{}',{},'{}'); exit" """.format(
+                            scriptdir,
+                            args.lib_path,
+                            matlab_script,
+                            dstdir,
+                            tile,
+                            args.res,
+                            args.gcpfile
+                        )
                     else:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); {}('{}','{}',{}); exit" """.format(scriptdir, matlab_script, dstdir, tile, args.res)
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); addpath('{}'); {}('{}','{}',{}); exit" """.format(
+                            scriptdir,
+                            args.lib_path,
+                            matlab_script,
+                            dstdir,
+                            tile,
+                            args.res
+                        )
                     print "{}, {}".format(i, cmd)
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)

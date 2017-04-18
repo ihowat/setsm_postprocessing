@@ -1,4 +1,5 @@
 import os, string, sys, argparse, glob, subprocess
+matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing'
 
 def main():
     
@@ -9,6 +10,8 @@ def main():
     
     parser.add_argument("--rema", action='store_true', default=False,
             help="use REMA-specific filter")
+    parser.add_argument("--lib-path", default=matlab_scripts,
+            help="path to referenced Matlab functions (default={}".format(matlab_scripts))
     parser.add_argument("--pbs", action='store_true', default=False,
             help="submit tasks to PBS")
     parser.add_argument("--qsubscript",
@@ -75,7 +78,16 @@ def main():
                     else:
                         script = 'scenes2strips_single'
                     job_name = 's2s{:04g}'.format(i)
-                    cmd = r'qsub -N {} -v p1={},p2={},p3={},p4={},p5={} {}'.format(job_name, scriptdir, src, stripid, args.res, script, qsubpath)
+                    cmd = r'qsub -N {} -v p1={},p2={},p3={},p4={},p5={},p6={} {}'.format(
+                        job_name,
+                        scriptdir,
+                        src,
+                        stripid,
+                        args.res,
+                        script,
+                        args.lib_path,
+                        qsubpath
+                    )
                     print cmd
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)
@@ -83,12 +95,24 @@ def main():
                 ## else run matlab
                 else:
                     if args.rema:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); scenes2strips_single_rema('{}','{}','{}'); exit" """.format(scriptdir, src, stripid, args.res)
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); addpath('{}'); scenes2strips_single_rema('{}','{}','{}'); exit" """.format(
+                            scriptdir,
+                            args.lib_path,
+                            src,
+                            stripid,
+                            args.res
+                        )
                         print "{}, {}".format(i, cmd)
                         if not args.dryrun:
                             subprocess.call(cmd, shell=True)
                     else:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); scenes2strips_single('{}','{}','{}'); exit" """.format(scriptdir, src, stripid, args.res)
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); addpath('{}'); scenes2strips_single('{}','{}','{}'); exit" """.format(
+                            scriptdir,
+                            args.lib_path,
+                            src,
+                            stripid,
+                            args.res
+                        )
                         print "{}, {}".format(i, cmd)
                         if not args.dryrun:
                             subprocess.call(cmd, shell=True)
