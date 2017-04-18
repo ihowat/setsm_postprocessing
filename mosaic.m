@@ -4,6 +4,8 @@ function mosaic(db,tiles,res,outdir,varargin)
 %  mosaic(db,tiles,res,outdir)
 %  mosaic(db,tiles,res,outdir,gcp)
 
+buffer=100;
+
 %% parse and error check varargin
 if ~isempty(varargin)
        
@@ -88,14 +90,14 @@ for i=1:length(tilef)
     
     load(fi,'x','y');
     % crop buffer tile
-    x=x(101:end-100);
-    y=y(101:end-100);
+    x=x(buffer+1:end-buffer);
+    y=y(buffer+1:end-buffer);
     
     OutDemName = strrep(fi,'.mat','.tif');
     if ~exist(OutDemName,'file');
         
         load(fi,'z');
-        z=z(101:end-100,101:end-100);
+        z=z(buffer+1:end-buffer,buffer+1:end-buffer);
         z(isnan(z)) = -9999;
         
         writeGeotiff(OutDemName,x,y,z,4,-9999,'polar stereo north')
@@ -105,7 +107,7 @@ for i=1:length(tilef)
     OutMatchtagName = strrep(fi,'dem.mat','matchtag.tif');
     if ~exist(OutMatchtagName,'file');
         load(fi,'mt');
-        mt =mt(101:end-100,101:end-100);
+        mt =mt(buffer+1:end-buffer,buffer+1:end-buffer);
         writeGeotiff(OutMatchtagName,x,y,mt,1,0,'polar stereo north')
         clear mt
     end
@@ -113,7 +115,7 @@ for i=1:length(tilef)
     OutOrthoName = strrep(fi,'dem.mat','ortho.tif');
     if ~exist(OutOrthoName ,'file');
         load(fi,'or');
-        or =or(101:end-100,101:end-100);
+        or =or(buffer+1:end-buffer,buffer+1:end-buffer);
         writeGeotiff(OutOrthoName ,x,y,or,2,0,'polar stereo north')
         clear or
     end;
@@ -121,7 +123,7 @@ for i=1:length(tilef)
     OutDaynumName = strrep(fi,'dem.mat','daynum.tif');
     if ~exist(OutDaynumName,'file');
         load(fi,'dy');
-        dy =dy(101:end-100,101:end-100);
+        dy =dy(buffer+1:end-buffer,buffer+1:end-buffer);
         writeGeotiff(OutDaynumName,x,y,dy,2,0,'polar stereo north')
         clear dy
     end
