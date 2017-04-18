@@ -5,8 +5,8 @@ function strips2tile(varargin)
 %           strips2tile(meta,tilex0, tilex1, tiley0, tiley1,res,outname)
 %
 % where meta is the database structure, tilex and tiley are the coordinate
-% ranges of the tile, res is the tile resolution in m and outname is the
-% tile output file name.
+% ranges of the tile, buff is an edge buffer to add  to these ranges in pixels
+% res is the tile resolution in m and outname is the tile output file name.
 %
 %[...] = strips2tile(...,'options') where the following options are
 %availble:
@@ -19,8 +19,9 @@ function strips2tile(varargin)
 %       for descriptions.
 %       'mergeMethodReg','methodstring', specifies the mergeing method for
 %       registered strips.'feather' (default), 'underprint' or 'warp'.
+%       'buffer' number of edge buffer pixels to add to the range, default=100
 %
-%   subfunctions: stripSearch,regStrips2Tile,initializeTile,readreg,addStrip2Mosaic
+% subfunctions: stripSearch,regStrips2Tile,initializeTile,readreg,addStrip2Mosaic
 %
 % Procedure description: Strips are added to the mosaic to form
 % 'coregistration clusters'. Strips with a priori registration are assigned
@@ -50,6 +51,9 @@ disableCoregTest=false;
 % default merging method
 mergeMethod='feather';
 
+%default edge buffer
+buff=100;
+
 % default merging method for registered files
 mergeMethodReg='underprint';
 
@@ -74,8 +78,7 @@ if nargin >= 7 % number of argins needed for creating a new mosaic from scratch
             fprintf('Coregistration testing disabled\n')
             disableCoregTest=true;
         end
-        
-        
+
         if any(strcmpi('mergeMethod',varargin))
             n=find(strcmpi('mergeMethod',varargin));
             mergeMethod=varargin{n+1};
@@ -84,6 +87,11 @@ if nargin >= 7 % number of argins needed for creating a new mosaic from scratch
         if any(strcmpi('mergeMethodReg',varargin))
             n=find(strcmpi('mergeMethodReg',varargin));
             mergeMethodReg=varargin{n+1};
+        end
+        
+        if any(strcmpi('buffer',varargin))
+            n=find(strcmpi('buffer',varargin));
+            buff=varargin{n+1};
         end
         
     end
@@ -103,7 +111,7 @@ if isempty(meta); return; end
 
 % Initialize/Restart Mosaic
 [x,y,c,C,N,m,meta] = initializeTile(...
-    meta,tilex0,tilex1,tiley0,tiley1,res,outname,tileVersion,disableReg,...
+    meta,tilex0,tilex1,tiley0,tiley1,buff,res,outname,tileVersion,disableReg,...
     disableCoregTest,mergeMethod,mergeMethodReg);
 
 % Add Registered Strips

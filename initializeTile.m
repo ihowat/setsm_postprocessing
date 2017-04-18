@@ -1,12 +1,12 @@
-function [x,y,c,C,N,m,meta] = initializeTile(meta,tilex0,tilex1,tiley0,tiley1,res,outname,tileVersion,disableReg, disableCoregTest,mergeMethod,mergeMethodReg);
+function [x,y,c,C,N,m,meta] = initializeTile(meta,tilex0,tilex1,tiley0,tiley1,buff,res,outname,tileVersion,disableReg, disableCoregTest,mergeMethod,mergeMethodReg);
 
 % initializeTile mosaic tile grid definition and initialization or restart
 %
 % [x,y,c,C,N,m] = initializeTile(...
-%       meta,tilex0,tilex1,tiley0,tiley1,res,outname) 
+%       meta,tilex0,tilex1,tiley0,tiley1,buff,res,outname,... 
 %       ARGINS: meta is the metastruct, tile* are the tile grid ranges,
-%       res is the output grid resolution and outname is the output file 
-%       name. 
+%       buff is the number of buffer pixels to add, res is the output 
+%       grid resolution and outname is the output file name. 
 %       ARGOOUTS: x,y are grid coordinate vectors, C is the coregistration
 %       cluster number array, c is the initial coregisteration cluster
 %       number, N is the grid point data flag and m is the output file
@@ -19,8 +19,8 @@ if ~exist(outname,'file')
     
     % define mosaic coorinate grid. Add a 100-pixel buffer for aligning/merging
     % the tiles
-    x = tilex0-100*res: res:tilex1+100*res;
-    y = tiley1+100*res:-res:tiley0-100*res;
+    x = tilex0-buff*res: res:tilex1+buff*res;
+    y = tiley1+buff*res:-res:tiley0-buff*res;
     y = y(:);
     
     % make output file
