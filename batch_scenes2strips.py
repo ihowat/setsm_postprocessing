@@ -1,5 +1,5 @@
 import os, string, sys, argparse, glob, subprocess
-matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing'
+matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing3'
 
 def main():
     

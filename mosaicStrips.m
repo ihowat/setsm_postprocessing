@@ -30,8 +30,10 @@ for n=1:length(tiles.I)
         fprintf('building tile %s: %d of %d\n',tiles.I{n},n,length(tiles.I))
         %strips2tile(meta,tiles.x0(n),tiles.x1(n),tiles.y0(n),tiles.y1(n),res,...
         %    outname,'disableReg','disableCoregTest');
+        % get buffer pixel count that makes it 200m
+        bufsize = floor(200 / res);
         strips2tile(meta,tiles.x0(n),tiles.x1(n),tiles.y0(n),tiles.y1(n),res,...
-            outname,'disableReg');
+            outname,'disableReg','buffer',bufsize);
     end
     
     if exist(outname,'file')
