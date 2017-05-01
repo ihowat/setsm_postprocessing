@@ -1,4 +1,4 @@
-function writeTileToTif(tilef,projstr)
+function writeTileToTif(tilef,res,projstr)
 % Write dem or reg_dem matfiles to tif
 
 %% Crop Buffers and Write Tiles To Geotiffs 
@@ -12,16 +12,19 @@ end
 
 fprintf('source: %s\n',fi);
 
+% calc buffer to remove
+buffer = floor(200 / res);
+
 load(fi,'x','y');
 % crop buffer tile
-x=x(101:end-100);
-y=y(101:end-100);
+x=x(buffer+1:end-buffer);
+y=y(buffer+1:end-buffer);
 
 OutDemName = strrep(fi,'.mat','.tif');
 if ~exist(OutDemName,'file');
     
     load(fi,'z');
-    z=z(101:end-100,101:end-100);
+    z=z(buffer+1:end-buffer,buffer+1:end-buffer);
     z(isnan(z)) = -9999;
     
     writeGeotiff(OutDemName,x,y,z,4,-9999,projstr)
@@ -31,7 +34,7 @@ end
 OutMatchtagName = strrep(fi,'dem.mat','matchtag.tif');
 if ~exist(OutMatchtagName,'file');
     load(fi,'mt');
-    mt =mt(101:end-100,101:end-100);
+    mt =mt(buffer+1:end-buffer,buffer+1:end-buffer);
     writeGeotiff(OutMatchtagName,x,y,mt,1,0,projstr)
     clear mt
 end
@@ -39,7 +42,7 @@ end
 % OutOrthoName = strrep(fi,'dem.mat','ortho.tif');
 % if ~exist(OutOrthoName ,'file');
 %     load(fi,'or');
-%     or =or(101:end-100,101:end-100);
+%     or =or(buffer+1:end-buffer,buffer+1:end-buffer);
 %     writeGeotiff(OutOrthoName ,x,y,or,2,0,projstr)
 %     clear or
 % end;
@@ -47,7 +50,7 @@ end
 % OutDaynumName = strrep(fi,'dem.mat','daynum.tif');
 % if ~exist(OutDaynumName,'file');
 %     load(fi,'dy');
-%     dy =dy(101:end-100,101:end-100);
+%     dy =dy(buffer+1:end-buffer,buffer+1:end-buffer);
 %     writeGeotiff(OutDaynumName,x,y,dy,2,0,projstr)
 %     clear dy
 % end

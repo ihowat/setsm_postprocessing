@@ -65,12 +65,13 @@ def main():
                     i+=1
                     if args.pbs:
                         job_name = 't2t_{}'.format(tile)
-                        cmd = r'qsub -N {} -v p1={},p2={},p3="{}",p4={} {}'.format(
+                        cmd = r'qsub -N {} -v p1={},p2={},p3="{}",p4={},p5={} {}'.format(
                             job_name,
                             scriptdir,
                             matfile,
                             projstr,
                             args.lib_path,
+                            args.res,
                             qsubpath
                         )
                         print cmd
@@ -79,10 +80,11 @@ def main():
                     
                     ## else run matlab
                     else:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); addpath('{}'); writeTileToTif('{}','{}'); exit" """.format(
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); addpath('{}'); writeTileToTif('{}',{},'{}'); exit" """.format(
                             scriptdir,
                             args.lib_path,
                             matfile,
+                            args.res,
                             projstr
                         )
                         print "{}, {}".format(i, cmd)
