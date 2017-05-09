@@ -7,6 +7,9 @@ function [meta] = stripSearch(meta,tilex0,tilex1,tiley0,tiley1)
 %   removed from meta. NOTE:all meta fields must be record-per-row or else
 %   they will be screwed up by the (n,:) removal.
 %
+%   Requires the MFE function intersections.m
+%   https://www.mathworks.com/matlabcentral/fileexchange/11837-fast-and-robust-curve-intersections?focused=5146979&tab=function
+%
 % Ian Howat, ihowat@gmail.com, Ohio State
 
 % make tile boundary polygon
@@ -29,8 +32,20 @@ meta = structfun(@(x) ( x(n,:) ), meta, 'UniformOutput', false);
 % search for all strip footprints overlapping this tile
 n=false(size(meta.f));
 for i=1:length(n)
+   
     n(i) = any(inpolygon(meta.x{i},meta.y{i},tilevx,tilevy)) | ...
         any(inpolygon(tilevx,tilevy,meta.x{i},meta.y{i}));
+    
+    if ~n(i)
+        
+        [xtest,~] = intersections(meta.x{i},meta.y{i},tilevx,tilevy);
+        
+        if ~isempty(xtest)
+            n(i) = true;
+        end
+    
+   end
+
 end
 
 % if no overlap, return
