@@ -62,7 +62,9 @@ for i=1:length(f);
 end
 
 % run mergeTileBuffer on each pair in list
-for i=1:length(n0); mergeTileBuffer(f{n0(i)},f{n1(i)}); end
+if ~(n0==0)
+    for i=1:length(n0); mergeTileBuffer(f{n0(i)},f{n1(i)}); end
+end
     
     
     
