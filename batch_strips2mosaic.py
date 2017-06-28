@@ -21,7 +21,7 @@ def main():
     parser.add_argument("--pbs", action='store_true', default=False,
             help="submit tasks to PBS")
     parser.add_argument("--qsubscript",
-            help="qsub script to use in PBS submission (default is qsub_strips2mosaic_rookery.sh in script root folder)")
+            help="qsub script to use in PBS submission (default is qsub_strips2mosaic.sh in script root folder)")
     parser.add_argument("--dryrun", action='store_true', default=False,
             help='print actions without executing')
     
@@ -33,7 +33,7 @@ def main():
 
     ## Verify qsubscript
     if args.qsubscript is None:
-        qsubpath = os.path.join(scriptdir,'qsub_strips2mosaic_rookery.sh')
+        qsubpath = os.path.join(scriptdir,'qsub_strips2mosaic.sh')
     else:
         qsubpath = os.path.abspath(args.qsubscript)
     if not os.path.isfile(qsubpath):
@@ -65,7 +65,7 @@ def main():
             ## if output does not exist, add to task list
             if args.rebuild:
                 dstfp = os.path.join(dstdir,tile,'{}_{}m_reg_dem.mat'.format(tile, args.res))
-                dstfp2 = os.path.join(dstdir,tile,'{}_{}m_rebuild.mat'.format(tile, args.res))
+                dstfp2 = os.path.join(dstdir,tile,'{}_{}m_dem.mat'.format(tile, args.res))
             else:
                 dstfp = os.path.join(dstdir,tile,'{}_{}m_reg_dem.mat'.format(tile, args.res))
                 dstfp2 = os.path.join(dstdir,tile,'{}_{}m_dem.mat'.format(tile, args.res))
@@ -109,7 +109,7 @@ def main():
                 else:
                     #cmd = """matlab -nodisplay -nosplash -r "addpath('{}'); parpool(4); selectTileByName('{}',{}); exit" """.format(scriptdir, tile, args.res)
                     if args.gcpfile:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); addpath('{}'); {}('{}','{}',{},'{}'); exit" """.format(
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); addpath('{1}/intersections'); {2}('{3}','{4}',{5},'{6}'); exit" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,
@@ -119,7 +119,7 @@ def main():
                             args.gcpfile
                         )
                     else:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); addpath('{}'); {}('{}','{}',{}); exit" """.format(
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); addpath('{1}/intersections'); {2}('{3}','{4}',{5}); exit" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,

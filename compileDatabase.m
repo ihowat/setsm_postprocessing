@@ -2,7 +2,7 @@
 
 udir='/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region';
 rdir=dir([udir,'/region_*']);
-outname='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing/arcticDEMdatabase_2m.mat';
+outname='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticDEMdatabase_2m_temp.mat';
 
 for i=1:length(rdir);
     demDir{i}=[udir,'/',rdir(i).name,'/strips/2m'];

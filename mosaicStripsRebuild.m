@@ -22,7 +22,7 @@ for n=1:length(tiles.I)
     
     lowresdem=[outdir,'/',tiles.I{n},'_40m_dem.mat'];
     outname=[outdir,'/',tiles.I{n},'_',num2str(res),'m_dem.mat'];
-
+    
     if exist(outname,'file')
         fprintf('tile dem %s exists\n',tiles.I{n})
     elseif ~exist(lowresdem,'file')

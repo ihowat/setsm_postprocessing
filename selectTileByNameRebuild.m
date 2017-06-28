@@ -24,6 +24,7 @@ tiles=load(tilefile);
 
 % crop tile structure to overlapping tiles
 tiles = structfun(@(x) ( x(n) ), tiles, 'UniformOutput', false);
+disp(tiles);
 
 % load database file into mat file object
 meta=loadQcData(dbasefile);

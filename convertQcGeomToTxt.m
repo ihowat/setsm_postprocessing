@@ -33,19 +33,34 @@ fprintf('QC records: %d\n',length(qc.fileNames));
 
 if ~isempty(qc.fileNames)
     
-    f = regexprep(qc.fileNames, '[\w\d\\:]+/','');
+    % get indices where flag = 3
+    I = qc.flag == 3;
+    % get basenames, x, y for those indicies
+    f = regexprep(qc.fileNames(I), '[\w\d\\:]+/','');
     f=strrep(f,'_dem_browse.tif','_v2.0');
     f=strcat('SETSM_',f);
     
-    flag = qc.flag;
+    x=qc.x(I);
+    y=qc.y(I);
     
     clear qc
     
     fid=fopen(txtfile,'w');
-    for i=1:length(f)
-        
-        fprintf(fid,'%s,%d\n',f{i},flag(i));
-        
+    for i=1:length(x)
+        for j=1:length(x{i})
+            coords={};
+            cx=x{i}{j};
+            cy=y{i}{j};
+            if ~(isempty(cx) || isempty(cy))
+                c=mat2str([cx,cy]);
+                c=strrep(strrep(strrep(c,'[','(('),']','))'),';',',');
+                coords{end+1}=c;
+            end
+        end
+        if ~isempty(coords)
+            strjoin(coords,',');
+            fprintf(fid,'%s;MULTIPOLYGON(%s)\n',f{i},c);
+        end
     end
     
 end
