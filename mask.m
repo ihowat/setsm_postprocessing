@@ -22,6 +22,9 @@ function  m = mask(varargin)
 % additionally, if image_1_wv_correct==1, the image_1_max field is also
 % required.
 %
+% REQUIRED FUNCTIONS: readGeotiff, DataDensityMap, rescaleDN, edgeSlopeMask
+% cloudMask, DG_DN2RAD, waterMask
+%
 % Ian Howat, ihowat@gmail.com
 % 25-Jul-2017 12:49:25
 
@@ -119,7 +122,7 @@ fprintf('radiance value range: %.2f to %.2f\n',...
 or = imresize(or,.25);
 
 %% edge crop
-M = edgeMask2(x,y,z);
+M = edgeSlopeMask(x,y,z);
 
 % apply mask
 z(~M) = NaN;
