@@ -1,147 +1,191 @@
-function m = mask(demFile)
-%m = mask(demFile) create ArcticDEM scene mask
+function  m = mask(varargin)
+% MASK ArcticDEM masking algorithm
 %
-% m = mask(demFile) returns the data mask structure m.x, m.y, m.z for the
-%dem in demFile. Mask uses the DEM, orthoimage and matchtag files, which
-%are assumed to be int he same path whith the same basename and standard
-%suffixes. Mask combines match point-density and orthoimage entropy to
-%locate large water bodies and uses the match point-density and the
-%standard deviation of slope to locate both water and cloads
+% m = mask(demFile,effectiveBandwidth,abScaleFactor,meanSunElevation) 
+% returns the mask stucture (m.x,m.y,m.z) for the demFile using the
+% given image parameters.
+%
+% m = mask(...,maxDigitalNumber,previewPlot) maxDigitalNumber is optional 
+% for rescaling the orthoimage to the original source image range. 
+% If it's mot included or is empty, no rescaling will be applied. If 
+% previewPlot == 'true', a *_maskPreview.tif image will be saved to the
+% same directory as the demFile that shows the DEM hillshade with and
+% without the mask applied.
+%
+% m = mask(demFile,meta) returns the mask stucture (m.x,m.y,m.z) for the
+% demFile and meta structure, where meta is the output of readSceneMeta.
+% Required fields in the meta structure are:
+% 'image_1_wv_correct'
+% 'image_1_effbw' 
+% 'image_1_abscalfact'
+% 'image_1_mean_sun_elevation'
+% additionally, if image_1_wv_correct==1, the image_1_max field is also
+% required.
 %
 % Ian Howat, ihowat@gmail.com
-% Version 1. 06-Apr-2017 14:14:36
+% 25-Jul-2017 12:49:25
 
-% make file names
-mtFile = strrep(demFile,'dem.tif','matchtag.tif');
-orFile = strrep(demFile,'dem.tif','ortho.tif');
-metaFile = strrep(demFile,'dem.tif','meta.txt');
-
-
-% There is some sort of scaling difference between the wv_correct and non
-% wv_correct - applied othos that screws up the conversion to uint8 in
-% entropyfilt (which uses im2uint8) unless I convert to uint8 first. So
-% need to check if wvc applied.
-wvcFlag=false;
-
-% check if meta file exists
-if ~exist(metaFile,'file')
-   warning('no meta file found, assuming no wv_correct applied\n');
-else
-    % exists, so read meta file
-    c=textread(metaFile,'%s','delimiter','\n');
-    
-    %find SETSM version
-    str='Image 1 wv_correct=';
-    r=find(~cellfun(@isempty,strfind(c,str)));
-    value=deblank(strrep(c{r(1)},str,''));
-    wvcFlag = logical(str2num(value));
-    
-    if wvcFlag
-        fprintf('wv_correct applied\n')
-    else
-        fprintf('wv_correct not applied\n');
+%% Parse inputs
+maxDN = [];
+previewFlag = false;
+if nargin == 2
+    demFile=varargin{1};
+    meta=varargin{2};
+    wv_correctflag=meta.image_1_wv_correct;
+    effbw = meta.image_1_effbw;
+    abscalfact=meta.image_1_abscalfact;
+    mean_sun_elevation = meta.image_1_mean_sun_elevation;
+    if wv_correctflag
+        maxDN = meta.image_1_max;
     end
+elseif nargin >= 4 || nargin <= 6
+    demFile=varargin{1};
+    effbw =varargin{2};
+    abscalfact =varargin{3};
+    mean_sun_elevation =varargin{4};
+    if nargin == 5 || nargin == 6; maxDN = varargin{5}; end;
+    if nargin == 6; previewFlag = varargin{6}; end;
+else
+    error('2, 4, 5 or 6 input arguments required')
 end
 
-%% Data density image
+% intialize output
+m = [];
 
-% read the matchtag and ortho files
-mt=readGeotiff(mtFile);
+% Ortho and Matchtag Files
+orthoFile = strrep(demFile,'dem.tif','ortho.tif');
+mtFile= strrep(demFile,'dem.tif','matchtag.tif');
 
-% calculate data density map using default (11x11 kernel)
-P = DataDensityMap(mt.z);
+%% read data and make initial arrays
 
-% resize to 8m - resizing the mt directly results in point loss
-P = imresize(P,0.25);
-
-%% Entropy Image
-
-% read ortho
-or=readGeotiff(orFile);
-or = or.z; % get rid of map data
-
-% resize ortho to 8m
-or = imresize(or,0.25);
-
-% subtraction image
-or_subtraction =  movmax(or,5) - movmin(or,5);
- 
-or_subtraction(imdilate(or == 0,ones(9))) = 0;
-
-if ~wvcFlag; or_subtraction = uint8(or_subtraction); end
-
- % entropy image
-J = entropyfilt(or_subtraction,ones(5));
-
-
-%% Entropy & Density Mask
-
-% use a two-minimum threshold, the first is high density, low entropy (e.g.
-% snow and ice), the second is low density, higher entropy (e.g. forest
-% canopy)
-M = (P > 0.9 & J > 0.2) | (P > 0.3 & J > 1) ; 
-
-% just concerned with coastline here so fill the interior data gaps
-M = imfill(M,'holes');
-
-% get rid of isolated little clusters of data. we could get rid of more if
-% a minumum "island" size is known
-M = bwareaopen(M, 1000); 
-
-% expand to ensure boundary/coast coverage
-M = imdilate(M, ones(7)); 
-
-% set background to false
-M(or ==0) = false;
-
-
-%% Sigma Slope & Density Mask
-
-% read dem
+% read DEM data
 z = readGeotiff(demFile);
 
-% x = z.x; only needed for hillshade 
-% y = z.y; only needed for hillshade
-z = z.z;
+% initialize output
+m.x = z.x;
+m.y = z.y;
+m.info = z.info;
+m.Tinfo = z.Tinfo;
 
+% parse structure
+x = z.x;
+y = z.y;
+z = z.z;
 z(z == -9999) = NaN;
 
+% orignal size for rescaling
+sz0=size(z);
+
+% original background for rescaling
+bg0 = isnan(z);
+
+% downscale to 8m
 z = imresize(z,.25);
-% x = imresize(x,.25); only needed for hillshade
-% y = imresize(y,.25); only needed for hillshade
+x = imresize(x,.25);
+y = imresize(y,.25);
 
-% construct hillshade for debugging
-%hill = hillshade(z,x,y);
+% read matchtag
+mt = readGeotiff(mtFile);
+mt = mt.z;
 
-[sx,sy] = gradient(z,8); % calculate slopes
+% make data density map
+P = DataDensityMap(mt,21);
 
-[~,rho] = cart2pol(sx,sy); % vector slope
+% downscale to 8m
+P = imresize(P,0.25);
 
-k=11; % convolution kernel size
-rhomn =conv2(rho,ones(k)/(k.^2),'same'); % mean slope
-rhosd=sqrt( conv2(rho.^2,ones(k)/(k.^2),'same') - rhomn.^2 ); % std dev
+% set P no data
+P(isnan(z)) = NaN;
 
-% sigma slope threshold function
-rhosdthresh= (1.*P).^4;
+%read ortho
+or = readGeotiff(orthoFile);
+or = or.z;
 
-% apply theshold
-M1 = rhosd <= rhosdthresh;
+% data re-scaling
+if ~isempty(maxDN)
+    fprintf('rescaled to: 0 to %d\n',maxDN)
+    or=rescaleDN(or,maxDN);
+end
 
-% remove data bits < 2000
-M1 = bwareaopen(M1,2000);
+%convert to radiance
+[~,satID]=fileparts(demFile);
+satID=upper(satID(1:4));
+or = DG_DN2RAD(or, satID,effbw, abscalfact);
 
-% remove data gaps < 2000
-M1 = ~bwareaopen(~M1,2000);
+fprintf('radiance value range: %.2f to %.2f\n',...
+    min(or(:)),max(or(:)))
 
-% build output structure
-m.z = imresize(M & M1,size(mt.z),'nearest');
-m.x = mt.x;
-m.y = mt.y;
-m.info = mt.info;
-m.Tinfo = mt.Tinfo;
+%rescale ortho to 8m
+or = imresize(or,.25);
 
+%% edge crop
+M = edgeMask2(x,y,z);
 
+% apply mask
+z(~M) = NaN;
+
+clear M
+
+%% Water Mask
+% set no data z values to 0 in ortho
+or(isnan(z)) = 0;
+P(isnan(z)) = 0;
+M = waterMask(or,mean_sun_elevation,P);
+
+% apply mask
+z(~M) = NaN;
+P(~M) = 0;
+
+%% Cloud Filter
+M = cloudMask(z,or,P);
+
+% apply mask
+z(M) = NaN;
+
+%% finalize mask
+M = ~isnan(z);
+
+M = bwareaopen(M,500);
+
+M = imresize(M,sz0,'nearest');
+M(bg0) = false;
+
+% add to structure
+m.z = M;
+% 
+
+if ~previewFlag; return; end
+
+%% Display output
+ % 
+ % read DEM data
+z = readGeotiff(demFile);
+x = z.x;
+y = z.y;
+z = z.z;
+z(z == -9999) = NaN;
  
+z_masked = z;
+z_masked(~M) = NaN;
  
-
-
+rf = 0.25;
+z = imresize(z,rf);
+x = imresize(x,rf); % only needed for hillshade
+y = imresize(y,rf); % only needed for hillshade
+z_masked = imresize(z_masked,rf);
+ 
+hill = hillshade(z,x,y);
+hill_masked = hillshade(z_masked,x,y);
+ 
+h=figure(1);
+set(gcf,'color','w','visible','off')
+hpos = get(gcf,'position');
+hpos(3) = 2000;
+hpos(4) = 1000;
+set(gcf,'position',hpos);
+subplot(1,2,1)
+imagesc(hill,'alphadata',~isnan(z)); colormap gray; axis equal
+subplot(1,2,2)
+imagesc(hill_masked,'alphadata',~isnan(z_masked)); colormap gray; axis equal
+print(h,'-dtiff','-r100',strrep(demFile,'_dem.tif','_maskPreview.tif'));
+close(h)
