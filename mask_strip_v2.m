@@ -26,9 +26,11 @@ for i=1:1:length(demFiles)
     demFile = demFiles{i};
     OutMaskName = strrep(demFile,'dem.tif','mask.tif');
     fprintf('processing %d of %d: %s \n',i,length(demFiles),demFile)
+   
+    %read meta file
+    metaFile= strrep(demFile,'dem.tif','meta.txt'); 
+    m = mask(demFile);
     
- 	m = mask(demFile);
-%     
     if isfield(m.Tinfo,'GeoDoubleParamsTag')
         
         if m.Tinfo.GeoDoubleParamsTag(1) > 0

@@ -55,7 +55,7 @@ end
 if missingflag==1; return; end
 
 %% run filtering
-mask_strip(demdir,stripid);
+mask_strip_v2(demdir,stripid);
 
 %% build strip segments
 seg=1;
