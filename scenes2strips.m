@@ -53,7 +53,6 @@ for i=1:length(f)
     end
     
     fprintf('scene %d of %d: %s\n',i,length(f),demFile)
-    fprintf('scene %d of %d: %s\n',i,length(f),maskFile)
     
     try
         [x,y,z,o,m,md] = loaddata(demFile,matchFile,orthoFile,maskFile);
