@@ -44,22 +44,19 @@ for i=1:length(f)
     matchFile= strrep(demFile,'dem.tif','matchtag.tif');
     orthoFile= strrep(demFile,'dem.tif','ortho.tif');
     %shadeFile= strrep(demFile,'dem.tif','dem_shade.tif');
-%     edgeMaskFile=  strrep(demFile,'dem.tif','edgemask.tif');
-%     dataMaskFile=  strrep(demFile,'dem.tif','datamask.tif');
+    %maskFile=  strrep(demFile,'dem.tif','mask.tif');
 
-     edgeMaskFile=  [];
-     dataMaskFile=  [];
+    maskFile=[];
 
     if maskFlag
-     edgeMaskFile=  strrep(demFile,'dem.tif','edgemask.tif');
-     dataMaskFile=  strrep(demFile,'dem.tif','datamask.tif');
+        maskFile= strrep(demFile,'dem.tif','mask.tif');
     end
     
     fprintf('scene %d of %d: %s\n',i,length(f),demFile)
+    fprintf('scene %d of %d: %s\n',i,length(f),maskFile)
     
     try
-            [x,y,z,o,m,me,md] = loaddata(demFile,matchFile,orthoFile,...
-                edgeMaskFile,dataMaskFile);
+        [x,y,z,o,m,md] = loaddata(demFile,matchFile,orthoFile,maskFile);
     catch
         fprintf('data read error, skipping \n'); 
         continue; 
@@ -347,7 +344,7 @@ else
     X=[]; Y=[]; Z=[]; M=[]; O=[];
 end
 
-function [x,y,z,o,m,me,md] = loaddata(demFile,matchFile,orthoFile,edgeMaskFile,dataMaskFile)
+function [x,y,z,o,m,md] = loaddata(demFile,matchFile,orthoFile,maskFile)
 % loaddata load data files and perform basic conversions
 
 d=readGeotiff(demFile); x=d.x; y=d.y; z=d.z; clear d
@@ -382,29 +379,14 @@ if exist(orthoFile,'file')
     clear d
 end
 
-if ~isempty(edgeMaskFile)
-    if exist(edgeMaskFile,'file')
-        d=readGeotiff(edgeMaskFile);
+if ~isempty(maskFile)
+    if exist(maskFile,'file')
+        d=readGeotiff(maskFile);
         szd=size(d.z);
-        if any(szd ~= sz); error('edgemaskfile wrong dimensions'); end
-        me=d.z;
-        clear d;
-    else
-        error('No edgeMaskFile Found')
-    end
-else
-    me = true(sz);
-end
-
-
-if ~isempty(dataMaskFile)
-    if exist(dataMaskFile,'file')
-        d=readGeotiff(dataMaskFile);
-        szd=size(d.z);
-        if any(szd ~= sz); error('datamaskfile wrong dimensions'); end
+        if any(szd ~= sz); error('maskFile wrong dimensions'); end
         md=d.z;
     else
-        error('No dataMaskFile Found')
+        error('No maskFile Found')
     end
 else
     md = true(sz);
