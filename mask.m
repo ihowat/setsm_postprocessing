@@ -67,6 +67,7 @@ z = readGeotiff(demFile);
 % initialize output
 m.x = z.x;
 m.y = z.y;
+m.z = false(size(z.z));
 m.info = z.info;
 m.Tinfo = z.Tinfo;
 
@@ -127,6 +128,9 @@ M = edgeSlopeMask(x,y,z);
 % apply mask
 z(~M) = NaN;
 
+% data existence check
+if ~any(~isnan(z)); return; end
+
 clear M
 
 %% Water Mask
@@ -139,6 +143,9 @@ M = waterMask(or,mean_sun_elevation,P);
 z(~M) = NaN;
 P(~M) = 0;
 
+% data existence check
+if ~any(~isnan(z)); return; end
+
 %% Cloud Filter
 M = cloudMask(z,or,P);
 
@@ -147,6 +154,9 @@ z(M) = NaN;
 
 %% finalize mask
 M = ~isnan(z);
+
+% data existence check
+if ~any(M(:)); return; end
 
 M = bwareaopen(M,500);
 
