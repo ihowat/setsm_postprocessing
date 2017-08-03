@@ -14,6 +14,12 @@ min_data_cluster = 1e4;%isolated clusters of data smaller than this number will 
 PMinCloud = 0.9;
 min_nodata_cluster=1000;
 
+% make sure sufficient non NaN pixels exist, otherwise cut to the chase
+if sum(~isnan(z(:)) < 2.*min_nodata_cluster
+    M=true(size(z));
+    return
+end
+
 % calculate standard deveiation of elevation
 avg_kernel = ones(avg_kernel_size)/(avg_kernel_size .^2);
 Mz =conv2(z,avg_kernel,'same');
@@ -61,5 +67,5 @@ M = M & Me;
 % dilate no data
 M = imdilate(M,ones(dilate_bad));
 
-% remove small clusters of unfiltered data (added for 3e)
+% remove small clusters of unfiltered data
 M = ~bwareaopen(~M,min_data_cluster);
