@@ -15,7 +15,7 @@ PMinCloud = 0.9;
 min_nodata_cluster=1000;
 
 % make sure sufficient non NaN pixels exist, otherwise cut to the chase
-if sum(~isnan(z(:)) < 2.*min_nodata_cluster)
+if sum(~isnan(z(:))) < 2.*min_nodata_cluster
     M=true(size(z));
     return
 end
