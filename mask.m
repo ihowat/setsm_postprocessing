@@ -129,7 +129,7 @@ M = edgeSlopeMask(x,y,z);
 z(~M) = NaN;
 
 % data existence check
-if ~any(~isnan(z)); return; end
+if ~any(~isnan(z(:))); return; end
 
 clear M
 
@@ -144,7 +144,7 @@ z(~M) = NaN;
 P(~M) = 0;
 
 % data existence check
-if ~any(~isnan(z)); return; end
+if ~any(~isnan(z(:))); return; end
 
 %% Cloud Filter
 M = cloudMask(z,or,P);
