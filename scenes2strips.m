@@ -13,6 +13,11 @@ function [X,Y,Z,M,O,trans,rmse,f]=scenes2strips(varargin)
 %   output f gives the list of filenames in the mosaic. If a break is
 %   detected, the list of output files will be less than the input.
 %
+%   [...]=scenes2strips(...,'noMask') will not apply a mask if present.
+%   [...]=scenes2strips(...,'max_coreg_rmse',value) will set a new maximum
+%   coregistration error limit in meters (default=1). Errors above this
+%   limit will result in a segment break.
+%
 % Version 3.0, Ian Howat, Ohio State University, 2015
 
 max_coreg_rmse = 1;%meters; coregistration error larger than this will
@@ -20,15 +25,14 @@ max_coreg_rmse = 1;%meters; coregistration error larger than this will
                    
 maskFlag=true; % look for & apply *_mask.tif file by default
 
+%% Parse argins
 demdir=varargin{1};
 f=varargin{2};
 
-if nargin > 2
-   if any(strcmpi(varargin,'nomask'))
-        maskFlag = false;
-   end
-end
-    
+if any(strcmpi(varargin,'nomask')); maskFlag = false; end;%do not apply mask
+
+n=find(strcmpi(varargin,'max_coreg_rmse'));  % set this max coreg limit
+if ~isempty(n); max_coreg_rmse=varargin{n+1}; end;
 
 %% Order Scenes in north-south or east-west direction by aspect ratio
 fprintf('ordering %d scenes\n',length(f))
@@ -469,5 +473,3 @@ if c(2) > size(A,2); c(2)=size(A,2); end
 if r(2) > size(A,1); r(2)=size(A,1); end
 
 A = A(r(1):r(2),c(1):c(2));
-
-
