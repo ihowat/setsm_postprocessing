@@ -15,7 +15,10 @@ function [X,Y,Z,M,O,trans,rmse,f]=scenes2strips(varargin)
 %
 % Version 3.0, Ian Howat, Ohio State University, 2015
 
-maskFlag=true;
+max_coreg_rmse = 1;%meters; coregistration error larger than this will
+                   %cause a segment break.
+                   
+maskFlag=true; % look for & apply *_mask.tif file by default
 
 demdir=varargin{1};
 f=varargin{2};
@@ -246,7 +249,7 @@ for i=1:length(f)
             P0,P1);
     
     %check for segment break
-    if isnan(rmse(i)) || (rmse(i) > 1)
+    if isnan(rmse(i)) || (rmse(i) > max_coreg_rmse)
         fprintf('Unable to coregister, breaking segment\n')
         f=f(1:i-1);
         trans = trans(:,1:i-1);
