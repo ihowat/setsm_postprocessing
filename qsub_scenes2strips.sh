@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#PBS -l walltime=40:00:00,nodes=1:ppn=6
+#PBS -l walltime=40:00:00,nodes=1:ppn=4
 #PBS -m n
 #PBS -k oe
 #PBS -j oe
@@ -22,7 +22,7 @@ echo $p4
 echo $p5
 echo $p6
 
-echo "addpath('${p1}'); addpath('${p6}'); addpath('${p6}'); ${p5}('${p2}','${p3}','${p4}'); exit"
+echo "addpath('${p1}'); addpath('${p6}'); ${p5}('${p2}','${p3}','${p4}'); exit"
 
 time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p6}'); ${p5}('${p2}','${p3}','${p4}'); exit"
 

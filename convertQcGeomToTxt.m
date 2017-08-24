@@ -47,19 +47,19 @@ if ~isempty(qc.fileNames)
     
     fid=fopen(txtfile,'w');
     for i=1:length(x)
+        coords={};
         for j=1:length(x{i})
-            coords={};
             cx=x{i}{j};
             cy=y{i}{j};
             if ~(isempty(cx) || isempty(cy))
                 c=mat2str([cx,cy]);
-                c=strrep(strrep(strrep(c,'[','(('),']','))'),';',',');
-                coords{end+1}=c;
+                c2=strrep(strrep(strrep(c,'[','(('),']','))'),';',',');
+                coords{end+1}=c2;
             end
         end
         if ~isempty(coords)
-            strjoin(coords,',');
-            fprintf(fid,'%s;MULTIPOLYGON(%s)\n',f{i},c);
+            c3=strjoin(coords,',');
+            fprintf(fid,'%s;MULTIPOLYGON(%s)\n',f{i},c3);
         end
     end
     

@@ -26,7 +26,7 @@ fprintf('merging pair id: %s, %d scenes\n',stripid,length(n))
 a=dir([outdir,'/',f{n(1)}(1:48),'seg*_dem.tif']);
 
 if ~isempty(a)
-    b=dir([demdir,'/',f{n(1)}(1:48),'*_mask.tif']);
+    b=dir([demdir,'/',f{n(1)}(1:48),'*mask.tif']);
 
     a=min([a.datenum]); %date of strip creation
     b=max([b.datenum]); %date of data mask creation

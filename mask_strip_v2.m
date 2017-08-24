@@ -6,7 +6,7 @@ demFiles = {demFiles.name};
 demFiles = cellfun( @(x) [demDir,'/',x], demFiles, 'uniformoutput', false);
 
 %% Update Mode - will only reprocess masks older than the matchtag file
-maskFiles = dir([demDir,'/*',stripid,'*_mask.tif']);
+maskFiles = dir([demDir,'/*',stripid,'*mask.tif']);
 
 if ~isempty(maskFiles)
     
@@ -28,8 +28,9 @@ for i=1:1:length(demFiles)
     fprintf('processing %d of %d: %s \n',i,length(demFiles),demFile)
    
     %read meta file
-    metaFile= strrep(demFile,'dem.tif','meta.txt'); 
-    m = mask(demFile);
+    metaFile= strrep(demFile,'dem.tif','meta.txt');
+    meta=readSceneMeta(metaFile);
+    m = mask(demFile,meta);
     
     if isfield(m.Tinfo,'GeoDoubleParamsTag')
         

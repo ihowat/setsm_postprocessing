@@ -37,6 +37,10 @@ def main():
     
     scene_dems = glob.glob(os.path.join(src,'*dem.tif'))
     
+    dstdir = src.replace('tif_results','strips')
+    if src == dstdir:
+        parser.error('src dir is the same as the dst dir: {}'.format(dstdir))
+
     ## find uniue strip IDs (<catid1_catid2>)    
     if len(scene_dems) > 0:
         stripids = list(set([os.path.basename(s)[14:47] for s in scene_dems]))
@@ -46,7 +50,6 @@ def main():
         for stripid in stripids:
             i+=1
             ## if dem date is less than existing strip date, remove existing output, else skip
-            dstdir = src.replace('tif_results','strips')
             dst_dems = glob.glob(os.path.join(dstdir,'*'+stripid+'_seg*_dem.tif'))
             if len(dst_dems) > 0:
                 src_datamasks = glob.glob(os.path.join(src,'*'+stripid+'*_matchtag.tif'))
