@@ -13,26 +13,29 @@ function [X,Y,Z,M,O,trans,rmse,f]=scenes2strips(varargin)
 %   output f gives the list of filenames in the mosaic. If a break is
 %   detected, the list of output files will be less than the input.
 %
-%   [...]=scenes2strips(...,'noMask') will not apply a mask if present.
+%   [...]=scenes2strips(...,'maskFileSuffix',value) will apply the mask
+%   identified as the dem filename with the _dem.tif replaced by
+%   _maskFileSuffix.tif
 %   [...]=scenes2strips(...,'max_coreg_rmse',value) will set a new maximum
 %   coregistration error limit in meters (default=1). Errors above this
 %   limit will result in a segment break.
 %
-% Version 3.0, Ian Howat, Ohio State University, 2015
+% Version 3.1, Ian Howat, Ohio State University, 2015.
 
 max_coreg_rmse = 1;%meters; coregistration error larger than this will
                    %cause a segment break.
                    
-maskFlag=true; % look for & apply *_mask.tif file by default
-
+         
 %% Parse argins
 demdir=varargin{1};
 f=varargin{2};
 
-if any(strcmpi(varargin,'nomask')); maskFlag = false; end;%do not apply mask
-
-n=find(strcmpi(varargin,'max_coreg_rmse'));  % set this max coreg limit
+n=find(strcmpi(varargin,'max_coreg_rmse')); % set this max coreg limit
 if ~isempty(n); max_coreg_rmse=varargin{n+1}; end;
+
+n=find(strcmpi(varargin,'maskFileSuffix')); % set this max coreg limit
+if ~isempty(n); maskFileSuffix=varargin{n+1}; end;
+
 
 %% Order Scenes in north-south or east-west direction by aspect ratio
 fprintf('ordering %d scenes\n',length(f))
@@ -50,13 +53,11 @@ for i=1:length(f)
     demFile = [demdir,'/',f{i}];
     matchFile= strrep(demFile,'dem.tif','matchtag.tif');
     orthoFile= strrep(demFile,'dem.tif','ortho.tif');
-    %shadeFile= strrep(demFile,'dem.tif','dem_shade.tif');
-    %maskFile=  strrep(demFile,'dem.tif','mask.tif');
-
-    maskFile=[];
-
-    if maskFlag
-        maskFile= strrep(demFile,'dem.tif','mask.tif');
+    maskFile= [];
+    if exist(maskFileSuffix,'var')
+        maskFile= strrep(demFile,'dem.tif',[maskFileSuffix,'.tif']);
+    else
+        fprintf('No Mask Applied');
     end
     
     fprintf('scene %d of %d: %s\n',i,length(f),demFile)
