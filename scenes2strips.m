@@ -36,7 +36,6 @@ if ~isempty(n); max_coreg_rmse=varargin{n+1}; end;
 n=find(strcmpi(varargin,'maskFileSuffix')); % set this max coreg limit
 if ~isempty(n); maskFileSuffix=varargin{n+1}; end;
 
-
 %% Order Scenes in north-south or east-west direction by aspect ratio
 fprintf('ordering %d scenes\n',length(f))
 
@@ -54,7 +53,7 @@ for i=1:length(f)
     matchFile= strrep(demFile,'dem.tif','matchtag.tif');
     orthoFile= strrep(demFile,'dem.tif','ortho.tif');
     maskFile= [];
-    if exist(maskFileSuffix,'var')
+    if exist('maskFileSuffix','var')
         maskFile= strrep(demFile,'dem.tif',[maskFileSuffix,'.tif']);
     else
         fprintf('No Mask Applied');
