@@ -1,11 +1,10 @@
-function scenes2strips_single_noentropy(demdir,stripid,res)
+function scenes2strips_single_noentropy(demdir,stripid,res,outdir)
 
 % change this
 res=[res,'m'];
 fprintf('source: %s\n',demdir)
 fprintf('res: %s\n',res)
 
-outdir=strrep(demdir,'tif_results','strips');
 if ~exist(outdir,'dir'); mkdir(outdir); end
 
 f = dir([demdir,'/*_dem.tif']);
@@ -24,20 +23,7 @@ fprintf('merging pair id: %s, %d scenes\n',stripid,length(n))
 
 %existance check
 a=dir([outdir,'/',f{n(1)}(1:48),'seg*_dem.tif']);
-
-if ~isempty(a)
-    b=dir([demdir,'/',f{n(1)}(1:48),'*mask.tif']);
-
-    a=min([a.datenum]); %date of strip creation
-    b=max([b.datenum]); %date of data mask creation
-
-    % if dem date is less than strip date continue
-    if b < a; fprintf('younger strip exists, skipping\n'); return; end
-
-    fprintf('old strip exists, deleting and reprocessing\n');
-    eval(['!rm -f ',outdir,'/',f{n(1)}(1:48),'*']);
-
-end
+if ~isempty(a); return; end
 
 % make sure all ortho's and matchtags exist, if missing, skip
 missingflag=0;
@@ -112,5 +98,15 @@ while ~isempty(n)
     stripmeta([OutDemName,'_dem.tif'])
 
     seg = seg + 1;
+    
+    tempfile = [OutDemName,'_dem_temp.tif'];
+    hillshade = [OutDemName,'_dem_browse.tif'];
+    system(['gdal_translate -q -tr 10 10 -r bilinear -co bigtiff=if_safer -a_nodata -9999 ',...
+        [OutDemName,'_dem.tif'],' ', tempfile]);
+    
+    system(['gdaldem hillshade -q -z 3 -compute_edges -of GTiff -co TILED=YES -co BIGTIFF=IF_SAFER -co COMPRESS=LZW ',...
+        tempfile,' ', hillshade]);
+    
+    delete(tempfile);
 
 end

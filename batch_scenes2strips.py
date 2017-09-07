@@ -11,6 +11,8 @@ def main():
     
     parser.add_argument("--rema2a", action='store_true', default=False,
             help="use filter rema2a")
+    parser.add_argument("--noentropy", action='store_true', default=False,
+            help="use no entropy filter")
     parser.add_argument("--lib-path", default=matlab_scripts,
             help="path to referenced Matlab functions (default={}".format(matlab_scripts))
     parser.add_argument("--pbs", action='store_true', default=False,
@@ -28,6 +30,9 @@ def main():
     src = os.path.abspath(args.src)
     dstdir = os.path.abspath(args.dst)
     scriptdir = os.path.dirname(sys.argv[0])
+
+    if args.noentropy and args.rema2a:
+        parser.error('no entropy and rema2a filters are incompatible')
 
     ## Verify qsubscript
     if args.qsubscript is None:
@@ -63,6 +68,8 @@ def main():
             else:
                 if args.rema2a:
                     script = 'scenes2strips_single_rema2a'
+                elif args.noentropy:
+                    script = 'scenes2strips_single_noentropy'
                 else:
                     script = 'scenes2strips_single'
                 
