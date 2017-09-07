@@ -1,4 +1,4 @@
-function scenes2strips_single(demdir,stripid,res,outdir)
+function scenes2strips_single_rema2a(demdir,stripid,res,outdir)
 
 % change this
 res=[res,'m'];
@@ -24,7 +24,7 @@ fprintf('merging pair id: %s, %d scenes\n',stripid,length(n))
 %existance check
 a=dir([outdir,'/',f{n(1)}(1:48),'seg*_dem.tif']);
 if ~isempty(a); return; end
-
+    
 % make sure all ortho, matchtags, and meta files exist, if missing, skip
 missingflag=0;
 j=1;
@@ -45,7 +45,7 @@ end
 if missingflag==1; return; end
 
 %% run filtering
-mask_strip_v2(demdir,stripid);
+mask_strip_v2a(demdir,stripid);
 
 %% build strip segments
 seg=1;
@@ -54,7 +54,7 @@ while ~isempty(n)
     fprintf('building segment %d\n',seg)
 
     % send n scenes to strip mosaicker
-    [x,y,z,m,o,trans,rmse,scene]=scenes2strips(demdir,f(n),'maskFileSuffix','mask');
+    [x,y,z,m,o,trans,rmse,scene]=scenes2strips(demdir,f(n),'maskFileSuffix','mask2a');
 
     % find which files were used
     [~,IA] = intersect(f(n),scene);

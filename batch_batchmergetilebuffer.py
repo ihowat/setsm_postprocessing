@@ -5,7 +5,7 @@ def main():
     
     ## args
     parser = argparse.ArgumentParser()
-    parser.add_argument("dstdir", help="target directory (tile subfolders will be created)")
+    parser.add_argument("dstdir", help="target directory")
     parser.add_argument("dimension", choices=['row','column'], help="dimension on which to group tiles for merging")
     parser.add_argument("tiles", help="list of mosaic tiles, comma delimited")
     
@@ -14,7 +14,7 @@ def main():
     parser.add_argument("--pbs", action='store_true', default=False,
             help="submit tasks to PBS")
     parser.add_argument("--qsubscript",
-            help="qsub script to use in PBS submission (default is qsub_tiles2tif_rookery.sh in script root folder)")
+            help="qsub script to use in PBS submission (default is qsub_mergetilebuffer.sh in script root folder)")
     parser.add_argument("--dryrun", action='store_true', default=False,
             help='print actions without executing')
     

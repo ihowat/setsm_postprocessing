@@ -1,4 +1,4 @@
-function mask_strip_v2(demDir,stripid)
+function mask_strip_v2a(demDir,stripid)
 
 demFiles = dir([demDir,'/*',stripid,'*_dem.tif']);
 demFiles = {demFiles.name};
@@ -8,14 +8,14 @@ i=1;
 for i=1:1:length(demFiles)
     
     demFile = demFiles{i};
-    OutMaskName = strrep(demFile,'dem.tif','mask.tif');
+    OutMaskName = strrep(demFile,'dem.tif','mask2a.tif');
     fprintf('processing %d of %d: %s \n',i,length(demFiles),demFile)
     if exist(OutMaskName,'file');  fprintf('mask exists, skipping\n'); continue; end
    
     %read meta file
-    metaFile= strrep(demFile,'dem.tif','meta.txt');
-    meta=readSceneMeta(metaFile);
-    m = mask(demFile,meta);
+    %metaFile= strrep(demFile,'dem.tif','meta.txt');
+    %meta=readSceneMeta(metaFile);
+    m = remaMask2a(demFile);
     
     if isfield(m.Tinfo,'GeoDoubleParamsTag')
         

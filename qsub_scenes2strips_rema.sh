@@ -22,7 +22,7 @@ echo $p4
 echo $p5
 echo $p6
 
-echo "addpath('${p1}'); addpath('${p6}'); ${p5}('${p2}','${p3}','${p4}'); exit"
+echo "addpath('${p1}'); addpath('${p6}'); ${p5}('${p2}','${p3}','${p4}','${p7}'); exit"
 
-time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p6}'); ${p5}('${p2}','${p3}','${p4}'); exit"
+time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p6}'); ${p5}('${p2}','${p3}','${p4}','${p7}'); exit"
 

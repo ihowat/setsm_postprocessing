@@ -6,10 +6,11 @@ def main():
     ## args
     parser = argparse.ArgumentParser()
     parser.add_argument("src", help="source directory")
+    parser.add_argument("dst", help="destination directory")
     parser.add_argument("res", choices=['2','8'], help="resolution of target dems (2 or 8)")
     
-    parser.add_argument("--no-entropy", action='store_true', default=False,
-            help="use filter without entropy protection")
+    parser.add_argument("--rema2a", action='store_true', default=False,
+            help="use filter rema2a")
     parser.add_argument("--lib-path", default=matlab_scripts,
             help="path to referenced Matlab functions (default={}".format(matlab_scripts))
     parser.add_argument("--pbs", action='store_true', default=False,
@@ -25,6 +26,7 @@ def main():
         parser.error('src must be a directory')
 
     src = os.path.abspath(args.src)
+    dstdir = os.path.abspath(args.dst)
     scriptdir = os.path.dirname(sys.argv[0])
 
     ## Verify qsubscript
@@ -37,10 +39,13 @@ def main():
     
     scene_dems = glob.glob(os.path.join(src,'*dem.tif'))
     
-    dstdir = src.replace('tif_results','strips')
     if src == dstdir:
         parser.error('src dir is the same as the dst dir: {}'.format(dstdir))
-
+    
+    if not os.path.isdir(dstdir):
+        if not args.dryrun:
+            os.makedirs(dstdir)
+            
     ## find uniue strip IDs (<catid1_catid2>)    
     if len(scene_dems) > 0:
         stripids = list(set([os.path.basename(s)[14:47] for s in scene_dems]))
@@ -48,40 +53,23 @@ def main():
         
         i=0
         for stripid in stripids:
-            i+=1
-            ## if dem date is less than existing strip date, remove existing output, else skip
-            dst_dems = glob.glob(os.path.join(dstdir,'*'+stripid+'_seg*_dem.tif'))
-            if len(dst_dems) > 0:
-                src_datamasks = glob.glob(os.path.join(src,'*'+stripid+'*_matchtag.tif'))
-                if len(src_datamasks) > 0:
-                    a = min([os.path.getmtime(f) for f in dst_dems])
-                    b = max([os.path.getmtime(f) for f in src_datamasks])
-                    if a < b:
-                        print '{} old strip exists, deleting and reprocessing'.format(stripid)
-                        for fp in glob.glob(os.path.join(dstdir,'*'+stripid+'_seg*')):
-                            #print 'removed {}'.format(fp)
-                            if not args.dryrun:
-                                os.remove(fp)
-            
-            if not os.path.isdir(dstdir):
-                if not args.dryrun:
-                    os.makedirs(dstdir)            
-            
+            i+=1            
+                      
             ## if output does not exist, add to task list
             dst_dems = glob.glob(os.path.join(dstdir,'*'+stripid+'_seg*_dem.tif'))
             if len(dst_dems) > 0:
                 print '{} output files exist, skipping'.format(stripid)
             
             else:
+                if args.rema2a:
+                    script = 'scenes2strips_single_rema2a'
+                else:
+                    script = 'scenes2strips_single'
                 
                 ## if pbs, submit to scheduler
                 if args.pbs:
-                    if args.no_entropy:
-                        script = 'scenes2strips_single_noentropy'
-                    else:
-                        script = 'scenes2strips_single'
                     job_name = 's2s{:04g}'.format(i)
-                    cmd = r'qsub -N {} -v p1={},p2={},p3={},p4={},p5={},p6={} {}'.format(
+                    cmd = r'qsub -N {} -v p1={},p2={},p3={},p4={},p5={},p6={},p7={} {}'.format(
                         job_name,
                         scriptdir,
                         src,
@@ -89,6 +77,7 @@ def main():
                         args.res,
                         script,
                         args.lib_path,
+                        dstdir,
                         qsubpath
                     )
                     print cmd
@@ -97,28 +86,18 @@ def main():
                 
                 ## else run matlab
                 else:
-                    if args.no_entropy:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); addpath('{}'); scenes2strips_single_noentropy('{}','{}','{}'); exit" """.format(
-                            scriptdir,
-                            args.lib_path,
-                            src,
-                            stripid,
-                            args.res
-                        )
-                        print "{}, {}".format(i, cmd)
-                        if not args.dryrun:
-                            subprocess.call(cmd, shell=True)
-                    else:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); addpath('{}'); scenes2strips_single('{}','{}','{}'); exit" """.format(
-                            scriptdir,
-                            args.lib_path,
-                            src,
-                            stripid,
-                            args.res
-                        )
-                        print "{}, {}".format(i, cmd)
-                        if not args.dryrun:
-                            subprocess.call(cmd, shell=True)
+                    cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); addpath('{}'); {}('{}','{}','{}','{}'); exit" """.format(
+                        scriptdir,
+                        args.lib_path,
+                        script,
+                        src,
+                        stripid,
+                        args.res,
+                        dstdir
+                    )
+                    print "{}, {}".format(i, cmd)
+                    if not args.dryrun:
+                        subprocess.call(cmd, shell=True)
                             
 
 

@@ -6,7 +6,7 @@
 #PBS -j oe
 
 cd $PBS_O_WORKDIR
-
+echo $PBS_O_WORKDIR
 echo $PBS_JOBID
 echo $PBS_O_HOST
 echo $PBS_NODEFILE
@@ -19,10 +19,8 @@ echo $p1
 echo $p2
 echo $p3
 echo $p4
-echo $p5
-echo $p6
+echo $p5    
 
-echo "addpath('${p1}'); addpath('${p6}'); ${p5}('${p2}','${p3}','${p4}','${p7}'); exit"
-
-time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p6}'); ${p5}('${p2}','${p3}','${p4}','${p7}'); exit"
-
+cmd="addpath('${p1}'); addpath('${p4}'); writeTileToTif_5m('${p2}',${p5},'${p3}'); exit"
+echo $cmd
+time matlab -nojvm -nodisplay -nosplash -r "${cmd}"
