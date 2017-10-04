@@ -20,14 +20,14 @@ x = varargin{1};
 y = varargin{2};
 z = varargin{3};
 
-n = strcmpi(varargin,'avg_kernel_size');
-if any(n); avg_kernel_size = varargin{n}; end
+n = find(strcmpi(varargin,'avg_kernel_size'));
+if any(n); avg_kernel_size = varargin{n+1}; end
 
-n = strcmpi(varargin,'dilate_bad');
-if any(n); dilate_bad = varargin{n}; end
+n = find(strcmpi(varargin,'dilate_bad'));
+if any(n); dilate_bad = varargin{n+1}; end
 
-n = strcmpi(varargin,'min_data_cluster');
-if any(n); min_data_cluster = varargin{n}; end
+n = find(strcmpi(varargin,'min_data_cluster'));
+if any(n); min_data_cluster = varargin{n+1}; end
 
 % slope of z
 [dx,dy] = gradient(z,x,y);
