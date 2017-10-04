@@ -64,6 +64,49 @@ mtFile= strrep(demFile,'dem.tif','matchtag.tif');
 % read DEM data
 z = readGeotiff(demFile);
 
+% orignal size for rescaling
+sz0=size(z.z);
+
+% original background for rescaling
+bg0 = isnan(z.z);
+
+% read matchtag
+mt = readGeotiff(mtFile);
+
+% read ortho
+or = readGeotiff(orthoFile);
+
+% size consistency checks
+if any(sz0 ~= size(mt.z))
+    error('size of dem and matchtag rasters dont match')
+end
+
+if any(sz0 ~= size(or.z))
+
+    warning('size of dem and ortho rasters dont match, cropping or padding')
+
+    % locate range of coordinate intersections in pixel space
+    [~,cols] = intersect(or.x,z.x);
+    [~,rows] = intersect(or.y,z.y);
+    
+    if isempty(rows) || isempty(cols)
+        error('ortho and dem are on different grids, cant crop/pad')
+    end
+    
+    % initialize new or array the same size as the dem
+    or1 = zeros(sz0,'uint16');
+    
+    % fill the pixel ranges with the matching values
+    or1(min(rows):max(rows),min(cols):max(cols)) = ...
+        or.z(min(rows):max(rows),min(cols):max(cols));
+    
+    % reset structure with matching values
+    or.z = or1;
+    or.x = z.x;
+    or.y = z.y;
+    
+end
+
 % initialize output
 m.x = z.x;
 m.y = z.y;
@@ -71,39 +114,30 @@ m.z = false(size(z.z));
 m.info = z.info;
 m.Tinfo = z.Tinfo;
 
-% parse structure
+% parse structures
 x = z.x;
 y = z.y;
 z = z.z;
 z(z == -9999) = NaN;
+mt = mt.z;
+or = or.z;
 
-% orignal size for rescaling
-sz0=size(z);
-
-% original background for rescaling
-bg0 = isnan(z);
-
-% downscale to 8m
+% downscale dem to 8m
 z = imresize(z,.25);
 x = imresize(x,.25);
 y = imresize(y,.25);
 
-% read matchtag
-mt = readGeotiff(mtFile);
-mt = mt.z;
-
 % make data density map
 P = DataDensityMap(mt,21);
+
+%don't need mt anymore
+clear mt
 
 % downscale to 8m
 P = imresize(P,0.25);
 
 % set P no data
 P(isnan(z)) = NaN;
-
-%read ortho
-or = readGeotiff(orthoFile);
-or = or.z;
 
 % data re-scaling
 if ~isempty(maxDN)
