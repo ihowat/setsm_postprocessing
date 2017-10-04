@@ -1,4 +1,4 @@
-function [M,dx,dy] = edgeSlopeMask(x,y,z)
+function [M,dx,dy] = edgeSlopeMask(varargin)
 % ESDGESLOPEMASK mask artificats on edges of DEM using high slope values
 %
 % M = edgeSlopeMask(x,y,z) masks bad edge values in the DEM with coordinate
@@ -8,11 +8,26 @@ function [M,dx,dy] = edgeSlopeMask(x,y,z)
 %
 % Ian Howat, ihowat@gmail.com
 % 24-Jul-2017 15:39:07
+% 04-Oct-2017 15:19:47: Added option/value argument support
 
-%parameters
-avg_kernel_size = 21;%size of kernel for calculating mean slope
+%default parameters (designed for data resampled to 8m from 2m)
+avg_kernel_size = 21;%size of kernel for calculating mean slope, use 5 for 8m source data
 dilate_bad = 13;%dialates masked pixels by this number of surrounding pixels
 min_data_cluster = 1000;%isolated clusters of data smaller than this number will be removed
+
+% parse inputs
+x = varargin{1};
+y = varargin{2};
+z = varargin{3};
+
+n = strcmpi(varargin,'avg_kernel_size');
+if any(n); avg_kernel_size = varargin{n}; end
+
+n = strcmpi(varargin,'dilate_bad');
+if any(n); dilate_bad = varargin{n}; end
+
+n = strcmpi(varargin,'min_data_cluster');
+if any(n); min_data_cluster = varargin{n}; end
 
 % slope of z
 [dx,dy] = gradient(z,x,y);
@@ -56,4 +71,3 @@ k = boundary(B(:,2),B(:,1),0.5); %allows for some inward "bending" to conform to
 
 % build edge mask
 M = poly2mask(B(k,2),B(k,1), size(M,1),size(M,2));
-
