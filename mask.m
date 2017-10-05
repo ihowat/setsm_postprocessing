@@ -1,7 +1,7 @@
 function  m = mask(varargin)
 % MASK ArcticDEM masking algorithm
 %
-% m = mask(demFile,effectiveBandwidth,abScaleFactor,meanSunElevation) 
+% m = mask(demFile,satID,effectiveBandwidth,abScaleFactor,meanSunElevation) 
 % returns the mask stucture (m.x,m.y,m.z) for the demFile using the
 % given image parameters.
 %
@@ -15,6 +15,7 @@ function  m = mask(varargin)
 % m = mask(demFile,meta) returns the mask stucture (m.x,m.y,m.z) for the
 % demFile and meta structure, where meta is the output of readSceneMeta.
 % Required fields in the meta structure are:
+% 'image_1_satID'
 % 'image_1_wv_correct'
 % 'image_1_effbw' 
 % 'image_1_abscalfact'
@@ -34,6 +35,7 @@ previewFlag = false;
 if nargin == 2
     demFile=varargin{1};
     meta=varargin{2};
+    satID =  meta.image_1_satID;
     wv_correctflag=meta.image_1_wv_correct;
     effbw = meta.image_1_effbw;
     abscalfact=meta.image_1_abscalfact;
@@ -43,9 +45,10 @@ if nargin == 2
     end
 elseif nargin >= 4 || nargin <= 6
     demFile=varargin{1};
-    effbw =varargin{2};
-    abscalfact =varargin{3};
-    mean_sun_elevation =varargin{4};
+    satID = varargin{2};
+    effbw =varargin{3};
+    abscalfact =varargin{4};
+    mean_sun_elevation =varargin{5};
     if nargin == 5 || nargin == 6; maxDN = varargin{5}; end;
     if nargin == 6; previewFlag = varargin{6}; end;
 else
@@ -104,7 +107,7 @@ if any(sz0 ~= size(or.z))
     or.z = or1;
     or.x = z.x;
     or.y = z.y;
-    
+          
 end
 
 % initialize output
@@ -146,8 +149,6 @@ if ~isempty(maxDN)
 end
 
 %convert to radiance
-[~,satID]=fileparts(demFile);
-satID=upper(satID(1:4));
 or = DG_DN2RAD(or, satID,effbw, abscalfact);
 
 fprintf('radiance value range: %.2f to %.2f\n',...
