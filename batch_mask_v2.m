@@ -54,13 +54,13 @@ for i=1:1:length(demFiles)
     [~,satID]=fileparts(meta.image_1);
     satID = upper(satID(1:4));
     
-    if stcmp(satID(1:2),'W1'); satID = 'WV01'; end 
-    if stcmp(satID(1:2),'W2'); satID = 'WV02'; end
-    if stcmp(satID(1:2),'W3'); satID = 'WV03'; end
-    if stcmp(satID(1:2),'G1'); satID = 'GE01'; end 
-    if stcmp(satID(1:2),'Q1'); satID = 'QB01'; end
-    if stcmp(satID(1:2),'Q2'); satID = 'QB02'; end
-    if stcmp(satID(1:2),'I1'); satID = 'IK01'; end
+    if strcmp(satID(1:2),'W1'); satID = 'WV01'; end 
+    if strcmp(satID(1:2),'W2'); satID = 'WV02'; end
+    if strcmp(satID(1:2),'W3'); satID = 'WV03'; end
+    if strcmp(satID(1:2),'G1'); satID = 'GE01'; end 
+    if strcmp(satID(1:2),'Q1'); satID = 'QB01'; end
+    if strcmp(satID(1:2),'Q2'); satID = 'QB02'; end
+    if strcmp(satID(1:2),'I1'); satID = 'IK01'; end
     
     meta.image_1_satID = satID;
     
