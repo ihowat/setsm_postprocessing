@@ -81,7 +81,11 @@ i=1;
 N=length(scene);
 for i=1:N
 
-	sceneMetaFile=[strrep(fileparts(f),'strips','tif_results'),'/',strrep(scene{i},'dem.tif','meta.txt')];
+    stripdir=fileparts(f);
+    s=find(stripdir=='/',2,'last');
+    stripdir=strrep(stripdir,stripdir(s(1):s(2)),'/tif_results/');
+    
+    sceneMetaFile=[stripdir,'/',strrep(scene{i},'dem.tif','meta.txt')];
 
     system(['echo scene ',num2str(i),' name=',scene{i},' >> ',outfile]);
     if exist(sceneMetaFile,'file')
