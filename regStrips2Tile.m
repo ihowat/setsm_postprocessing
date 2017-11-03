@@ -1,4 +1,4 @@
-function [meta,m,N,C] = regStrips2Tile(meta,m,N,C,mergeMethodReg,dy0)
+function [meta,m,N,C] = regStrips2Tile(meta,m,N,C,mergeMethodReg,dy0,minNewPixels)
 % regStrips2Tile add registered strips to tile
 %
 % [meta,m,N,C] = regStrips2Tile(meta,m,N,C,,mergeMethodReg) 
@@ -9,7 +9,7 @@ function [meta,m,N,C] = regStrips2Tile(meta,m,N,C,mergeMethodReg,dy0)
 %
 % Ian Howat, ihowat@gmail.com, Ohio State
 
-% if dtrans is not in the meta, look for reg files.
+%% if dtrans is not in the meta, look for reg files.
 if ~isfield(meta,'dtrans')
     
     regfiles=strrep(meta.f,'meta.txt','reg.txt');
@@ -31,53 +31,146 @@ if ~isfield(meta,'dtrans')
     end
 end
 
-%filter out data over 4m std
-meta.dtrans(meta.rmse > 4,:) = NaN;
-meta.rmse(meta.rmse > 4) = NaN;
+%% sort database in order of descending registration error x 3 and decreasing coverage. 
+W = mean([3.*nanmean(meta.rmse)./meta.rmse,...
+    meta.gridPointN./nanmean(meta.gridPointN)],2);
 
-% sort database by p75
-[~,n] = sort(meta.rmse,'ascend');
+W = [double(meta.qc),1./W];
+
+[~,n] = sortrows(W);
 meta = structfun(@(x) ( x(n,:) ), meta, 'UniformOutput', false);
 
-nreg=find(~isnan(meta.rmse));
 
 %% Add Registered Strips as Anchors
-if ~isempty(nreg)
+nreg = find(~isnan(meta.rmse));
+x = m.x;
+y = m.y;
+while ~isempty(nreg)
     
-    for i=1:length(nreg)
-
-        fprintf('adding anchor strip %d of %d: %s\n',i,length(nreg),meta.f{i})
-        if isfield(meta,'maskPolyx')
-            mask=[meta.maskPolyx{i}(:) meta.maskPolyy{i}(:)];
-        else
-            mask=cell(1,2);
+    % Check for redundancy    
+    if any(N(:))
+        
+        % subset the DEMs to those that just overlap the rectangle of
+        % existing data coverage
+        anyN=any(N);
+        minNx = x(find(anyN,1,'first'));
+        maxNx = x(find(anyN,1,'last'));
+        anyN=any(N');
+        maxNy=y(find(anyN,1,'first'));
+        minNy =y(find(anyN,1,'last'));
+        clear anyN
+        
+        % find files within boundary
+        n = find(meta.xmax > minNx & meta.xmin < maxNx & ...
+            meta.ymax > minNy & meta.ymin < maxNy);
+        
+        % loop through files in boundary and find # of new/existing points
+        overlap=meta.overlap;
+        for i=1:length(n)
+            
+            % subset of N at data points in this file
+            Nsub=N(meta.gridPointInd{n(i)}) > 0;
+            
+            % count existing data points
+            overlap(n(i))=sum(Nsub);
+            
+            % count new data points
+            meta.gridPointN(n(i)) = sum(~Nsub);
+            
         end
-        N = addStrip2Mosaic( meta.f{i},m,meta.stripDate(i)-dy0,N,...
-            meta.dtrans(i,:)',meta.rmse(i),...
-            'mergeMethod',mergeMethodReg,...
-            'mask',mask,...
-            'addErrors',false);
+       
         
-        % add this file name
-        m.f=[m.f,meta.f(i)];
-        m.reg=[m.reg,{'R'}];
-        m.N = N;
+        % refresh overlap
+        meta.overlap=overlap; overlap=[];
         
-        % add meta data
-        m.overlap=[m.overlap,0];
-        m.stripDate = [m.stripDate,meta.stripDate(i)];
-        m.qcflag = [m.qcflag,meta.qc(i)];
+        % remove rendundant files (with already 100% coverage)
+        redundantFlag = meta.gridPointN < minNewPixels;
+        
+        if any(redundantFlag)
+            
+            % append redundant file records to ouput
+            [m,meta] = appendRedundant(m,meta,redundantFlag);
+            
+            % remove redundant files from lists
+            meta = structfun(@(x) ( x(~redundantFlag,:) ), meta, 'UniformOutput', false);
+            
+            fprintf('%d redundant files removed\n',sum(redundantFlag));
+           
+            nreg = find(~isnan(meta.rmse));
+            
+            if isempty(nreg); break; end
+
+        end
+        
+    end
+
+    i = nreg(1);
+    
+    fprintf('%d anchor files remaining, %d total files remaining \n',length(nreg),length(meta.f));
+    fprintf('adding anchor strip: %s, quality=%d, rmse=%.2fm,coverage=%d pixels\n',meta.f{i}, meta.qc(i), meta.rmse(i), meta.gridPointN(i))
+        
+    mask=cell(1,2);
+    if isfield(meta,'maskPolyx')
+        if ~isempty(meta.maskPolyx{i})
+            mask=[meta.maskPolyx{i}(:) meta.maskPolyy{i}(:)];
+        end
+    end
+            
+    N = addStrip2Mosaic( meta.f{i},m,meta.stripDate(i)-dy0,N,...
+        meta.dtrans(i,:)',meta.rmse(i),...
+        'mergeMethod',mergeMethodReg,...
+        'mask',mask,...
+        'addErrors',false);
+        
+    % add this file name
+    m.f=[m.f,meta.f(i)];
+    m.reg=[m.reg,{'R'}];
+    m.N = N;
+        
+    % add meta data
+    m.overlap=[m.overlap,0];
+    m.stripDate = [m.stripDate,meta.stripDate(i)];
+    m.qcflag = [m.qcflag,meta.qc(i)];
+        
+        
+    if isfield(meta,'maskPolyx')
         m.maskPolyx = [m.maskPolyx,meta.maskPolyx(i)];
         m.maskPolyy = [m.maskPolyy,meta.maskPolyy(i)];
-        
     end
     
     % remove these files from the meta struct
-    in=length(nreg)+1:length(meta.f);
+    in = true(size(meta.f)); in(i) = false;
     meta = structfun(@(x) ( x(in,:) ), meta, 'UniformOutput', false);
     
     C(N ~= 0)=int16(1);
     m.C = C;
     m.Nreg = C;
     
+    sumN = sum(N(:) > 0);
+    
+    fprintf('%.2f%% of tile filled\n',sumN./numel(N).*100)
+    
+    % check if compeletly covered - if so skip
+    if numel(N) == sumN
+        fprintf('coverage complete, skipping')
+        return
+    end
+    
+    nreg = find(~isnan(meta.rmse));
+        
 end
+
+function [m,meta] = appendRedundant(m,meta,redundantFlag)
+
+% append redundant file records to ouput
+m.f=[m.f,meta.f(redundantFlag)'];
+m.reg=[m.reg,repmat({'-'},1,sum(redundantFlag))];
+m.dtrans=[m.dtrans,nan(3,sum(redundantFlag))];
+m.rmse=[m.rmse,nan(1,sum(redundantFlag))];
+m.overlap = [m.overlap,meta.overlap(redundantFlag)'];
+m.qcflag = [m.qcflag,meta.qc(redundantFlag)'];
+if isfield(meta,'maskPolyx')
+    m.maskPolyx =  [m.maskPolyx,meta.maskPolyx(redundantFlag)'];
+    m.maskPolyy =  [m.maskPolyy,meta.maskPolyy(redundantFlag)'];
+end
+m.stripDate = [m.stripDate,meta.stripDate(redundantFlag)'];
