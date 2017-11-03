@@ -100,6 +100,9 @@ else
     error('incorrect number of input arguments')
 end
 
+minNewPixels = 1000/res;
+minOverlapPixels = 1000/res;
+
 fprintf('Using registered strip merge method: %s\n',mergeMethodReg)
 fprintf('Using floating strip merge method: %s\n',mergeMethod)
 
@@ -114,26 +117,28 @@ if isempty(meta); return; end
     meta,tilex0,tilex1,tiley0,tiley1,buff,res,outname,tileVersion,disableReg,...
     disableCoregTest,mergeMethod,mergeMethodReg);
 
-% Add Registered Strips
-if ~disableReg % check for disable registration argument
-    [meta,m,N,C] = regStrips2Tile(meta,m,N,C,mergeMethodReg,dy0);
-end
-
-% Build Grid Point Index Field
-meta = buildGridPointInd(meta,x,y,N);
-
-%% Sequential Floating Strip Addition Loop
-% Sequentially add strips to the mosaic by selecting the file with the most
-% new data coverage, with enough overlap to coregister to exisiting data.
-
-minNewPixels = 1000/res;
-minOverlapPixels = 1000/res;
-
 % add dummy fields to if dont exist
 if ~isfield(meta,'qc'); meta.qc = ones(size(meta.f)); end;
 if ~isfield(meta,'rmse'); meta.rmse=nan(size(meta.f));end
 if ~isfield(meta,'dtrans'); meta.dtrans=nan(length(meta.f),3); end
 if ~isfield(meta,'overlap'); meta.overlap=zeros(size(meta.f)); end % number existing data points overlapping file
+
+% Build Grid Point Index Field
+meta = buildGridPointInd(meta,x,y,N > 0);
+
+% Add Registered Strips
+if ~disableReg % check for disable registration argument
+    [meta,m,N,C] = regStrips2Tile(meta,m,N,C,mergeMethodReg,dy0,minNewPixels);
+    % need to reset the overlaps to zero so that all are co-reg tested,
+    % otherwise rmse's will be nan even when overlap > 0 and a new cluster
+    % will be created.
+    meta.overlap = zeros(size(meta.f));
+end
+
+
+%% Sequential Floating Strip Addition Loop
+% Sequentially add strips to the mosaic by selecting the file with the most
+% new data coverage, with enough overlap to coregister to exisiting data.
 
 while length(meta.f) >= 1
     
@@ -248,15 +253,15 @@ while length(meta.f) >= 1
         j=1;
         while ~skipFlag && (j <= size(A,1))
             
-            addErrors = true;
+	    addErrors = true;
             
             % get the top selection index
             i = A(j,end);
             
             % if meta.rmse isnan, then this is a new cluster.
             if isnan(meta.rmse(i))
-                meta.rmse(i)=0;
                 meta.dtrans(i,:) = [0,0,0];
+		meta.rmse(i)=0;
                 c=c+1;
                 addErrors=false;
             end
@@ -277,8 +282,8 @@ while length(meta.f) >= 1
                 'minNewPixels',minNewPixels,...
                 'minOverlapPixels',minOverlapPixels,...
                 'mask',mask,...
-                'addErrors',addErrors);
-            
+                'addErrors',addErrors,...
+                'resetDate',true);
             j=j+1;
         end
         
@@ -297,8 +302,11 @@ while length(meta.f) >= 1
         m.overlap   = [m.overlap,meta.overlap(i)];
         m.stripDate = [m.stripDate,meta.stripDate(i)];
         m.qcflag    = [m.qcflag,meta.qc(i)];
-        m.maskPolyx = [m.maskPolyx,meta.maskPolyx(i)];
-        m.maskPolyy = [m.maskPolyy,meta.maskPolyy(i)];
+        
+        if isfield(meta,'maskPolyx')
+            m.maskPolyx = [m.maskPolyx,meta.maskPolyx(i)];
+            m.maskPolyy = [m.maskPolyy,meta.maskPolyy(i)];
+        end
         
         if meta.rmse(i) == 0
             m.reg=[m.reg,{'N'}];
@@ -320,6 +328,7 @@ while length(meta.f) >= 1
     
     % update data coverage field N in file
     m.N = N;
+    fprintf('%.2f%% of tile filled\n',sum(N(:) > 0)./numel(N).*100)
     
 end
 
@@ -335,6 +344,8 @@ m.dtrans=[m.dtrans,nan(3,sum(redundantFlag))];
 m.rmse=[m.rmse,nan(1,sum(redundantFlag))];
 m.overlap = [m.overlap,meta.overlap(redundantFlag)'];
 m.qcflag = [m.qcflag,meta.qc(redundantFlag)'];
-m.maskPolyx =  [m.maskPolyx,meta.maskPolyx(redundantFlag)'];
-m.maskPolyy =  [m.maskPolyy,meta.maskPolyy(redundantFlag)'];
+if isfield(meta,'maskPolyx')
+    m.maskPolyx =  [m.maskPolyx,meta.maskPolyx(redundantFlag)'];
+    m.maskPolyy =  [m.maskPolyy,meta.maskPolyy(redundantFlag)'];
+end
 m.stripDate = [m.stripDate,meta.stripDate(redundantFlag)'];
