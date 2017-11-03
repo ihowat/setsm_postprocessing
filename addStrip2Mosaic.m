@@ -41,6 +41,7 @@ minOverlapPixels=100;
 returnFlag = false;
 addErrorFlag=false;
 refineRegFlag=false;
+resetDate=false;
 
 % parse input args
 for i=1:2:length(varargin)
@@ -90,6 +91,14 @@ for i=1:2:length(varargin)
             
             if ~islogical(refineRegFlag)
                 error('refineReg argument must be logical')
+            end
+            
+        case 'resetdate'
+            
+            resetDate=varargin{i+1};
+            
+            if ~islogical(refineRegFlag)
+                error('resetDate argument must be logical')
             end
             
         otherwise
@@ -156,7 +165,7 @@ if isempty(dtrans) || any(isnan(dtrans)) || refineRegFlag
     ro= find(sum(A,2) ~= 0,1,'first'):find(sum(A,2) ~= 0,1,'last');
     
     % set dtrans to zeros if this is a new adjustment
-    if ~refineRegFlag; 
+    if ~refineRegFlag
         dtrans0 = zeros(3,1); 
     else
         dtrans0=dtrans;
@@ -243,15 +252,11 @@ switch mergeMethod
       
         
     case 'feather'
-        
-        
+          
         dx = m.x(1,2)-m.x(1,1);
         buff=10*dx+1;
    
-        tic;
         W = edgeFeather(Nsub~=0,~isnan(z),'buffer',buff);
-        toc;
-        
         
         % make weighted elevation grid
         zsub=m.z(r,c);
@@ -301,12 +306,17 @@ switch mergeMethod
         m.or(r,c) = A;
         clear A or orsub
         
+        
         % make weighted dy grid
+        dysub = single(m.dy(r,c));
+        dysub(dysub==0) = NaN;
+        
+        if resetDate;  dy0 = nanmean(dysub(~isnan(z))); end
+        
         dy=~isnan(z).*dy0;
         dy = single(dy);
         dy(dy==0) = NaN;
-        dysub = single(m.dy(r,c));
-        dysub(dysub==0) = NaN;
+ 
         
         A=  dysub.*W + dy.*(1-W);
         
@@ -373,4 +383,3 @@ m.rmse=[m.rmse,rmse];
 
 N(r,c)=~isnan(m.z(r,c));
 returnFlag=true;
-
