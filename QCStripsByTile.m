@@ -4,8 +4,6 @@ function QCStripsByTile(regionNum,varargin)
 tilefile  = 'PGC_Imagery_Mosaic_Tiles_Antarctica.mat'; %PGC/NGA Tile definition file
 arcdemfile= 'rema_tiles.mat'; % lists which tiles go to which regions
 dbasefile = 'rema_strips_8m_wqc_cs2bias.mat';
-coastlineShape = [];
-%coastlineShape ='~/Coastline_high_res_polygon/Coastline_high_res_polygon.shp';
 startfrom = 1;
 
 for i=1:2:length(varargin)
@@ -77,11 +75,11 @@ for i=startfrom:length(tiles.I)
    end
     
     
-    qctile(tile,meta,coastlineShape);
+    qctile(tile,meta);
 
 end
 
-function qctile(tiles,meta,coastlineShape)
+function qctile(tiles,meta)
 
 %% Spatial coverage search
 
@@ -141,29 +139,25 @@ N= zeros(length(y),length(x),'uint8');
 
 
 % water
-if ~isempty(coastlineShape)
+
     fprintf('applying coastline\n');
-    bbox = [min(x) min(y); max(x) max(y)];
-    S = shaperead(coastlineShape,'BoundingBox',bbox);
-    
-    Ocean = true(size(N));
-    
+
+   
+    A = false(size(N));
     i=1;
-    for i=1:length(S)
+    for i=1:length(tiles.coastline{1})
         
-        n =isfinite(S(i).X) & isfinite(S(i).Y);
-        
-        Ocean(roipoly(x,y,N,S(i).X(n),S(i).Y(n)))=false;
+       A(roipoly(x,y,N,tiles.coastline{1}{i}(1,:),...
+           tiles.coastline{1}{i}(2,:))) = true;
     end
     
-    N(Ocean) = 1;
+    N(~A) = 1;
     
     percent_filled = 100*sum(N(:))./numel(N);
     fprintf('%.2f%% filled\n',percent_filled);
     
     if percent_filled == 100; fprintf('returning \n'); return; end
-    
-end
+   
 
 %% Build Grid Point Index Field
 % make a cell for each file containing the col-wise indices of the data
