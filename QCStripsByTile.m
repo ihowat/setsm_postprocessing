@@ -1,10 +1,12 @@
 function QCStripsByTile(regionNum,varargin)
 
+%% Argins
 %regionNum='02'; % region number
-tilefile  = 'PGC_Imagery_Mosaic_Tiles_Antarctica.mat'; %PGC/NGA Tile definition file
+tilefile  = 'PGC_Imagery_Mosaic_Tiles_Antarctica.mat'; %PGC/NGA Tile definition file. 
 arcdemfile= 'rema_tiles.mat'; % lists which tiles go to which regions
 dbasefile = 'rema_strips_8m_wqc_cs2bias.mat';
 startfrom = 1;
+minN = 500;
 
 for i=1:2:length(varargin)
     eval([varargin{i},'=',num2str(varargin{i+1}),';']);
@@ -55,31 +57,31 @@ meta.sigma(meta.sigma > 1) = NaN;
 meta.avg_rmse(meta.avg_rmse == 0) = NaN;
 
 for i=startfrom:length(tiles.I)
-     
+    
     fprintf('working tile %d of %d\n',i,length(tiles.I));
     tile = structfun(@(x) ( x(i) ), tiles, 'UniformOutput', false);
     
-   if exist([tileDir,tile.I{1},'_40m_dem.mat'],'file')
-      load([tileDir,tile.I{1},'_40m_dem.mat'],'N');
-      
-      if sum(N(:))./numel(N) == 1
-          
-          fprintf('tile coverage complete, skipping\n')
-          
-          clear N
-          
-          continue
-          
-      end
-      
-   end
+    if exist([tileDir,tile.I{1},'_40m_dem.mat'],'file')
+        load([tileDir,tile.I{1},'_40m_dem.mat'],'N');
+        
+        if sum(N(:))./numel(N) == 1
+            
+            fprintf('tile coverage complete, skipping\n')
+            
+            clear N
+            
+            continue
+            
+        end
+        
+    end
     
     
-    qctile(tile,meta);
-
+    qctile(tile,meta,minN);
+    
 end
 
-function qctile(tiles,meta)
+function qctile(tiles,meta,minN)
 
 %% Spatial coverage search
 
@@ -125,6 +127,7 @@ fprintf('%d files with existing qc\n',sum(meta.qc ~= 0));
 if any(meta.qc == 5)
     fprintf('removing %d files with qc flag=5\n',sum(meta.qc == 5));
     meta = structfun(@(x) ( x(meta.qc ~= 5 ,:) ), meta, 'UniformOutput', false);
+    if isempty(meta.f); fprintf('all strips removed, returning \n'); return; end
 end
 
 % build grid
@@ -138,26 +141,26 @@ y = y(:);
 N= zeros(length(y),length(x),'uint8');
 
 
-% water
-
+if isfield(tiles,'coastline')
     fprintf('applying coastline\n');
-
-   
+    
+    
     A = false(size(N));
     i=1;
     for i=1:length(tiles.coastline{1})
-        
-       A(roipoly(x,y,N,tiles.coastline{1}{i}(1,:),...
-           tiles.coastline{1}{i}(2,:))) = true;
+        if  isempty(tiles.coastline{1}{i}); continue; end
+        A(roipoly(x,y,N,tiles.coastline{1}{i}(1,:),...
+            tiles.coastline{1}{i}(2,:))) = true;
     end
     
     N(~A) = 1;
+    clear A
     
     percent_filled = 100*sum(N(:))./numel(N);
     fprintf('%.2f%% filled\n',percent_filled);
     
     if percent_filled == 100; fprintf('returning \n'); return; end
-   
+end
 
 %% Build Grid Point Index Field
 % make a cell for each file containing the col-wise indices of the data
@@ -234,7 +237,7 @@ skipn = 0;
 while length(meta.f) >= 1
     
     percent_filled = 100*sum(N(:))./numel(N);
-
+    
     if percent_filled == 100; fprintf('100%% filled returning \n',percent_filled); return; end
     
     fprintf('%.2f%% filled, %d of %d strips remaining\n', percent_filled,skipn+1,length(meta.f));
@@ -258,33 +261,24 @@ while length(meta.f) >= 1
     recountFlag=false;
     
     % remove rendundant files (with already 100% coverage)
-    redundantFlag = meta.gridPointN==0;
+    redundantFlag = meta.gridPointN < minN;
     
     if any(redundantFlag)
-        %
-        %     %append redundant file records to ouput
-        %     m.f=[m.f,meta.f(redundantFlag)'];
-        %     m.dtrans=[m.dtrans,nan(3,sum(redundantFlag))];
-        %     m.rmse=[m.rmse,nan(1,sum(redundantFlag))];
-        %     m.overlap = [m.overlap,meta.overlap(redundantFlag)'];
-        
+
         % remove redundant files from lists
         meta = structfun(@(x) ( x(~redundantFlag,:) ), meta, 'UniformOutput', false);
         
-        fprintf('%d redundant files removed\n',sum(redundantFlag));
+        fprintf('%d redundant files (N < %d) removed\n',sum(redundantFlag),minN);
         
-        if isempty(meta.overlap); break; end
+        if isempty(meta.f); fprintf('all strips removed, returning \n'); return; end
     end
+
+    A = nansum([100.*meta.gridPointN./numel(N),1./(meta.avg_rmse.^2)],2);
+    [~,n]=sort(A,'descend');
     
     
-
-      
-        A = nansum([100.*meta.gridPointN./numel(N),1./(meta.avg_rmse.^2)],2);
-       [~,n]=sort(A,'descend');
-
-
     % skip if skipped on last iteration
-    if length(n) >= 1+skipn 
+    if length(n) >= 1+skipn
         n = n(1+skipn);
     elseif skipn < 0
         skipn = length(n) -1;
@@ -293,10 +287,8 @@ while length(meta.f) >= 1
         n=n(1);
         skipn = 0;
     end
-         
     
-    
-    
+
     fileName=strrep(meta.f{n},'meta.txt','dem_browse.tif');
     
     
@@ -316,6 +308,21 @@ while length(meta.f) >= 1
     colormap gray;
     hold on;
     imagesc(I.x,I.y,Ni,'alphadata',single(Ni).*.5)
+    
+
+    if isfield(tiles,'coastline')
+        i=1;
+        for i=1:length(tiles.coastline{1})
+            if  isempty(tiles.coastline{1}{i}); continue; end
+            plot(tiles.coastline{1}{i}(1,:),...
+                tiles.coastline{1}{i}(2,:),'b','linewidth',1)
+        end
+    end
+    
+    plot([tiles.x0,tiles.x0,tiles.x1,tiles.x1,tiles.x0], [tiles.y0,tiles.y1,tiles.y1,tiles.y0,tiles.y0],'w','linewidth',2)
+   
+    set(gca,'xlim',[min(I.x) max(I.x)],'ylim',[min(I.y) max(I.y)]);
+    
     
     %set(gcf,'units','normalized');
     %set(gcf,'position',[0.01,0.01,.35,.9])
@@ -337,15 +344,15 @@ while length(meta.f) >= 1
         
         j=1;
         while j
-
-             try
-
+            
+            try
+                
                 flag=input('Enter quality flag: 0=skip,9=back, 1=good, 2=partial, 3=manual edit, 4=poor, 5=unuseable, 6=quit\n');
                 
                 
                 if ~isempty(flag)
                     if isnumeric(flag)
-                        if flag == 0 || flag == 9 || flag == 1 || flag == 2 || flag == 3 || flag == 4 || flag == 5 || flag == 6 
+                        if flag == 0 || flag == 9 || flag == 1 || flag == 2 || flag == 3 || flag == 4 || flag == 5 || flag == 6
                             break;
                         end
                     end
@@ -384,7 +391,7 @@ while length(meta.f) >= 1
                 
                 [~,qc.x{IA}{j},qc.y{IA}{j}] =  roipoly;
                 
-                plot(qc.x{IA}{j},qc.y{IA}{j},'r')
+                plot(qc.x{IA}{j},qc.y{IA}{j},'g','linewidth',2)
                 
                 
                 while j
@@ -406,7 +413,7 @@ while length(meta.f) >= 1
         save([fileparts(fileName),'/qc.mat'],'-struct','qc');
         
     end
-
+    
     
     clf
     
@@ -435,8 +442,8 @@ while length(meta.f) >= 1
         % remove this file from the meta struct
         in=1:length(meta.f); in(n)=[];
         meta = structfun(@(x) ( x(in,:) ), meta, 'UniformOutput', false);
-
-
+        
+        
     end
     
 end
