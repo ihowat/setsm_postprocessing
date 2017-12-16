@@ -1,4 +1,4 @@
-function m = addQC2Meta(m)
+function m = addQC2Meta(m,changePath)
 
 m.baseName = strrep(m.f,'_8m_meta.txt','');
 
@@ -13,7 +13,7 @@ for i=1:length(uniqueRegionDir)
     if exist([uniqueRegionDir{i},'/qc.mat'],'file')
         
         qci=load([uniqueRegionDir{i},'/qc.mat']);
-        
+                
         n = ~cellfun(@iscell, qci.x) | ~cellfun(@iscell, qci.y);
         if any(n)
             warning('non cell mask entries detected, correcting')
@@ -36,6 +36,10 @@ for i=1:length(uniqueRegionDir)
         clear qci;
     end
     
+end
+
+if ~isempty(changePath)
+    qc.fileNames= strrep(qc.fileNames,'/data4',changePath);
 end
 
 if ~isempty(qc.fileNames)
