@@ -2,21 +2,32 @@ function QCStripsByTile(regionNum,varargin)
 
 %% Argins
 %regionNum='02'; % region number
-tilefile  = 'PGC_Imagery_Mosaic_Tiles_Antarctica.mat'; %PGC/NGA Tile definition file. 
-arcdemfile= 'rema_tiles.mat'; % lists which tiles go to which regions
-dbasefile = 'rema_strips_8m_wqc_cs2bias.mat';
+tilefile  = 'PGC_Imagery_Mosaic_Tiles_Antarctica.mat'; %PGC/NGA Tile definition file, required
+arcdemfile= 'rema_tiles.mat'; % lists which tiles go to which regions, required
+dbasefile = 'rema_strips_8m_wqc_cs2bias.mat'; % database file
+changePath='/Users/ihowat'; %if set, will change the path to the REMA directory from what's in the database file. set to [] if none.
+
+% if an older set of mosaic files already exist, we can speed things up by
+% check to see if they already have 100% coverage - will skip if do. Leave
+% empty if none.
+tileDir= dir(['/data4/REMA/region_',regionNum,'*']);
+if ~isempty(tileDir)
+    tileDir= ['/data4/REMA/',tileDir(1).name,'/mosaic_reg_qc_feather/40m/'];
+end
+
+%% defaults
 startfrom = 1;
 minN = 500;
 minArea = 500;
 
+% parse inputs
 for i=1:2:length(varargin)
     eval([varargin{i},'=',num2str(varargin{i+1}),';']);
 end
 
-tileDir= dir(['/data4/REMA/region_',regionNum,'*']);
-tileDir= ['/data4/REMA/',tileDir(1).name,'/mosaic_reg_qc_feather/40m/'];
+%% Find tiles in this region and load meta
 
-%Get Arctic Tile Defs
+% Get tile Defs
 tiles=load(tilefile);
 a=load(arcdemfile);
 
@@ -39,54 +50,61 @@ tiles = structfun(@(x) ( x(n) ), tiles, 'UniformOutput', false);
 % load database structure
 meta=load(dbasefile);
 
+% alter paths in database if set
+if ~isempty(changePath)
+    meta.f = strrep(meta.f,'/data4',changePath);
+    meta.region = strrep(meta.region,'/data4',changePath);
+end
+
 %check meta file for required fields
-flds = fields(meta);
-
-if ~any(strcmp(flds,'avg_rmse')); error('meta stucture missing avg_rmse field \n'); end
-if ~any(strcmp(flds,'xmax')); error('meta stucture missing xmax field \n'); end
-if ~any(strcmp(flds,'ymax')); error('meta stucture missing ymax field \n'); end
-if ~any(strcmp(flds,'xmin')); error('meta stucture missing ymin field \n'); end
-if ~any(strcmp(flds,'ymin')); error('meta stucture missing ymin field \n'); end
-if ~any(strcmp(flds,'x')); error('meta stucture missing x field \n'); end
-if ~any(strcmp(flds,'y')); error('meta stucture missing y field \n'); end
-if ~any(strcmp(flds,'f')); error('meta stucture missing f field \n'); end
-if ~any(strcmp(flds,'f')); error('meta stucture missing f field \n'); end
-if ~any(strcmp(flds,'sigma_all')); error('meta stucture missing sigma_all field \n'); end
-if ~any(strcmp(flds,'sigma_1yr')); error('meta stucture missing sigma_1yr field \n'); end
-
+if ~isfield(meta,'avg_rmse'); error('meta stucture missing avg_rmse field '); end
+if ~isfield(meta,'xmax'); error('meta stucture missing xmax field '); end
+if ~isfield(meta,'ymax'); error('meta stucture missing ymax field '); end
+if ~isfield(meta,'xmin'); error('meta stucture missing ymin field '); end
+if ~isfield(meta,'ymin'); error('meta stucture missing ymin field '); end
+if ~isfield(meta,'x'); error('meta stucture missing x field '); end
+if ~isfield(meta,'y'); error('meta stucture missing y field '); end
+if ~isfield(meta,'f'); error('meta stucture missing f field '); end
 
 % select the whichever registration has the better sigma_bias (all or 1 yr)
-meta.sigma = nanmin([meta.sigma_all(:)';meta.sigma_1yr(:)'])';
+if isfield(meta,'sigma_all') &&  isfield(meta,'sigma_1yr') &&  ~isfield(meta,'sigma') 
+    meta.sigma = nanmin([meta.sigma_all(:)';meta.sigma_1yr(:)'])';
+end
+
+% if no ground control error field, just set to nan
+if ~isfield(meta,'sigma')
+    meta.sigma  = nan(size(meta.f));
+end
+
+% if ground control error > 1, set to NaN
 meta.sigma(meta.sigma > 1) = NaN;
 
+% set 0 RMSE (single scenes) to NaN
 meta.avg_rmse(meta.avg_rmse == 0) = NaN;
 
+% tile loop
 for i=startfrom:length(tiles.I)
     fprintf(' \n')
     fprintf('Working tile %d of %d: %s \n',i,length(tiles.I),tiles.I{i});
     tile = structfun(@(x) ( x(i) ), tiles, 'UniformOutput', false);
     
-    if exist([tileDir,tile.I{1},'_40m_dem.mat'],'file')
-        load([tileDir,tile.I{1},'_40m_dem.mat'],'N');
-        
-        if sum(N(:))./numel(N) == 1
-            
-            fprintf('tile coverage complete, skipping\n')
-            
-            clear N
-            
-            continue
-            
+    % check existing tile for coverage
+    if ~isempty(tileDir)
+        if exist([tileDir,tile.I{1},'_40m_dem.mat'],'file')
+            load([tileDir,tile.I{1},'_40m_dem.mat'],'N');
+            if sum(N(:))./numel(N) == 1
+                fprintf('tile coverage complete, skipping\n')
+                clear N
+                continue 
+            end
         end
-        
     end
-    
-    
-    qctile(tile,meta,minN,minArea);
+
+    qctile(tile,meta,minN,minArea,changePath);
     
 end
 
-function qctile(tiles,meta,minN,minArea)
+function qctile(tiles,meta,minN,minArea,changePath)
 
 %% Spatial coverage search
 
@@ -123,10 +141,9 @@ meta = structfun(@(x) ( x(logical(in),:) ), meta, 'UniformOutput', false);
 fprintf('%d files overlapping this tile, ',sum(in));
 
 % add existing qc data
-meta = addQC2Meta(meta);
+meta = addQC2Meta(meta,changePath);
 
 fprintf('%d files with existing qc\n',sum(meta.qc ~= 0));
-
 
 % remove already added entries  from metadata
 if any(meta.qc == 5)
@@ -145,11 +162,10 @@ y = y(:);
 
 N= zeros(length(y),length(x),'uint8');
 
-
+% apply coastline
 if isfield(tiles,'coastline')
     fprintf('applying coastline, ');
-    
-    
+
     A = false(size(N));
     i=1;
     for i=1:length(tiles.coastline{1})
@@ -157,8 +173,7 @@ if isfield(tiles,'coastline')
         A(roipoly(x,y,N,tiles.coastline{1}{i}(1,:),...
             tiles.coastline{1}{i}(2,:))) = true;
     end
-    
-    
+
     percent_filled = 100*sum(~A(:))./numel(A);
     
     if percent_filled >  0.2  
@@ -246,8 +261,6 @@ end
 
 fprintf('removing %d strips smaller than %.1f km^2\n',sum(stripArea < minArea),minArea);
 meta = structfun(@(x) ( x(stripArea >= minArea ,:) ), meta, 'UniformOutput', false);
-
-
 
 %% coverage test loop
 if ~isfield(meta,'rmse'); meta.rmse=nan(size(meta.f));end
@@ -354,9 +367,14 @@ while length(meta.f) >= 1
     
     qc=load([fileparts(fileName),'/qc.mat']);
     
-    % qc.fileNames=strrep(qc.fileNames,'/data2','/data3');
+    fileNames = qc.fileNames;
     
-    [~,IA]=intersect(qc.fileNames, fileName);
+   % alter paths in database if set
+    if ~isempty(changePath)
+        fileNames = strrep(fileNames,'/data4',changePath);
+    end
+    
+    [~,IA]=intersect(fileNames, fileName);
     
     if isempty(IA); error('this file name not matched in the qc.mat, probably need to upadate it.'); end
     
