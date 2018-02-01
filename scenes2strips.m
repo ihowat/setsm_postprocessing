@@ -271,9 +271,9 @@ for i=1:length(f)
     clear M3 
     
     % remove border on orthos seperately
-    M4= oi~=0;
+    M4= ~isnan(oi);
     M4=imerode(M4,ones( 6 ));
-    oi(~M4)=0;
+    oi(~M4)=NaN;
     clear M4
     
     % make weighted elevation grid
@@ -349,7 +349,7 @@ if exist(orthoFile,'file')
     szd=size(d.z);
     if any(szd ~= sz);
         d.z = single(d.z);
-        d.z(isnan(d.z)) = NaN; % set border to NaN so wont be interpolated
+        d.z(d.z==0) = NaN; % set border to NaN so wont be interpolated
         o = interp2(d.x,d.y,d.z,...
             x(:)',y(:),'*cubic');
         o(isnan(o)) = 0; % convert back to uint16
