@@ -20,11 +20,6 @@ for i=1:2:length(varargin)
     eval([varargin{i},'=''',(varargin{i+1}),''';']);
 end
 
-tileDir= dir(['/data4/REMA/region_',regionNum,'*']);
-%tileDir= ['/data4/REMA/',tileDir(1).name,'/mosaic_reg_qc_feather2/40m/'];
-tileDir= ['/data4/REMA/',tileDir(1).name,'/mosaic2m/40m/'];
-
-
 %Get Arctic Tile Defs
 tiles=load(tilefile);
 a=load(arcdemfile);
