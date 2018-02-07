@@ -2,18 +2,16 @@ function QCStripsByTile(regionNum,varargin)
 
 %% Argins
 %regionNum='02'; % region number
-tilefile  = 'PGC_Imagery_Mosaic_Tiles_Antarctica.mat'; %PGC/NGA Tile definition file, required
-arcdemfile= 'rema_tiles.mat'; % lists which tiles go to which regions, required
-dbasefile = 'rema_strips_8m_wqc_cs2bias.mat'; % database file
-changePath='/Users/ihowat'; %if set, will change the path to the REMA directory from what's in the database file. set to [] if none.
+tilefile  = 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/PGC_Imagery_Mosaic_Tiles_Arctic.mat'; %PGC/NGA Tile definition file, required
+arcdemfile= 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticdem_tiles_v2.mat'; % lists which tiles go to which regions, required
+dbasefile = 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticDEMdatabase_2m.mat'; % database file
+changePath= 'V:/pgc'; %if set, will change the path to the REMA directory from what's in the database file. set to [] if none.
 
 % if an older set of mosaic files already exist, we can speed things up by
 % check to see if they already have 100% coverage - will skip if do. Leave
 % empty if none.
-tileDir= dir(['/data4/REMA/region_',regionNum,'*']);
-if ~isempty(tileDir)
-    tileDir= ['/data4/REMA/',tileDir(1).name,'/mosaic_reg_qc_feather/40m/'];
-end
+tileDir= '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/2m_v3_tileqc/';
+
 
 %% defaults
 startfrom = 1;
@@ -22,7 +20,7 @@ minArea = 500;
 
 % parse inputs
 for i=1:2:length(varargin)
-    eval([varargin{i},'=',num2str(varargin{i+1}),';']);
+    eval([varargin{i},'=''',(varargin{i+1}),''';']);
 end
 
 %% Find tiles in this region and load meta
@@ -48,12 +46,24 @@ if ~(any(n)); error('no tiles matched for this region number'); end
 tiles = structfun(@(x) ( x(n) ), tiles, 'UniformOutput', false);
 
 % load database structure
+fprintf('Loading db\n');
 meta=load(dbasefile);
+
+% check for region field
+if ~isfield(meta,'region')
+    meta.region=cell(size(meta.f));
+    i=1;
+    for i=1:length(meta.f); 
+            meta.region{i} = fileparts(meta.f{i});
+    end
+end
 
 % alter paths in database if set
 if ~isempty(changePath)
-    meta.f = strrep(meta.f,'/data4',changePath);
-    meta.region = strrep(meta.region,'/data4',changePath);
+    meta.f = strrep(meta.f,'/mnt/pgc',changePath);
+    meta.f = strrep(meta.f,'/','\');    
+    meta.region = strrep(meta.region,'/mnt/pgc',changePath);
+    meta.region = strrep(meta.region,'/','\');
 end
 
 %check meta file for required fields
@@ -84,7 +94,7 @@ meta.avg_rmse(meta.avg_rmse == 0) = NaN;
 
 % tile loop
 for i=startfrom:length(tiles.I)
-    fprintf(' \n')
+    fprintf('\n')
     fprintf('Working tile %d of %d: %s \n',i,length(tiles.I),tiles.I{i});
     tile = structfun(@(x) ( x(i) ), tiles, 'UniformOutput', false);
     
@@ -363,15 +373,14 @@ while length(meta.f) >= 1
     
     %set(gcf,'units','normalized');
     %set(gcf,'position',[0.01,0.01,.35,.9])
-    
-    
     qc=load([fileparts(fileName),'/qc.mat']);
     
     fileNames = qc.fileNames;
     
    % alter paths in database if set
     if ~isempty(changePath)
-        fileNames = strrep(fileNames,'/data4',changePath);
+        fileNames = strrep(fileNames,'/mnt/pgc',changePath);
+        fileNames = strrep(fileNames,'/','\');        
     end
     
     [~,IA]=intersect(fileNames, fileName);

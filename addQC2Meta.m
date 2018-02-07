@@ -38,11 +38,12 @@ for i=1:length(uniqueRegionDir)
     
 end
 
-if ~isempty(changePath)
-    qc.fileNames= strrep(qc.fileNames,'/data4',changePath);
-end
-
 if ~isempty(qc.fileNames)
+    
+    if ~isempty(changePath)
+        qc.fileNames= strrep(qc.fileNames,'/mnt/pgc',changePath);
+        qc.fileNames= strrep(qc.fileNames,'/','\');
+    end
     
     [~,IA,IB]=intersect( strrep(m.f,'_meta.txt',''), strrep(qc.fileNames,'_dem_browse.tif',''));
     
@@ -57,5 +58,11 @@ if ~isempty(qc.fileNames)
     m.qc(IA) = qc.flag(IB);
     m.maskPolyx(IA) = qc.x(IB);
     m.maskPolyy(IA) = qc.y(IB);
+    
+else % if no qc files found, make empty arrays
+    
+    m.qc = zeros(size(m.f),'uint8');
+    m.maskPolyx = cell(size(m.f));
+    m.maskPolyy = cell(size(m.f));
     
 end
