@@ -12,13 +12,14 @@ changePath= 'V:/pgc'; %if set, will change the path to the REMA directory from w
 % empty if none.
 tileDir= '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/2m_v3_tileqc/';
 
-startfrom = 1;
+startfrom = '1';
 minN = 500;
 minArea = 500;
 
 for i=1:2:length(varargin)
     eval([varargin{i},'=''',(varargin{i+1}),''';']);
 end
+startfrom=str2num(startfrom);
 
 %Get Arctic Tile Defs
 tiles=load(tilefile);
@@ -72,15 +73,19 @@ if ~any(strcmp(flds,'ymin')); error('meta stucture missing ymin field \n'); end
 if ~any(strcmp(flds,'x')); error('meta stucture missing x field \n'); end
 if ~any(strcmp(flds,'y')); error('meta stucture missing y field \n'); end
 if ~any(strcmp(flds,'f')); error('meta stucture missing f field \n'); end
-if ~any(strcmp(flds,'f')); error('meta stucture missing f field \n'); end
-if ~any(strcmp(flds,'sigma_all')); error('meta stucture missing sigma_all field \n'); end
-if ~any(strcmp(flds,'sigma_1yr')); error('meta stucture missing sigma_1yr field \n'); end
-
 
 % select the whichever registration has the better sigma_bias (all or 1 yr)
-meta.sigma = nanmin([meta.sigma_all(:)';meta.sigma_1yr(:)'])';
-meta.sigma(meta.sigma > 1) = NaN;
+if isfield(meta,'sigma_all') &&  isfield(meta,'sigma_1yr') &&  ~isfield(meta,'sigma') 
+    meta.sigma = nanmin([meta.sigma_all(:)';meta.sigma_1yr(:)'])';
+end
 
+% if no ground control error field, just set to nan
+if ~isfield(meta,'sigma')
+    meta.sigma  = nan(size(meta.f));
+end
+
+% if ground control error > 1, set to NaN
+meta.sigma(meta.sigma > 1) = NaN;
 meta.avg_rmse(meta.avg_rmse == 0) = NaN;
 
 for i=startfrom:length(tiles.I)
@@ -104,11 +109,11 @@ for i=startfrom:length(tiles.I)
     end
     
     
-    qctile(tile,meta,minN,minArea);
+    qctile(tile,meta,minN,minArea,changePath);
     
 end
 
-function qctile(tiles,meta,minN,minArea)
+function qctile(tiles,meta,minN,minArea,changePath)
 
 %% Spatial coverage search
 
@@ -145,7 +150,7 @@ meta = structfun(@(x) ( x(logical(in),:) ), meta, 'UniformOutput', false);
 fprintf('%d files overlapping this tile, ',sum(in));
 
 % add existing qc data
-meta = addQC2Meta(meta);
+meta = addQC2Meta(meta,changePath);
 
 fprintf('%d files with existing qc\n',sum(meta.qc ~= 0));
 
@@ -382,7 +387,7 @@ while length(meta.f) >= 1
         fileNames = strrep(fileNames,'/','\');        
     end
     
-    [~,IA]=intersect(qc.fileNames, fileName);
+    [~,IA]=intersect(fileNames, fileName);
     
     if isempty(IA) 
         error('this file name not matched in the qc.mat, probably need to upadate it.'); 
