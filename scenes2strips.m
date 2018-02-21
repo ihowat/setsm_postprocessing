@@ -178,14 +178,6 @@ for i=1:length(f)
         ~isnan(Zsub(r(1):r(2),c(1):c(2))) &  isnan(z(r(1):r(2),c(1):c(2))),...
         1000))=2;
          % data in strip and no data in scene is a two
-         
-    %check for segment break
-    if sum(A(:)~=0) <= 1000
-        f=f(1:i-1);
-        trans = trans(:,1:i-1);
-        rmse  = rmse(1:i-1);
-        break
-    end
     
 %     tic
 %     % USING REGIONFILL - Requires matlab 2015a or newer
