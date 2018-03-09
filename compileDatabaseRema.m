@@ -2,13 +2,14 @@
 
 udir='/mnt/pgc/data/elev/dem/setsm/REMA/region';
 rdir=dir([udir,'/region_*']);
-outname='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing/REMAdatabase_2m.mat';
+outname='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/Remadatabase_2m.mat';
 
 for i=1:length(rdir);
     demDir{i}=[udir,'/',rdir(i).name,'/strips/2m'];
 end
 
 f               = cell(length(rdir),1);
+region          = cell(length(rdir),1);
 creationDate    = cell(length(rdir),1);
 stripDate       = cell(length(rdir),1);
 res             = cell(length(rdir),1);
@@ -73,6 +74,12 @@ end
 
 a.f=[]; i=1; for i=1:length(f); a.f = [a.f;f{i}]; end; clear f;
 
+a.region=cell(size(a.f));
+i=1;
+for i=1:length(a.f); 
+        a.region{i} = fileparts(a.f{i});
+end
+
 a.creationDate=cell2mat(creationDate(:)); clear creationDate
 a.stripDate = cell2mat(stripDate(:)); clear stripDate
 a.res= cell2mat(res(:)); clear res
@@ -110,21 +117,3 @@ a.ymin = cellfun(@min, a.y);
 a.ymax=cellfun(@max, a.y);
 
 save(outname,'-struct','a','-v7.3');
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

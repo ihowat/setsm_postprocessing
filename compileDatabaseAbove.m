@@ -1,11 +1,11 @@
 % built a searchable index of all data
 
-udir='/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region';
-rdir=dir([udir,'/region_*']);
-outname='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticDEMdatabase_2m.mat';
+udir='/mnt/pgc/data/elev/dem/setsm/aboveDEM/region';
+rdir=dir([udir,'/*']);
+outname='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/aboveDEMdatabase_2m.mat';
 
 for i=1:length(rdir);
-    demDir{i}=[udir,'/',rdir(i).name,'/strips/2m'];
+    demDir{i}=[udir,'/',rdir(i).name,'/strips_102001/2m'];
 end
 
 f               = cell(length(rdir),1);

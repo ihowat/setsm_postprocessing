@@ -8,10 +8,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("dstdir", help="target directory (tile subfolders will be created)")
     parser.add_argument("tiles", help="list of mosaic tiles, comma delimited")
-    parser.add_argument("res", choices=['2','8','40'], help="resolution (2, 8, or 40)")
+    parser.add_argument("res", choices=['2','8','20','40'], help="resolution (2, 8, or 40)")
     parser.add_argument("region", choices=['arctic','antarctic'], help="region (arctic or antarctic)")
     
-    parser.add_argument("--rebuild", action='store_true', default=False, help="rebuild 2m DEM from 40m template 40m version must already exist)")
+    parser.add_argument("--rebuild", action='store_true', default=False, help="rebuild DEM from 40m template. 40m version must already exist)")
     parser.add_argument("--gcpfile", help="csv file of GCP points (must have x, y, and z, no headers)")
     parser.add_argument("--rerun", action='store_true', default=False,
                         help="run script even if target dem already exists")
@@ -109,7 +109,8 @@ def main():
                 else:
                     #cmd = """matlab -nodisplay -nosplash -r "addpath('{}'); parpool(4); selectTileByName('{}',{}); exit" """.format(scriptdir, tile, args.res)
                     if args.gcpfile:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); addpath('{1}/intersections'); {2}('{3}','{4}',{5},'{6}'); exit" """.format(
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}');
+                        addpath('{1}/intersections'); {2}('{3}','{4}',{5},'{6}'); exit" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,
@@ -119,7 +120,8 @@ def main():
                             args.gcpfile
                         )
                     else:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); addpath('{1}/intersections'); {2}('{3}','{4}',{5}); exit" """.format(
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}');
+                        addpath('{1}/intersections'); {2}('{3}','{4}',{5}); exit" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,

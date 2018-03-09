@@ -13,6 +13,7 @@ for i=1:length(f)
     if exist([outdir,'/',f1.name],'dir')
         if strmatch(f1.name,tileList)
             g=dir([outdir,'/',f1.name,'/*2m_reg_dem.mat']);
+            %g=dir([outdir,'/',f1.name,'/*2m_dem.mat']);
             gp=[outdir,'/',f1.name,'/',g.name];
             if ~isdir(gp)
                 tilef = [tilef, gp];

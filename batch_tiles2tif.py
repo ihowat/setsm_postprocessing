@@ -58,7 +58,7 @@ def main():
                 
             else:
                 if (os.path.isfile(dstfp) or os.path.isfile(dstfp2)) and not args.rerun:
-                    print '{} exists, skipping'.format(dstfp)
+                    print '{} or {} exists, skipping'.format(dstfp, dstfp2)
 
                 else:
                     ## if pbs, submit to scheduler

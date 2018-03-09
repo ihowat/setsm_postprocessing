@@ -1,4 +1,4 @@
-function mask_strip(demdir,stripid)
+function mask_strip_noentropy(demdir,stripid)
 
 f = dir([demdir,'/*',stripid,'*_matchtag.tif']);
 fdate=[f.datenum];
