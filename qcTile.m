@@ -6,11 +6,20 @@ function qcTile(tileFile,meta)
 % the qc display and, if not, a hillshade will be created. Hillshades must
 % exist for the individual strips, however.
 
+fprintf('loading tile schema\n');
+tileschema='V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/PGC_Imagery_Mosaic_Tiles_Arctic.mat'; %PGC/NGA Tile definition file, required
+tiles=load(tileschema);
+% get tile with matching name
+[~,tn,~] = fileparts(tileFile);
+tn=strrep(tn,'_8m_dem','');
+i=strcmp(tn,tiles.I);
+tile = structfun(@(x) ( x(i) ), tiles, 'UniformOutput', false);
+
 % open the tileFile into a matfile structure
 m=matfile(tileFile);
 
-
 % check if shade tif exists and read if it does
+fprintf('loading/building tile hillshade\n');
 shadeFile = strrep(tileFile,'dem.mat','dem_shade.tif');
 if strcmp(tileFile,shadeFile); shadeFile =[]; end
 if exist(shadeFile,'file')
@@ -31,9 +40,18 @@ end
 imagesc(x,y,uint8(h));
 axis xy equal;
 colormap gray
-set(gca,'clim', [150 200])
-
+set(gca,'clim', [0 255])
 hold on
+
+if isfield(tile,'coastline')
+    i=1;
+    for i=1:length(tile.coastline{1})
+        if isempty(tile.coastline{1}{i}); continue; end
+        plot(tile.coastline{1}{i}(1,:),...
+            tile.coastline{1}{i}(2,:),'b','linewidth',1)
+    end
+end
+
 
 deleteFlag = false;
 k=1;
@@ -69,8 +87,12 @@ while k
         n=n(logical(in));
         
         % select the whichever registration has the better sigma_bias (all or 1 yr)
-        meta.sigma = nanmin([meta.sigma_all(:)';meta.sigma_1yr(:)'])';
-        meta.sigma(meta.sigma > 1) = NaN;
+        if isfield(meta,'sigma_all') &&  isfield(meta,'sigma_1yr') &&  ~isfield(meta,'sigma')
+            meta.sigma = nanmin([meta.sigma_all(:)';meta.sigma_1yr(:)'])';
+            meta.sigma(meta.sigma > 1) = NaN;
+        else
+            meta.sigma  = nan(size(meta.f));
+        end
 
         meta.avg_rmse(meta.avg_rmse == 0) = NaN;
         
@@ -80,6 +102,8 @@ while k
      
             % load and plot strip hillshade
             fileName=strrep(meta.f{n(i)},'meta.txt','dem_browse.tif');
+            fileName=strrep(fileName,'/mnt/pgc','V:\pgc');
+            fileName=strrep(fileName,'/','\');
             fprintf('loading %d of %d: %s\n',i,length(n),fileName);
             I=readGeotiff(fileName);
             imagesc(I.x,I.y,I.z,'alphadata',single(I.z ~= 0))
@@ -95,7 +119,8 @@ while k
             
             % load qc data
             qc=load([fileparts(fileName),'/qc.mat']);
-            [~,IA]=intersect(qc.fileNames, fileName);
+            fileNames=strrep(qc.fileNames,'/','\');
+            [~,IA]=intersect(fileNames, fileName);
             
             % existing qc is 3, plot the mask polys
             j=1;
@@ -229,16 +254,16 @@ while k
     
 end
 
-if deleteFlag
-
-    s=input('Delete edited tile file (y/n)\n','s');
-    
-    
-    if strcmpi(s,'y')
-        
-         [filePath,fileName] = fileparts(tileFile);
-         delete([filePath,'/',fileName(1:5),'*']) 
-    end
-end
+% if deleteFlag
+% 
+%     s=input('Delete edited tile file (y/n)\n','s');
+%     
+%     
+%     if strcmpi(s,'y')
+%         
+%          [filePath,fileName] = fileparts(tileFile);
+%          delete([filePath,'/',fileName(1:5),'*']) 
+%     end
+% end
 
 clf

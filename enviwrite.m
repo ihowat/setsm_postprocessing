@@ -71,9 +71,16 @@ switch lower(proj)
     
     case 'polar stereo north';
         proj_info = '31, 6378137.0, 6356752.3, 70.000000, -45.000000, 0, 0, WGS-84, Polar Stereo North, units=Meters';
+        proj_name = 'Polar Stereographic';
 
-     case 'polar stereo south';   
+    case 'polar stereo south';   
         proj_info = '31, 637813.0, 635674.5, -71.000000, 0.000000, 0, 0, WGS-84, Polar Stereo South, units=Meters';
+        proj_name = 'Polar Stereographic';
+        
+    case 'canada albers equal area conic';
+        proj_info = '9, 6378137, 6356752.314140356, 40, -96, 0, 0, 50, 70, North America 1983, Albers Conical Equal Area';
+        datum = 'North America 1983';
+        proj_name = 'Albers Equal Area Conic';
         
     case 'bamber'
          proj_info = '31, 6378137.0, 6356752.3, 70.000000, -39.000000, 1, 1, WGS-84, bamber, units=Meters';
@@ -135,9 +142,9 @@ fprintf(fid,'%s\n','interleave = bsq');
 fprintf(fid,'%s\n','sensor type = Unknown');
 fprintf(fid,'%s\n','byte order = 0');
 if strcmpi(proj,'UTM'); 
-fprintf(fid,'%s\n',['map info = { ',proj,', 1.000, 1.000, ',num2str(x1),', ',num2str(y1),', ',num2str(dx),', ',num2str(dy),', ',num2str(zone),', ',hemi,', ',datum,', units=',units,'}']);
+    fprintf(fid,'%s\n',['map info = { ',proj,', 1.000, 1.000, ',num2str(x1),', ',num2str(y1),', ',num2str(dx),', ',num2str(dy),', ',num2str(zone),', ',hemi,', ',datum,', units=',units,'}']);
 else
-    fprintf(fid,'%s\n',['map info = { ',proj,', 1.000, 1.000, ',num2str(x1),', ',num2str(y1),', ',num2str(dx),', ',num2str(dy),',',datum,', units=',units,'}']);
+    fprintf(fid,'%s\n',['map info = { ',proj_name,', 1.000, 1.000, ',num2str(x1),', ',num2str(y1),', ',num2str(dx),', ',num2str(dy),',',datum,', units=',units,'}']);
     fprintf(fid,'%s\n',['projection info = {',proj_info,'}']);
 end;
 fprintf(fid,'%s\n','wavelength units = Unknown');
