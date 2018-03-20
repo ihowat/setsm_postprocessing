@@ -22,7 +22,7 @@ function  m = mask8m(varargin)
 % 25-Jul-2017 12:49:25
 
 %% Parse inputs
-previewFlag = true;
+previewFlag = false;
 demFile=varargin{1};
 
 % intialize output
