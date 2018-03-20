@@ -59,9 +59,6 @@ mt = mt.z;
 % make data density map
 P = DataDensityMap(mt,21);
 
-%don't need mt anymore
-clear m
-
 % set P no data
 P(isnan(z)) = NaN;
 
