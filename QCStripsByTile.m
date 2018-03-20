@@ -14,7 +14,7 @@ tileDir= '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/2m_v3_tileqc/';
 
 startfrom = '1';
 minN = 500;
-minArea = 500;
+minArea = 35;
 
 for i=1:2:length(varargin)
     eval([varargin{i},'=''',(varargin{i+1}),''';']);
@@ -351,14 +351,66 @@ while length(meta.f) >= 1
     
     I=readGeotiff(localfileName);
      
-    Ni=interp2(x,y(:),N,I.x,I.y(:),'*nearest');
+%     Ni=interp2(x,y(:),N,I.x,I.y(:),'*nearest');
     
-    imagesc(I.x,I.y,I.z,'alphadata',single(I.z ~= 0))
+    
+    % Make square image to show in the figure window.
+    X_fig = I.x;
+    Y_fig = I.y;
+    xsize = max(size(I.x));
+    ysize = max(size(I.y));
+    max_dim = max(xsize, ysize);
+    if max_dim == ysize
+        dx = X_fig(2) - X_fig(1);
+        x_border = (max_dim - xsize) / 2;
+        x_lft = [(X_fig(1)-floor(x_border)*dx):dx:(X_fig(1)-dx)];
+        x_rgt = [(X_fig(end)+dx):dx:(X_fig(end)+ceil(x_border)*dx)];
+        X_fig = [x_lft, X_fig, x_rgt];
+    else
+        dy = Y_fig(2) - Y_fig(1);
+        y_border = (max_dim - ysize) / 2;
+        y_lft = [(Y_fig(1)-floor(y_border)*dy):dy:(Y_fig(1)-dy)];
+        y_rgt = [(Y_fig(end)+dy):dy:(Y_fig(end)+ceil(y_border)*dy)];
+        Y_fig = [y_lft, Y_fig, y_rgt];
+    end
+    
+    Ni=interp2(x,y(:),N,X_fig,Y_fig(:),'*nearest');
+    
+    Z_fig = zeros(max(size(Y_fig)), max(size(X_fig)));
+    Ni_fig = zeros(max(size(Y_fig)), max(size(X_fig)));
+    
+    Z_c0 = find(I.x(1) == X_fig);
+    Z_c1 = find(I.x(end) == X_fig);
+    Z_r0 = find(I.y(1) == Y_fig);
+    Z_r1 = find(I.y(end) == Y_fig);
+    
+    Ni_c0 = find(x(1) == X_fig);
+    if isempty(Ni_c0)
+        Ni_c0 = 1;
+    end
+    Ni_c1 = find(x(end) == X_fig);
+    if isempty(Ni_c1)
+        Ni_c1 = length(X_fig);
+    end
+    Ni_r0 = find(y(1) == Y_fig);
+    if isempty(Ni_r0)
+        Ni_r0 = 1;
+    end
+    Ni_r1 = find(y(end) == Y_fig);
+    if isempty(Ni_r1)
+        Ni_r1 = length(Y_fig);
+    end
+    
+    Z_fig(Z_r0:Z_r1, Z_c0:Z_c1) = I.z;
+    Ni_fig(Ni_r0:Ni_r1, Ni_c0:Ni_c1) = Ni(Ni_r0:Ni_r1, Ni_c0:Ni_c1);
+    
+    
+    imagesc(X_fig,Y_fig,Z_fig,'alphadata',single(Z_fig ~= 0))
     set(gca,'color','r')
     axis xy  equal tight;
     colormap gray;
     hold on;
-    imagesc(I.x,I.y,Ni,'alphadata',single(Ni).*.5)
+    imagesc(X_fig,Y_fig,Ni_fig,'alphadata',single(Ni_fig).*.5)
     
 
     if isfield(tiles,'coastline')
@@ -372,7 +424,7 @@ while length(meta.f) >= 1
     
     plot([tiles.x0,tiles.x0,tiles.x1,tiles.x1,tiles.x0], [tiles.y0,tiles.y1,tiles.y1,tiles.y0,tiles.y0],'w','linewidth',2)
    
-    set(gca,'xlim',[min(I.x)-500 max(I.x)+500],'ylim',[min(I.y)-500 max(I.y)+500]);
+    set(gca,'xlim',[min(X_fig)-500 max(X_fig)+500],'ylim',[min(Y_fig)-500 max(Y_fig)+500]);
     
     
     %set(gcf,'units','normalized');
@@ -390,7 +442,7 @@ while length(meta.f) >= 1
     [~,IA]=intersect(fileNames, fileName);
     
     if isempty(IA) 
-        error('this file name not matched in the qc.mat, probably need to upadate it.'); 
+        error('this file name not matched in the qc.mat, probably need to update it.'); 
     end
     
     if qc.flag(IA) ~= 4 && qc.flag(IA) ~= 0

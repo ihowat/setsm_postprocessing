@@ -106,7 +106,39 @@ while k
             fileName=strrep(fileName,'/','\');
             fprintf('loading %d of %d: %s\n',i,length(n),fileName);
             I=readGeotiff(fileName);
-            imagesc(I.x,I.y,I.z,'alphadata',single(I.z ~= 0))
+            
+            
+            % Make square image to show in the figure window.
+            X_fig = I.x;
+            Y_fig = I.y;
+            xsize = max(size(I.x));
+            ysize = max(size(I.y));
+            max_dim = max(xsize, ysize);
+            if max_dim == ysize
+                dx = X_fig(2) - X_fig(1);
+                x_border = (max_dim - xsize) / 2;
+                x_lft = [(X_fig(1)-floor(x_border)*dx):dx:(X_fig(1)-dx)];
+                x_rgt = [(X_fig(end)+dx):dx:(X_fig(end)+ceil(x_border)*dx)];
+                X_fig = [x_lft, X_fig, x_rgt];
+            else
+                dy = Y_fig(2) - Y_fig(1);
+                y_border = (max_dim - ysize) / 2;
+                y_lft = [(Y_fig(1)-floor(y_border)*dy):dy:(Y_fig(1)-dy)];
+                y_rgt = [(Y_fig(end)+dy):dy:(Y_fig(end)+ceil(y_border)*dy)];
+                Y_fig = [y_lft, Y_fig, y_rgt];
+            end
+
+            Z_fig = zeros(max(size(Y_fig)), max(size(X_fig)));
+
+            c0 = find(I.x(1) == X_fig);
+            c1 = find(I.x(end) == X_fig);
+            r0 = find(I.y(1) == Y_fig);
+            r1 = find(I.y(end) == Y_fig);
+
+            Z_fig(r0:r1,c0:c1) = I.z;
+            
+            
+            imagesc(X_fig,Y_fig,Z_fig,'alphadata',single(Z_fig ~= 0))
             set(gca,'color','r')
             axis xy  equal tight;
             colormap gray;
@@ -115,7 +147,7 @@ while k
             hold on
             % plot ROI
             plot(xv,yv,'b','linewidth',2)
-            set(gca,'xlim',[min(I.x)-500 max(I.x)+500],'ylim',[min(I.y)-500 max(I.y)+500])
+            set(gca,'xlim',[min(X_fig)-500 max(X_fig)+500],'ylim',[min(Y_fig)-500 max(Y_fig)+500])
             
             % load qc data
             qc=load([fileparts(fileName),'/qc.mat']);
