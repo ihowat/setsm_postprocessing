@@ -200,6 +200,9 @@ end
 % apply dtrans and interpolate back to grid (but only dtrans is not zeros)
 if any(dtrans ~= 0)
     
+    % round dtrans to 3 sig figs to prevent precision errors
+    dtrans = round(dtrans,3);
+    
     x = x + dtrans(2);
     y = y + dtrans(3);
     z = z + dtrans(1);
