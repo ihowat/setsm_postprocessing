@@ -1,4 +1,4 @@
-function QCStripsByTile_above(regionNum,varargin)
+function [] = QCStripsByTile_above(regionNum,varargin)
 
 %% Argins
 %regionNum='02'; % region number
@@ -111,6 +111,7 @@ for i=startfrom:length(tiles.I)
     
     qctile(tile,meta,minN,minArea,changePath);
     
+end
 end
 
 function qctile(tiles,meta,minN,minArea,changePath)
@@ -340,6 +341,7 @@ while length(meta.f) >= 1
     fprintf('%d of %d strips remaining\n',skipn+1,length(meta.f));
 
     fileName=strrep(meta.f{n},'meta.txt','dem_browse.tif');
+    rawfileName=strrep(meta.f{n},'meta.txt','dem_small.tif');
     
     
     fprintf('%s\n',fileName);
@@ -405,6 +407,7 @@ while length(meta.f) >= 1
     Ni_fig(Ni_r0:Ni_r1, Ni_c0:Ni_c1) = Ni(Ni_r0:Ni_r1, Ni_c0:Ni_c1);
     
     
+    fig = figure;
     imagesc(X_fig,Y_fig,Z_fig,'alphadata',single(Z_fig ~= 0))
     set(gca,'color','r')
     axis xy  equal tight;
@@ -492,16 +495,194 @@ while length(meta.f) >= 1
             
         end
         
+        if exist('I_dem', 'var')
+            clear I_dem;
+        end
+        
         if flag == 3
             fprintf('entering manual edit mode\n')
+            if ~exist(rawfileName, 'file')
+                fprintf('** filter mode is NOT available for this image **\n')
+            end
             
             j=1;
             while j
                 
-                [~,qc.x{IA}{j},qc.y{IA}{j}] =  roipoly;
+%                 [~,qc.x{IA}{j},qc.y{IA}{j}] =  roipoly;
+                [roi_BW,roi_x,roi_y] =  roipoly;
+                polys = {[roi_x roi_y]};
                 
-                plot(qc.x{IA}{j},qc.y{IA}{j},'g','linewidth',2)
-                
+                if ~isempty(roi_BW)
+                    poly_group = plot(roi_x,roi_y,'g','linewidth',2);
+
+                    if exist(rawfileName, 'file')
+                        while j
+                            s=input('enter filter mode? (y/n)\n','s');
+
+                            if ~strcmpi(s,'y') && ~strcmpi(s,'n')
+                                fprintf('%s not recogized, try again\n',s);
+                            else
+                                break
+                            end
+                        end
+
+                        if strcmpi(s,'y')
+                            delete(poly_group);
+                            poly_group = plot(roi_x,roi_y,'y','linewidth',2);
+                            polys = {};
+                            
+                            % crop figure-size ROI mask to DEM extent
+                            roi_BW = roi_BW(Z_r0:Z_r1, Z_c0:Z_c1);
+                            
+                            % read raw DEM
+                            if ~exist('I_dem', 'var')
+                                I_dem = readGeotiff(rawfileName);
+                            end
+                            F = guihandles(fig);
+                            F.z = I_dem.z;
+                            F.x = I_dem.x;
+                            F.y = I_dem.y;
+                            
+                            % crop ROI and DEM to ROI extent
+                            [roi_BW,rcrop,ccrop] = cropzeros(roi_BW);
+                            F.z = F.z(rcrop(1):rcrop(2), ccrop(1):ccrop(2));
+                            F.x = F.x(ccrop(1):ccrop(2));
+                            F.y = F.y(rcrop(1):rcrop(2));
+                            F.roi = roi_BW;
+                            F.nodata = isnan(F.z);
+                            
+                            bgcolor = fig.Color;
+                            
+                            
+                            % make slider for kernel size
+                            F.kern_val = 5;
+                            F.kern_title = uicontrol('Parent',fig,'Style','text','Position',[260,25,100,23],...
+                                            'String','Kernel Size','BackgroundColor',bgcolor);
+                            F.kern_slide = uicontrol('Parent',fig,'Style','slider','Position',[101,54,419,23],...
+                                            'Value',F.kern_val, 'min',1, 'max',20, 'SliderStep',1);
+                            F.kern_lmin = uicontrol('Parent',fig,'Style','text','Position',[50,50,43,23],...
+                                            'String',1,'BackgroundColor',bgcolor,...
+                                            'HorizontalAlignment','Right');
+                            F.kern_lmax = uicontrol('Parent',fig,'Style','text','Position',[528,50,43,23],...
+                                            'String',[num2str(round(kern_max)),' m'],'BackgroundColor',bgcolor,...
+                                            'HorizontalAlignment','Left');
+                            F.kern_slide.Callback = @(es,ed) callback_kern_slide(fig, es.Value);
+                            
+                            
+%                             % make slider for slope filter
+%                             F.group_slope = hggroup;
+%                             [dx,dy] = gradient(z,x,y);
+%                             [~,F.slope_raw] = cart2pol(dx,dy);
+%                             clear(dx, dy);
+                            
+                            
+                            % make slider for elevation filter
+                            F.group_elev = hggroup;
+                            F.elev_raw = F.z;
+                            F.elev_on = 0;
+                            
+                            roi_elev = F.elev_raw;
+                            roi_elev(~F.roi) = NaN;
+                            elev_min = min(roi_elev(:));
+                            elev_max = max(roi_elev(:));
+                            F.elev_val = (elev_min+elev_max)/2;
+                            
+                            F.elev_title = uicontrol('Parent',fig,'Style','text','Position',[260,25,100,23],...
+                                            'String','Elevation Filter','BackgroundColor',bgcolor);
+                            F.elev_togg = uicontrol('Parent',fig,'Style','togglebutton','Position',[20,54,23,23],...
+                                            'Value',F.elev_on, 'min',0, 'max',1);
+                            F.elev_slide = uicontrol('Parent',fig,'Style','slider','Position',[101,54,419,23],...
+                                            'Value',F.elev_val, 'min',elev_min, 'max',elev_max);
+                            F.elev_lmin = uicontrol('Parent',fig,'Style','text','Position',[50,50,43,23],...
+                                            'String',[num2str(round(elev_min)),' m'],'BackgroundColor',bgcolor,...
+                                            'HorizontalAlignment','Right');
+                            F.elev_lmax = uicontrol('Parent',fig,'Style','text','Position',[528,50,43,23],...
+                                            'String',[num2str(round(elev_max)),' m'],'BackgroundColor',bgcolor,...
+                                            'HorizontalAlignment','Left');
+                            F.elev_slide.Callback = @(es,ed) callback_elev_slide(fig, es.Value);
+                            F.elev_togg.Callback = @(es,ed) callback_elev_togg(fig, es.Value);
+                            
+                            F.mask = false(size(F.z));
+                            prompt = 'apply filters?';
+                            while j
+                                F.mask_elev = false(size(F.z));
+                                F.mask_slope = false(size(F.z));
+                                
+                                guidata(fig, F) 
+                                while j
+                                    s=input([prompt,' (y/n)\n'],'s');
+
+                                    if ~strcmpi(s,'y') && ~strcmpi(s,'n')
+                                        fprintf('%s not recogized, try again\n',s);
+                                    else
+                                        break
+                                    end
+                                end
+                                F = guidata(fig);
+
+                                if strcmpi(s,'y')
+                                    mask_additions = true(size(F.z));
+                                    if F.elev_on
+                                        mask_additions = (mask_additions & F.mask_elev);
+                                    end
+                                    if F.slope_on
+                                        mask_additions = (mask_additions & F.mask_slope);
+                                    end
+                                    F.mask = F.roi & (F.mask | mask_additions);
+                                    
+                                    prompt = 'apply more filters?';
+                                else
+                                    B = bwboundaries(F.mask, 'noholes');
+                                    polys = [polys; B];
+                                    break
+                                end
+                            end
+                            
+                            delete(F.group_elev);
+                            
+                            delete(poly_group);
+                            poly_group = hggroup;
+                            for k = 1:length(polys)
+                               boundary = polys{k};
+                               plot(F.x(boundary(:,2)), F.y(boundary(:,1)), 'g','linewidth',2,'Parent',poly_group)
+                            end
+                        end
+                    end
+                    
+                    if exist('F', 'var')
+                        fields = fieldnames(F);
+                        for k = 1:numel(fields)
+                            delete(F.(fields{i}));
+                        end
+                        clear F;
+                    end
+                    
+                    if ~isempty(polys)
+                        while j
+                            s=input('apply mask? (y/n)\n','s');
+
+                            if ~strcmpi(s,'y') && ~strcmpi(s,'n')
+                                fprintf('%s not recogized, try again\n',s);
+                            else
+                                break
+                            end
+                        end
+
+                        if strcmpi(s,'y')
+                            for poly_num = 1:length(polys)
+                                qc.x{IA}{j} = polys{poly_num}(:,1);
+                                qc.y{IA}{j} = polys{poly_num}(:,2);
+                                j = j + 1;
+                            end
+                        else
+                            children = get(poly_group, 'children');
+                            if ~isempty(children)
+                                delete(children(:));
+                            end
+                            delete(poly_group);
+                        end
+                    end
+                end
                 
                 while j
                     s=input('continue editing this image? (y/n)\n','s');
@@ -514,8 +695,6 @@ while length(meta.f) >= 1
                 end
                 
                 if strcmpi(s,'n'); break; end
-                
-                j=j+1;
             end
         end
         
@@ -555,4 +734,78 @@ while length(meta.f) >= 1
         
     end
     
+end
+end
+
+
+function callback_elev_togg(fig, val)
+    F = guidata(fig);
+    F.elev_on = val;
+    guidata(fig, F);
+    callback_elev_slide(fig, F.elev_val)
+end
+
+
+function callback_elev_slide(fig, val)
+    F = guidata(fig);
+    
+    children = get(F.group_elev, 'children');
+    if ~isempty(children)
+        delete(children(:));
+    end
+    
+    if F.elev_on
+        if val ~= F.elev_val
+            F.elev_val = val;
+            F.mask_elev = F.roi & ((F.elev_raw < F.elev_val) | F.nodata);
+        end
+        B = bwboundaries(F.mask_elev, 'noholes');
+        for k = 1:length(B)
+           boundary = B{k};
+           plot(F.x(boundary(:,2)), F.y(boundary(:,1)), 'cyan','linewidth',2,'Parent',F.group_elev)
+        end
+    end
+    
+    guidata(fig, F);
+end
+
+
+function [r] = grade(z,x,y)
+    [dx,dy] = gradient(z,x,y);
+    [~,r] = cart2pol(dx,dy);
+end
+
+
+function [A,r,c] = cropzeros(varargin)
+% cropnans crop array of bordering nans
+%
+% [A,r,c] = cropnans(A)
+
+A=varargin{1};
+buff=0;
+if nargin == 2; buff=varargin{2}; end
+
+r = [];
+c = [];
+
+
+% M = ~isnan(A);
+
+if ~any(A(:)); return; end
+
+rowsum = sum(A) ~= 0;
+colsum = sum(A,2) ~= 0;
+
+c(1) = find(rowsum,1,'first')-buff;
+c(2) = find(rowsum,1,'last')+buff;
+
+r(1) = find(colsum,1,'first')-buff;
+r(2) = find(colsum,1,'last')+buff;
+
+if c(1) < 1; c(1)=1; end
+if r(1) < 1; r(1)=1; end
+if c(2) > size(A,2); c(2)=size(A,2); end
+if r(2) > size(A,1); r(2)=size(A,1); end
+
+A = A(r(1):r(2),c(1):c(2));
 end
