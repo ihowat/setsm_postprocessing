@@ -10,9 +10,9 @@ def main():
     parser.add_argument("res", choices=['2','8'], help="resolution of target dems (2 or 8)")
     
     parser.add_argument("--rema2a", action='store_true', default=False,
-            help="use filter rema2a")
-    parser.add_argument("--noentropy", action='store_true', default=False,
-            help="use no entropy filter")
+            help="use rema2a filter")
+    parser.add_argument("--mask8m", action='store_true', default=False,
+            help="use rema8m filter")
     parser.add_argument("--lib-path", default=matlab_scripts,
             help="path to referenced Matlab functions (default={}".format(matlab_scripts))
     parser.add_argument("--pbs", action='store_true', default=False,
@@ -31,8 +31,8 @@ def main():
     dstdir = os.path.abspath(args.dst)
     scriptdir = os.path.dirname(sys.argv[0])
 
-    if args.noentropy and args.rema2a:
-        parser.error('no entropy and rema2a filters are incompatible')
+    if args.mask8m and args.rema2a:
+        parser.error('mask8m and rema2a filters are incompatible')
 
     ## Verify qsubscript
     if args.qsubscript is None:
@@ -68,8 +68,8 @@ def main():
             else:
                 if args.rema2a:
                     script = 'scenes2strips_single_rema2a'
-                elif args.noentropy:
-                    script = 'scenes2strips_single_noentropy'
+                elif args.mask8m:
+                    script = 'scenes2strips_single_8m'
                 else:
                     script = 'scenes2strips_single'
                 

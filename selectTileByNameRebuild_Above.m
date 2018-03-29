@@ -3,14 +3,14 @@ function selectTileByName_Above(dstdir,tile_name,res,varargin)
 % NGA ArcticDEM region
 
 %tile_name='45_17';
-%res=2;
-projstr='canada albers equal area';
+%res=2;          % strip & tile region
+projstr='canada albers equal area conic';
 
 % file names
 tilefile  = 'PGC_Imagery_Mosaic_Tiles_ABoVE_nocoast.mat'; %PGC/NGA Tile definition file
-dbasefile = ['aboveDEMdatabase_2m.mat']; % strip datbase file
-%dbasefile = ['GrITdatabase_2m.mat']; % strip datbase file
-%includeListFile = 'includeList_baffin.txt'; % list of strips to include
+%dbasefile = ['REMAdatabase_',num2str(res),'m.mat']; % strip datbase file
+dbasefile = ['AboveDEMdatabase_2m.mat']; % strip datbase file
+%includeListFile = 'includeListRema.txt'; % list of strips to include
 
 % make output directory
 outdir=[dstdir,'/',tile_name];
@@ -19,6 +19,7 @@ if ~exist(outdir,'dir'); mkdir(outdir); end
 
 %Get Arctic Tile Defs
 tiles=load(tilefile);
+
 % get target tile
 [~,n]=intersect(tiles.I,tile_name);
 
@@ -54,13 +55,12 @@ end
 % get gcps into gcp.x, y, and z
 if ~isempty(varargin);
     gcpfile=varargin{1};
-    %gcp = loadGCPFile_is(gcpfile);
     gcp = loadGCPFile_is(gcpfile);
     % send to mosaicker
-    mosaicStrips(meta,tiles,res,outdir,projstr,gcp);
+    mosaicStripsRebuild(meta,tiles,res,outdir,projstr,gcp);
 
 else
     % send to mosaicker
-    mosaicStrips(meta,tiles,res,outdir,projstr);
+    mosaicStripsRebuild(meta,tiles,res,outdir,projstr);
     
 end

@@ -9,7 +9,7 @@ def main():
     parser.add_argument("dstdir", help="target directory (tile subfolders will be created)")
     parser.add_argument("tiles", help="list of mosaic tiles, comma delimited")
     parser.add_argument("res", choices=['2','8','40'], help="resolution (2, 8, or 40)")
-    parser.add_argument("region", choices=['arctic','antarctic'], help="region (arctic or antarctic)")
+    parser.add_argument("region", choices=['arctic','antarctic','above'], help="region (arctic, antarctic, or above)")
     
     parser.add_argument("--rerun", action='store_true', default=False,
             help="run script even if target dem already exists")
@@ -43,6 +43,8 @@ def main():
         projstr = 'polar stereo north'    
     elif args.region == 'antarctic':
         projstr = 'polar stereo south'
+    elif args.region == 'above':
+        projstr = 'canada albers equal area conic'
         
     i=0
     if len(tiles) > 0:

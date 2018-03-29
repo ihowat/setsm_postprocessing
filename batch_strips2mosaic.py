@@ -9,7 +9,7 @@ def main():
     parser.add_argument("dstdir", help="target directory (tile subfolders will be created)")
     parser.add_argument("tiles", help="list of mosaic tiles, comma delimited")
     parser.add_argument("res", choices=['2','8','20','40'], help="resolution (2, 8, or 40)")
-    parser.add_argument("region", choices=['arctic','antarctic'], help="region (arctic or antarctic)")
+    parser.add_argument("region", choices=['arctic','antarctic','above'], help="region (arctic, antarctic, or above)")
     
     parser.add_argument("--rebuild", action='store_true', default=False, help="rebuild DEM from 40m template. 40m version must already exist)")
     parser.add_argument("--gcpfile", help="csv file of GCP points (must have x, y, and z, no headers)")
@@ -50,12 +50,17 @@ def main():
         if args.region == 'arctic':
             matlab_script = 'selectTileByNameRebuild'    
         elif args.region == 'antarctic':
-            matlab_script = 'selectTileByNameRebuild_Antarctic'    
+            matlab_script = 'selectTileByNameRebuild_Antarctic'
+        elif args.region == 'above':
+            matlab_script = 'selectTileByNameRebuild_Above'
+            
     else:
         if args.region == 'arctic':
             matlab_script = 'selectTileByName'    
         elif args.region == 'antarctic':
             matlab_script = 'selectTileByName_Antarctic'
+        elif args.region == 'above':
+            matlab_script = 'selectTileByName_Above'
     
     i=0
     if len(tiles) > 0:
@@ -109,8 +114,7 @@ def main():
                 else:
                     #cmd = """matlab -nodisplay -nosplash -r "addpath('{}'); parpool(4); selectTileByName('{}',{}); exit" """.format(scriptdir, tile, args.res)
                     if args.gcpfile:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}');
-                        addpath('{1}/intersections'); {2}('{3}','{4}',{5},'{6}'); exit" """.format(
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); addpath('{1}/intersections'); {2}('{3}','{4}',{5},'{6}'); exit" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,
@@ -120,8 +124,7 @@ def main():
                             args.gcpfile
                         )
                     else:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}');
-                        addpath('{1}/intersections'); {2}('{3}','{4}',{5}); exit" """.format(
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); addpath('{1}/intersections'); {2}('{3}','{4}',{5}); exit" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,
