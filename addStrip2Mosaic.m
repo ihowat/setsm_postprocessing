@@ -200,15 +200,28 @@ end
 % apply dtrans and interpolate back to grid (but only dtrans is not zeros)
 if any(dtrans ~= 0)
     
-    % round dtrans to 3 sig figs to prevent precision errors
-    dtrans = round(dtrans,3);
+    x0=x;
+    y0=y;
     
-    x = x + dtrans(2);
-    y = y + dtrans(3);
-    z = z + dtrans(1);
+    try
     
-    % interpolate the first dem to the same grid
-    [z,mt,or] = interpolate2grid(x,y,z,mt,or,m.x(1,c),m.y(r,1));
+        % round dtrans to 3 sig figs to prevent precision errors
+        dtrans = round(dtrans,3);
+    
+        x = x + dtrans(2);
+        y = y + dtrans(3);
+        z = z + dtrans(1);
+    
+        % interpolate the first dem to the same grid
+        [z,mt,or] = interpolate2grid(x,y,z,mt,or,m.x(1,c),m.y(r,1));
+    
+    catch
+        fprintf('stupid dtrans precision error, taking a dump\n')
+   
+        save dtrans_precision_error_dump.mat
+   end
+   
+   clear x0 y0
     
 end
 
