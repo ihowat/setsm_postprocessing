@@ -199,19 +199,27 @@ end
 
 % apply dtrans and interpolate back to grid (but only dtrans is not zeros)
 if any(dtrans ~= 0)
-    
-    x0=x;
-    y0=y;
-    
-    try
-    
-        % round dtrans to 3 sig figs to prevent precision errors
-        dtrans = round(dtrans,3);
-    
+     
+        x0=x;
+        y0=y;
+     
         x = x + dtrans(2);
         y = y + dtrans(3);
         z = z + dtrans(1);
-    
+
+        % check for precision issues that result in a non-uniform grid
+        if range(x(2:end)-x(1:end-1)) ~= 0
+            fprintf('non-uniform x-spacing detected following dtrans apply, correcting\n')
+            % force a uniform spacing by adding a vector of the cumultive sum of the target resolution to the first value of the coordinate vector. 
+            x = x(1) + [0,cumsum(ones(1,length(x)-1).*(m.x(1,2)-m.x(1,1)))];  
+        end
+        if range(y(2:end)-y(1:end-1)) ~= 0
+            fprintf('non-uniform y-spacing detected following dtrans apply, correcting\n')
+            % same as for x
+            y = y(1) + [0,cumsum(ones(1,length(y)-1).*(m.y(2,1)-m.y(1,1)))]';
+        end
+
+    try
         % interpolate the first dem to the same grid
         [z,mt,or] = interpolate2grid(x,y,z,mt,or,m.x(1,c),m.y(r,1));
     
