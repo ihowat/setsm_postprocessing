@@ -3,7 +3,7 @@ function [L, effectiveBandwith, abscalFactor, gain, offset] = DG_DN2RAD(DN,varar
 %
 % L =  = DG_DN2RAD(DN, satID, effectiveBandwith, abscalFactor) applies the
 % conversion using the supplied factors with a table look-up for the satID.
-% The output L is top-of-atmosphere radiance in units of Wµm^-1 m^-2 sr^-1.
+% The output L is top-of-atmosphere radiance in units of WÂµm^-1 m^-2 sr^-1.
 %
 % L =  = DG_DN2RAD(DN,xmlFile) reads the factors from the supplied xml file
 %
@@ -16,6 +16,8 @@ switch length(varargin)
     case 1
         xmlFile=varargin{1};
         [satID,effectiveBandwith,abscalFactor] = getParams(xmlFile);
+        if strcmp(satID,'QB2'); satID = 'QB02'; end
+        if strcmp(satID,'IKO'); satID = 'IK01'; end
     case 3
         satID              = varargin{1};
         effectiveBandwith  = varargin{2};
@@ -26,7 +28,7 @@ end
      
 % Values from:
 % https://dg-cms-uploads-production.s3.amazonaws.com/uploads/document/file/209/DGConstellationAbsRadCalAdjustmentFactors_2015v2.pdf
-sensor = {'WV03', 'WV02', 'GE01', 'QB2', 'IKO', 'WV01'};
+sensor = {'WV03', 'WV02', 'GE01', 'QB02', 'IK01', 'WV01'};
 gain = [  0.923	0.96	0.978	0.876	0.907	1.016];
 offset = [ -1.7	-2.957	-1.948	-2.157	-4.461	-3.932];
 
