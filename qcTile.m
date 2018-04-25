@@ -66,7 +66,7 @@ while k
         if ~exist('f','var')
             %% match strip files to database
             f=m.f; % extract image filename vector from from matfile
-            f(isnan(m.rmse))=[]; % remove unused data
+%             f(isnan(m.rmse))=[]; % remove unused data
             [~,IA]= intersect(meta.f,f); % find index of tile files in meta
             meta = structfun(@(x) ( x(IA,:) ), meta, 'UniformOutput', false); %crop meta
             meta = addQC2Meta(meta); % add existing qc data
