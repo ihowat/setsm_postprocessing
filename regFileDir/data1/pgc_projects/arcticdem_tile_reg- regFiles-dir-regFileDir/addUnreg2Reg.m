@@ -6,7 +6,7 @@ i=1;
 for i=1:length(regFiles)
 
 regFile=regFiles{i};
-unregFile=strrep(regFile,'_reg','');
+unregFile=strrep(regFile,'_reg_','_');
 
 mreg=matfile(regFile,'writable',true);
 
