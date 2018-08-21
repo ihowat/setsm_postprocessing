@@ -17,12 +17,16 @@ else
     fprintf(2, 'filter mode requires MATLAB release R2016a or later; updating to the latest release is recommended\n');
 end
 
+
 %% Argins
 %regionNum='02'; % region number
 tilefile  = 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/PGC_Imagery_Mosaic_Tiles_Above_nocoast.mat'; %PGC/NGA Tile definition file, required
 arcdemfile= 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/ABoVE_tiles.mat'; % lists which tiles go to which regions, required
 dbasefile = 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/aboveDEMdatabase_2m.mat'; % database file
 changePath= 'V:/pgc'; %if set, will change the path to the REMA directory from what's in the database file. set to [] if none.
+
+dbasedir_local = [getenv('USERPROFILE'),'\setsm_postprocessing_dbase'];
+[tilefile, arcdemfile, dbasefile] = copy_dbase_local(dbasedir_local, tilefile, arcdemfile, dbasefile);
 
 % if an older set of mosaic files already exist, we can speed things up by
 % check to see if they already have 100% coverage - will skip if do. Leave
@@ -37,12 +41,11 @@ qcAll = false;
 for i=1:2:length(varargin)
     if strcmp(varargin{i}, 'all')
         qcAll = true;
-        continue;
     elseif strcmp(varargin{i}, 'nofilter')
         filtermode_avail = false;
-        continue;
+    else
+        eval([varargin{i},'=''',(varargin{i+1}),''';']);
     end
-    eval([varargin{i},'=''',(varargin{i+1}),''';']);
 end
 startfrom=str2num(startfrom);
 
@@ -139,14 +142,17 @@ end
 
 
 function qctile(tiles,meta,minN,minArea,changePath,qcAll)
+
 global fig_qc
 global fig_panel
 global filter_item_plot_groups
 global filtermode_avail
 
+coverageFile_missing_total = 0;
 coverageFile_warned = false;
 orthoFile_warned = false;
 demFile_warned = false;
+
 
 %% Spatial coverage search
 
@@ -252,28 +258,40 @@ fprintf('%d already qc-passed files will be added \n',sum(add2N))
 
 if ~any(~add2N); fprintf('all files already passed qc, returning \n'); return; end
 
+coveragealign_warned = false;
+coverageFile_missing = [];
 % file loop
 for i=1:length(meta.f)
     
     % counter
-    if i>1; for p=1:count; fprintf('\b'); end %delete line before
-        count = fprintf('strip %d of %d',i,size(meta.f,1));
-    end
+    if i>1; for p=1:count; fprintf('\b'); end; end %delete line before
+    count = fprintf('strip %d of %d',i,size(meta.f,1));
     
+    % load strip data coverage
     coverageFile = strrep(meta.f{i}, 'meta.txt', 'dem_coverage.tif');
     if exist(coverageFile, 'file')
+        
         BW = get_tile_size_coverage(coverageFile, x, y);
-        if isempty(BW)
-            fprintf(2, ['no overlap between strip and tile; ' ...
-                        'make sure *dem_coverage.tif is properly aligned to tile grid\n']);
+        if ~coveragealign_warned && isempty(BW)
+            
+            BW = roipoly(x, y, N, meta.x{i}, meta.y{i});
+            if any(BW)
+                fprintf(2, ['\nno overlap between strip *dem_coverage.tif and tile; ' ...
+                            'make sure coverage grid is properly aligned to tile grid\n']);
+                fprintf('strip %d of %d',i,size(meta.f,1));
+                coveragealign_warned = true;
+            end
+            
             continue;
         end
     else
+        coverageFile_missing_total = coverageFile_missing_total + 1;
+        coverageFile_missing = [coverageFile_missing, string(coverageFile)];
         % locate grid pixels within footprint polygon
         BW = roipoly(x, y, N, meta.x{i}, meta.y{i});
     end
     
-    %if mask data exists, apply it
+    % if mask data exists, apply it
     if meta.qc(i) == 3
         for j=1:length(meta.maskPolyx{i})
             BW(roipoly(x,y,BW,...
@@ -293,6 +311,16 @@ end
 
 % clear counter line
 for p=1:count; fprintf('\b'); end
+
+if length(coverageFile_missing) ~= length(meta.f)
+    % print missing coverage files
+    for k = 1:length(coverageFile_missing)
+        fprintf(2, 'Missing coverage file %s\n', coverageFile_missing(k));
+    end
+    if ~isempty(coverageFile_missing)
+        fprintf(2, '%d coverage files missing up to this point\n', coverageFile_missing_total);
+    end
+end
 
 % check if filled
 percent_filled = 100*sum(N(:))./numel(N);
@@ -413,33 +441,32 @@ while length(meta.f) >= 1
     F.ortho_browse_ready = false;
     guidata(fig_qc, F);
     
-    % Make square image to show in the figure window.
+    % make square image to show in the figure window
     [Z_fig, Ni_fig] = get_square_browse_images(fig_qc, I, N, x, y);
     F = guidata(fig_qc);
     
-    
-    % Plot strip hillshade and tile coverage in figure.
+    % plot strip hillshade and tile coverage in figure
     imagesc(F.X_fig,F.Y_fig,Z_fig,'alphadata',single(Z_fig ~= 0), 'Parent',F.plot_group_hill);
     set(gca,'color','r');
+    set(gca,'Position',[0 0 1 1]);
     axis xy  equal tight;
     colormap gray;
     hold on;
     imagesc(F.X_fig,F.Y_fig,Ni_fig,'alphadata',single(Ni_fig).*.25, 'Parent',F.plot_group_hill);
     
-    
-    % Make radio buttons for switching between hillshade, ortho.
+    % make radio buttons for switching between hillshade, ortho.
     F.ui_image_select = uibuttongroup('Visible','off',...
-                      'Units','pixels',...
-                      'Position',[0 0 130 100],...
-                      'SelectionChangedFcn',@(source,event) change_browse_image(fig_qc));
+        'Units','pixels',...
+        'Position',[0 0 130 100],...
+        'SelectionChangedFcn',@(source,event) change_browse_image(fig_qc));
     uicontrol(F.ui_image_select,'Style','radiobutton', 'Position',[20 50 100 30],...
-                      'String','DEM Hillshade', 'HandleVisibility','off');
+        'String','DEM Hillshade', 'HandleVisibility','off');
     uicontrol(F.ui_image_select,'Style','radiobutton', 'Position',[20 20 100 30],...
-                      'String','Ortho Image', 'HandleVisibility','off');
+        'String','Ortho Image', 'HandleVisibility','off');
     F.ui_image_select.Visible = 'on';
     guidata(fig_qc, F);
     
-
+    % plot coastline
     if isfield(tiles,'coastline')
         for i=1:length(tiles.coastline{1})
             if  isempty(tiles.coastline{1}{i}); continue; end
@@ -448,15 +475,15 @@ while length(meta.f) >= 1
         end
     end
     
-    % Plot tile boundary.
+    % plot tile boundary
     plot([tiles.x0,tiles.x0,tiles.x1,tiles.x1,tiles.x0], [tiles.y0,tiles.y1,tiles.y1,tiles.y0,tiles.y0],'w','linewidth',2)
     
-    % Give figure axis a border beyond DEM extent.
+    % give figure axis a border beyond DEM extent
     set(gca,'xlim',[min(F.X_fig)-500 max(F.X_fig)+500],'ylim',[min(F.Y_fig)-500 max(F.Y_fig)+500]);
+
+%     set(gcf,'units','normalized');
+%     set(gcf,'position',[0.01,0.01,.35,.9])
     
-    
-    %set(gcf,'units','normalized');
-    %set(gcf,'position',[0.01,0.01,.35,.9])
     qc=load([fileparts(hillFile),'/qc.mat']);
     
     fileNames = qc.fileNames;
@@ -478,185 +505,221 @@ while length(meta.f) >= 1
         fprintf('flag previoulsy changed to %d, applying\n',qc.flag(IA))
         
     else
-        if ~coverageFile_warned && ~exist(coverageFile, 'file')
-            fprintf(2, '** MISSING *_dem_coverage.tif FILE(S); %% FILLED MAY BE INCORRECT UPON QC REVISIT **\n');
-            fprintf('(the preceding warning will now be suppressed)\n');
-            coverageFile_warned = true;
-        end
-        if ~orthoFile_warned && ~exist(orthoFile, 'file')
-            fprintf(2, '** Missing *_ortho_browse.tif file; ortho image layer is NOT available for this image **\n');
-            fprintf('(the preceding warning will now be suppressed)\n');
-            orthoFile_warned = true;
-        end
-        if ~demFile_warned && ~exist(demFile, 'file') && filtermode_avail
-            fprintf(2, '** Missing *_dem_10m.tif file; filter mode is NOT available for this image **\n');
-            fprintf('(the preceding warning will now be suppressed)\n');
-            demFile_warned = true;
-        end
         
         while true
-            
-            try
-                
+
+            if ~coverageFile_warned && coverageFile_missing_total ~= 0
+                fprintf(2, '** Missing %d *dem_coverage.tif files up to this point; %% filled may be incorrect upon qc revisit **\n', coverageFile_missing_total);
+                fprintf('(the preceding warning will now be suppressed)\n');
+                coverageFile_warned = true;
+            end
+            if ~orthoFile_warned && ~exist(orthoFile, 'file')
+                fprintf(2, '** Missing *ortho_browse.tif file; ortho image layer is NOT available for this image **\n');
+                fprintf('(the preceding warning will now be suppressed)\n');
+                orthoFile_warned = true;
+            end
+            if ~demFile_warned && ~exist(demFile, 'file') && filtermode_avail
+                fprintf(2, '** Missing *dem_10m.tif file; filter mode is NOT available for this image **\n');
+                fprintf('(the preceding warning will now be suppressed)\n');
+                demFile_warned = true;
+            end
+
+            while true
+
                 if qc.flag(IA) == 4
                     fprintf(2, 'qc flag previously set to 4\n');
                 end
-                    
-                flag=input('Enter quality flag: 0=skip,9=back, 1=good, 2=partial, 3=manual edit, 4=poor, 5=unuseable, 6=next tile\n');
-                
-                
-                if ~isempty(flag)
-                    if isnumeric(flag)
-                        if flag == 0 || flag == 9 || flag == 1 || flag == 2 || flag == 3 || flag == 4 || flag == 5 || flag == 6
-                            break;
-                        end
+
+                s=input('Enter quality flag: 0=skip,9=back, 1=good, 2=partial, 3=manual edit, 4=poor, 5=unuseable, 6=next tile\n','s');
+
+                if ~isempty(s) && all(ismember(s, '0123456789'))
+                    flag = str2num(s);
+                    if flag == 0 || flag == 9 || flag == 1 || flag == 2 || flag == 3 || flag == 4 || flag == 5 || flag == 6
+                        break;
                     end
                 end
-            catch
-                fprintf('%d not recogized, try again\n',flag);
+
+                fprintf('%s not recogized, try again\n',s);
+
             end
-            
-            if iscell(flag); flag=flag{1}; end
-            
-            fprintf('%d not recogized, try again\n',flag);
-            
-        end
-        
-        
-        if flag == 6; clf(fig_qc); return; end
-        
-        
-        if flag == 0;  skipn = skipn+1;  clf(fig_qc); continue; end
-        
-        if flag == 9;  skipn = skipn-1;  clf(fig_qc); continue; end
-        
-        
-        qc.flag(IA)=flag;
-        
-        if flag == 1 || flag == 2
-            qc.x{IA}=cell(1); qc.y{IA}=cell(1);
-            
-        end
-        
-        if flag == 3
-            fprintf('entering manual edit mode\n')
-            
-            total_poly_num = 1;
-            while true
-                
-                [roi_BW,roi_x,roi_y] = roipoly;
-                
-                if ~isempty(roi_BW)
-                    roi_poly = {[roi_x roi_y]};
-                    plot_group_roi = plot(roi_x,roi_y,'g','linewidth',2);
-                    qc_polys = roi_poly;
-                    plot_group_qc = plot_group_roi;
 
-                    if filtermode_avail && exist(demFile, 'file')
-                        while true
-                            s=input('enter filter mode? (1/0)\n','s');
-                            if ~strcmpi(s,'1') && ~strcmpi(s,'0')
-                                fprintf('%s not recogized, try again\n',s);
-                            else
-                                break
-                            end
-                        end
+            if flag == 0;  skipn = skipn+1;  clf(fig_qc); continue; end
 
-                        if strcmpi(s,'1')
-                            % Read raw DEM.
-                            if ~exist('I_dem', 'var')
-                                I_dem = readGeotiff(demFile); 
-                            end
-                            if ~exist('I_ortho', 'var')
-                                if isfield(F, 'I_ortho')
-                                    I_ortho = F.I_ortho;
-                                else
-                                    if exist(orthoFile, 'file')
-                                        I_ortho = readGeotiff(orthoFile);
-                                        F.I_ortho = I_ortho;
-                                        guidata(fig_qc, F);
+            if flag == 9;  skipn = skipn-1;  clf(fig_qc); continue; end
+
+            if flag == 6; clf(fig_qc); return; end
+
+            qc.flag(IA)=flag;
+
+            if flag == 1 || flag == 2
+                qc.x{IA}=cell(1); qc.y{IA}=cell(1);
+            end
+
+            if flag == 3
+                fprintf('entering manual edit mode\n')
+
+                total_poly_num = 1;
+                while true
+
+                    roi_BW = [];
+                    [roi_BW,roi_x,roi_y] = roipoly;
+
+                    if ~isempty(roi_BW)
+                        roi_poly = {[roi_x roi_y]};
+                        plot_group_roi = hggroup;
+                        p = fill(roi_x, roi_y, 'yellow','linewidth',2,'EdgeColor','green', 'Parent',plot_group_roi);
+                        alpha(p, 0.5);
+                        qc_polys = roi_poly;
+                        plot_group_qc = plot_group_roi;
+
+                        s = '';
+                        initial_filter = true;
+                        if filtermode_avail && exist(demFile, 'file')
+                            while strcmp(s, '')
+                                while true
+                                    s=input('apply mask? (y/n/[f]ilter mode)\n','s');
+                                    if ~strcmpi(s,'y') && ~strcmpi(s,'n') && ~strcmpi(s,'f') && ~strcmpi(s,'.') && ~strcmpi(s,'0') && ~strcmpi(s,'+')
+                                        fprintf('%s not recogized, try again\n',s);
                                     else
-                                        I_ortho = [];
-                                        fprintf(2, '** Missing *_ortho_browse.tif file; falling back to DEM for entropy filter **\n');
+                                        break
                                     end
                                 end
-                            end
-                            
-                            % Crop figure-size ROI mask to DEM extent.
-                            roi_BW = roi_BW(F.Z_r0:F.Z_r1, F.Z_c0:F.Z_c1);
-                            
-                            % Enter filter mode.
-                            plot_group_roi_black = plot(roi_x,roi_y,'black','linewidth',2);
-                            plot_group_filt = hggroup;
-                            filt_polys = [];
-                            try
-                                [filt_polys] = filter_mode(roi_BW, I_dem, I_ortho, plot_group_filt);
-                            catch ME
-                                if strcmp(ME.identifier, 'MATLAB:guidata:InvalidInput')
-                                    fig_panel = [];
-                                else
-                                    rethrow(ME);
+
+                                if strcmpi(s,'f') || strcmpi(s,'+')
+                                    s = '';
+
+                                    % read raw DEM
+                                    if ~exist('I_dem', 'var')
+                                        I_dem = readGeotiff(demFile); 
+                                    end
+                                    if ~exist('I_ortho', 'var')
+                                        if isfield(F, 'I_ortho')
+                                            I_ortho = F.I_ortho;
+                                        else
+                                            if exist(orthoFile, 'file')
+                                                I_ortho = readGeotiff(orthoFile);
+                                                F.I_ortho = I_ortho;
+                                                guidata(fig_qc, F);
+                                            else
+                                                I_ortho = [];
+                                                fprintf(2, '** Missing *_ortho_browse.tif file; falling back to DEM for entropy filter **\n');
+                                            end
+                                        end
+                                    end
+
+                                    if initial_filter
+                                        % crop figure-size ROI mask to DEM extent
+                                        roi_BW = roi_BW(F.Z_r0:F.Z_r1, F.Z_c0:F.Z_c1);
+                                    else
+                                        roi_BW = false(size(roi_BW));
+                                        for k = 1:length(qc_polys)
+                                            p = qc_polys{k};
+                                            M = poly2mask((p(:,1)-I_dem.x(1))/(I_dem.x(2)-I_dem.x(1))+1, ...
+                                                          (p(:,2)-I_dem.y(1))/(I_dem.y(2)-I_dem.y(1))+1, ...
+                                                          size(roi_BW,1),size(roi_BW,2));
+                                            roi_BW = roi_BW | M;
+                                        end
+                                    end
+                                    if ~any(roi_BW)
+                                        fprintf(2, 'Edit polygon does not intersect DEM raster\n');
+                                        delete(plot_group_qc);
+                                        s = 'n';
+                                        break;
+                                    end
+
+                                    % enter filter mode
+                                    plot_group_roi_border = hggroup;
+                                    for k = 1:length(qc_polys)
+                                        p = qc_polys{k};
+                                        plot(p(:,1), p(:,2), 'Color','green','linewidth',2, 'Parent',plot_group_roi_border);
+                                    end
+                                    set(plot_group_roi, 'visible','off');
+                                    filt_polys = [];
+                                    plot_group_filt = hggroup;
+                                    try
+                                        [filt_polys] = filter_mode(roi_BW, I_dem, I_ortho, plot_group_filt);
+                                    catch ME
+                                        if strcmp(ME.identifier, 'MATLAB:class:InvalidHandle')
+                                            % ASSUME USER HAS CLOSED Filter Controls WINDOW
+                                            fprintf(2, 'Caught MATLAB:class:InvalidHandle error; was Filter Controls window closed?\n');
+                                            fprintf('Returning to original edit polygon\n');
+                                            fig_panel = [];
+                                        else
+                                            rethrow(ME);
+                                        end
+                                    end
+                                    for k = 1:length(filter_item_plot_groups)
+                                        delete(filter_item_plot_groups{k});
+                                    end
+                                    if ~isempty(filt_polys)
+                                        qc_polys = filt_polys;
+                                        delete(plot_group_roi);
+                                        plot_group_roi = plot_group_filt;
+                                        plot_group_qc = plot_group_filt;
+                                    else
+                                        delete(plot_group_filt);
+                                        set(plot_group_roi, 'visible','on');
+                                    end
+                                    delete(plot_group_roi_border);
+
+                                    initial_filter = false;
                                 end
                             end
-                            for i = 1:length(filter_item_plot_groups)
-                                delete(filter_item_plot_groups{i});
-                            end
-                            if ~isempty(filt_polys)
-                                qc_polys = filt_polys;
-                                plot_group_qc = plot_group_filt;
-                                delete(plot_group_roi);
-                            else
-                                delete(plot_group_filt);
-                                delete(plot_group_roi_black);
+                        end
+
+                        if strcmp(s,'')
+                            while true
+                                s=input('apply mask? (y/n)\n','s');
+                                if ~strcmpi(s,'y') && ~strcmpi(s,'n') && ~strcmpi(s,'.') && ~strcmpi(s,'0')
+                                    fprintf('%s not recogized, try again\n',s);
+                                else
+                                    break
+                                end
                             end
                         end
+
+                        if strcmpi(s,'y') || strcmpi(s,'.')
+                            % write poly(s) to qc file
+                            for poly_num = 1:length(qc_polys)
+                                qc.x{IA}{total_poly_num} = qc_polys{poly_num}(:,1);
+                                qc.y{IA}{total_poly_num} = qc_polys{poly_num}(:,2);
+                                total_poly_num = total_poly_num + 1;
+                            end
+                            qc_poly_children = get(plot_group_qc, 'Children');
+                            for k = 1:length(qc_poly_children)
+                                set(qc_poly_children(k), 'EdgeColor', 'green');
+                                set(qc_poly_children(k), 'FaceColor', 'white');
+                            end
+                        else
+                            delete(plot_group_qc);
+                        end
                     end
-                    
+
                     while true
-                        s=input('apply mask? (1/0)\n','s');
-                        if ~strcmpi(s,'1') && ~strcmpi(s,'0')
+                        s=input('continue editing this image? (y/n)\n','s');
+                        if ~strcmpi(s,'y') && ~strcmpi(s,'n') && ~strcmpi(s,'.') && ~strcmpi(s,'0') && ~strcmpi(s,'3')
                             fprintf('%s not recogized, try again\n',s);
                         else
                             break
                         end
                     end
 
-                    if strcmpi(s,'1')
-                        % Write poly(s) to qc file.
-                        for poly_num = 1:length(qc_polys)
-                            qc.x{IA}{total_poly_num} = qc_polys{poly_num}(:,1);
-                            qc.y{IA}{total_poly_num} = qc_polys{poly_num}(:,2);
-                            total_poly_num = total_poly_num + 1;
-                        end
-                    else
-                        % Clear drawn polys created with this edit.
-                        delete(plot_group_qc);
-                    end
-                    
-                    if exist('plot_group_roi_black', 'var')
-                        delete(plot_group_roi_black);
-                    end
+                    if strcmpi(s,'n') || strcmpi(s,'0'); break; end
                 end
-                
-                while true
-                    s=input('continue editing this image? (1/0)\n','s');
-                    if ~strcmpi(s,'1') && ~strcmpi(s,'0')
-                        fprintf('%s not recogized, try again\n',s);
-                    else
-                        break
-                    end
-                end
-                
-                if strcmpi(s,'0'); break; end
             end
+
+            if qc.flag(IA) == 3 && isempty(qc.x{IA}{1})
+    %             fprintf('changing qc flag from 3 to 2\n')
+    %             qc.flag(IA)= 2;
+                fprintf('no kept edits; resetting qc flag\n');
+                continue;
+            end
+
+            save([fileparts(hillFile),'/qc.mat'],'-struct','qc');
+
+            break;
+            
         end
-        
-        if qc.flag(IA) == 3 && isempty(qc.x{IA}{1})
-            fprintf('changing qc flag from 3 to 2\n')
-            qc.flag(IA)= 2;
-        end
-        
-        save([fileparts(hillFile),'/qc.mat'],'-struct','qc');
         
     end
     
@@ -693,7 +756,6 @@ while length(meta.f) >= 1
         % remove this file from the meta struct
         in=1:length(meta.f); in(n)=[];
         meta = structfun(@(x) ( x(in,:) ), meta, 'UniformOutput', false);
-        
         
     end
     
@@ -861,6 +923,12 @@ function [A, entropy_kernel_size] = get_pixvals_raw(F, item_num)
     switch item_num
         case F.nans.item_num
             A = isnan(F.z);
+            B = bwboundaries(~A, 8, 'noholes');
+            B = cell2mat(B);
+            k = convhull(B(:,2),B(:,1));
+            M = poly2mask(B(k,2),B(k,1), size(A,1),size(A,2));
+            M = imerode(M, ones(3));
+            A(~M) = false;
         case F.slope.item_num
             [dx,dy] = gradient(F.z,F.x,F.y);
             [~,A] = cart2pol(dx,dy);
@@ -875,8 +943,9 @@ function [A, entropy_kernel_size] = get_pixvals_raw(F, item_num)
             else
                 z_uint16 = cast(F.z, 'uint16');
             end
-            z_subtraction =  movmax(z_uint16, entropy_kernel_size) - movmin(z_uint16, entropy_kernel_size);
+            z_subtraction = movmax(z_uint16, entropy_kernel_size) - movmin(z_uint16, entropy_kernel_size);
             A = entropyfilt(z_subtraction, true(entropy_kernel_size));
+            A(isnan(F.z)) = NaN;
         case F.elev.item_num
             A = F.z;
         otherwise
@@ -908,14 +977,28 @@ end
 function [polys] = filter_mode(roi_BW, I_dem, I_ortho, plot_group_filt)
     global fig_panel
     global filter_item_plot_groups
+    global plot_group_filt_applied_top
+    global plot_group_filt_applied_bottom
 
     polys = {};
-    plot_group_filt_single = hggroup;
+    plot_group_filt_applied_bottom = hggroup;
     
     % Create Filter Controls UI in a new window.
+    if ~isempty(fig_panel)
+        try
+            get(fig_panel, 'default');
+        catch ME
+            if strcmp(ME.identifier, 'MATLAB:class:InvalidHandle')
+                fig_panel = [];
+            else
+                rethrow(ME);
+            end
+        end
+    end
     if isempty(fig_panel)
         create_filter_panel();
         initial_recompute = false;
+        set_property_recursive(fig_panel, 'enable','off');
     else
         reset_filter_data();
         initial_recompute = true;
@@ -928,6 +1011,8 @@ function [polys] = filter_mode(roi_BW, I_dem, I_ortho, plot_group_filt)
             filter_item_plot_groups(end+1) = {E.plot_group};
         end
     end
+    
+    plot_group_filt_applied_top = hggroup;
     
     % Crop ROI and DEM to ROI extent.
     F = guidata(fig_panel);
@@ -949,47 +1034,81 @@ function [polys] = filter_mode(roi_BW, I_dem, I_ortho, plot_group_filt)
         recompute_basemask(fig_panel, F.kernel_smooth.item_num, true);
     end
     
-    prompt = 'apply filters?';
+    set_property_recursive(fig_panel, 'enable','on');
+    figure(fig_panel);
+    
+    prompt = 'apply filter mask?';
+    first_apply = true;
     quit = false;
     while ~quit
         while true
-            s=input([prompt,' (1/0)\n'],'s');
-            if ~strcmpi(s,'1') && ~strcmpi(s,'0')
+            s=input([prompt,' (y/n)\n'],'s');
+            get(fig_panel, 'default');  % to throw error if Filter Controls window has been closed
+            if ~strcmpi(s,'y') && ~strcmpi(s,'n') && ~strcmpi(s,'.') && ~strcmpi(s,'0')
                 fprintf('%s not recogized, try again\n',s);
             else
                 break
             end
         end
         
-        if strcmpi(s,'1')
+        if strcmpi(s,'y') || strcmpi(s,'.')
             F = guidata(fig_panel);
             if F.result.ui_display.Value == 0
-                fprintf('Please set RESULT MASK display to SHOW before proceeding.\n');
+                fprintf('Please set Result Mask display to SHOW before proceeding\n');
+                continue;
+            elseif ~isfield(F.result, 'mask_polys') || isempty(F.result.mask_polys)
+                fprintf('Result Mask contains no polygons to apply\n');
+                continue;
+            elseif ~first_apply && isempty(get(plot_group_filt_applied_bottom, 'Children'))
+                fprintf('Result Mask has not been changed since last application\n');
                 continue;
             else
-                mask_polys = F.result.mask_polys;
-                if ~isempty(mask_polys)
-                    new_polys = cellfun(@(p) vertcat(F.x(p(:,2)), F.y(p(:,1))).', mask_polys, 'UniformOutput',false);
-                    for k = 1:length(new_polys)
-                        p = new_polys{k};
-                        plot(p(:,1), p(:,2), 'white','linewidth',2, 'Parent',plot_group_filt_single);
-                    end
-                    polys = [polys; new_polys];
+                new_polys = cellfun(@(p) vertcat(F.x(p(:,2)), F.y(p(:,1))).', F.result.mask_polys, 'UniformOutput',false);
+                polys = [polys; new_polys];
+
+                for k = 1:length(new_polys)
+                    p = new_polys{k};
+                    s = fill(p(:,1), p(:,2), 'white','linewidth',2,'EdgeColor','white', 'Parent',plot_group_filt_applied_bottom);
+                    alpha(s, 0.25);
+                end
+                filt_applied_children = get(plot_group_filt_applied_bottom, 'Children');
+                for k = 1:length(filt_applied_children)
+                    set(filt_applied_children(k), 'Parent', plot_group_filt_applied_top);
                 end
             end
-            prompt = 'apply more filters?';
+            prompt = 'apply another filter mask?';
+            first_apply = false;
         else
             quit = true;
         end
     end
     
-    delete(plot_group_filt_single);
+    set_property_recursive(fig_panel, 'enable','off');
+    
+    delete(plot_group_filt_applied_bottom);
+    delete(plot_group_filt_applied_top);
+    
     for k = 1:length(polys)
         p = polys{k};
-        plot(p(:,1), p(:,2), 'green','linewidth',2, 'Parent',plot_group_filt);
+        s = fill(p(:,1), p(:,2), 'yellow','linewidth',2,'EdgeColor','green', 'Parent',plot_group_filt);
+        alpha(s, 0.5);
     end
     
     reset_filter_data();
+end
+
+
+function set_property_recursive(obj, prop_name,prop_val)
+    children = get(obj, 'Children');
+    for k = 1:length(children)
+        child = children(k);
+        if isprop(child, prop_name) 
+            set(child, prop_name,prop_val);
+        end
+        if isprop(child, 'Children')
+            set_property_recursive(child, prop_name,prop_val);
+        end
+    end
 end
 
 
@@ -1038,7 +1157,7 @@ end
 
 function toggle_item_on(fig, item_num, btn, isKernel)
     if ~exist('isKernel', 'var') || isempty(isKernel)
-            isKernel = false;
+        isKernel = false;
     end
     
     F = guidata(fig);
@@ -1096,12 +1215,12 @@ function toggle_item_display(fig, item_num, btn)
 end
 
 
-function slider_step(fig, item_num, direction, roundToInt, isKernel)
+function slider_step(fig, item_num, direction, roundToInt, step_by_one)
     if ~exist('roundToInt', 'var') || isempty(roundToInt)
-            roundToInt = false;
+        roundToInt = false;
     end
-    if ~exist('isKernel', 'var') || isempty(isKernel)
-            isKernel = false;
+    if ~exist('isKernel', 'var') || isempty(step_by_one)
+        step_by_one = false;
     end
     
     F = guidata(fig);
@@ -1111,7 +1230,7 @@ function slider_step(fig, item_num, direction, roundToInt, isKernel)
     slider_min = slider_limits(1,1);
     slider_max = slider_limits(1,2);
     
-    if isKernel
+    if step_by_one
         step_size = 1;
     else
         step_size = (slider_max-slider_min)/20;
@@ -1157,11 +1276,19 @@ end
 
 
 function redraw_item(fig, item_num, modified)
+    global plot_group_filt_applied_top
+    global plot_group_filt_applied_bottom
+    
     F = guidata(fig);
     [E,item_name] = get_gui_element_by_item_num(F, item_num);
     
     if ~isfield(E, 'plot_group')
         return;
+    end
+    
+    filt_applied_children = get(plot_group_filt_applied_top, 'Children');
+    for k = 1:length(filt_applied_children)
+        set(filt_applied_children(k), 'Parent', plot_group_filt_applied_bottom);
     end
     
     % Clear drawn polygons for this item.
@@ -1176,8 +1303,9 @@ function redraw_item(fig, item_num, modified)
             E.mask_polys = bwboundaries(E.mask_array, 'noholes');
         end
         for k = 1:length(E.mask_polys)
-           poly = E.mask_polys{k};
-           plot(F.x(poly(:,2)), F.y(poly(:,1)), E.plot_color,'linewidth',2, 'Parent',E.plot_group);
+            poly = E.mask_polys{k};
+            s = fill(F.x(poly(:,2)), F.y(poly(:,1)), E.plot_color,'linewidth',2,'EdgeColor',E.plot_color, 'Parent',E.plot_group);
+            alpha(s, 0.5);
         end
     end
     
@@ -1217,6 +1345,10 @@ function [modified] = cluster_filter_size(fig, basemask_modified, slider_modifie
             F.basemask_RP.Area = [rp.Area];
             [new_slider_min,~] = min(F.basemask_RP.Area);
             [new_slider_max,~] = max(F.basemask_RP.Area);
+            if isempty(new_slider_min); new_slider_min = 0; end
+            if isempty(new_slider_max); new_slider_max = 0; end
+            new_slider_min = round(log(max(1, new_slider_min)), 2);
+            new_slider_max = max(10, round(log(max(1, new_slider_max)), 2));
             if new_slider_min == new_slider_max
                 new_slider_max = new_slider_min + 1;
             end
@@ -1226,9 +1358,9 @@ function [modified] = cluster_filter_size(fig, basemask_modified, slider_modifie
             E.ui_slider.Limits = new_slider_limits;
         end
         if E.ui_cond.SelectedObject == E.ui_cond_lt
-            new_postfilt_CC_ind = find(F.basemask_RP.Area < E.ui_slider.Value);
+            new_postfilt_CC_ind = find(F.basemask_RP.Area < exp(E.ui_slider.Value));
         else
-            new_postfilt_CC_ind = find(F.basemask_RP.Area > E.ui_slider.Value);
+            new_postfilt_CC_ind = find(F.basemask_RP.Area > exp(E.ui_slider.Value));
         end
         if isfield(E, 'postfilt_CC_ind') && slider_modified && ~basemask_modified && isequal(new_postfilt_CC_ind, E.postfilt_CC_ind)
             modified = false;
@@ -1236,7 +1368,7 @@ function [modified] = cluster_filter_size(fig, basemask_modified, slider_modifie
             E.postfilt_CC_ind = new_postfilt_CC_ind;
         end
         if modified
-            new_postfilt_array = bwareaopen(E.prefilt_array, round(E.ui_slider.Value));
+            new_postfilt_array = bwareaopen(E.prefilt_array, round(exp(E.ui_slider.Value)));
             if E.ui_cond.SelectedObject == E.ui_cond_lt
                 new_postfilt_array = xor(E.prefilt_array, new_postfilt_array);
             end
@@ -1341,13 +1473,20 @@ function [modified] = cluster_filter_dist(fig, basemask_modified, slider_modifie
             F.basemask_RP.dist_array = sqrt( ...
                 power(repmat(cent_coords_row, [1,num_clusters]) - repmat(cent_coords_row.', [num_clusters,1]), 2) ...
               + power(repmat(cent_coords_col, [1,num_clusters]) - repmat(cent_coords_col.', [num_clusters,1]), 2));
+            for k = 1:num_clusters
+                F.basemask_RP.dist_array(k, k) = NaN;
+            end
             sizefilt_modified = true;
         end
         
         if sizefilt_modified
             E.dist_array = F.basemask_RP.dist_array(E.prefilt_CC_ind, E.prefilt_CC_ind);
-            new_slider_min = min(F.basemask_RP.dist_array(:));
-            new_slider_max = max(F.basemask_RP.dist_array(:));
+            new_slider_min = min(E.dist_array(:));
+            new_slider_max = max(E.dist_array(:));
+            if isempty(new_slider_min); new_slider_min = 0; end
+            if isempty(new_slider_max); new_slider_max = 0; end
+            new_slider_min = round(log(max(1, new_slider_min)), 2);
+            new_slider_max = round(log(max(1, new_slider_max)), 2);
             if new_slider_min == new_slider_max
                 new_slider_max = new_slider_min + 1;
             end
@@ -1360,7 +1499,7 @@ function [modified] = cluster_filter_dist(fig, basemask_modified, slider_modifie
         if ~dilated || ~isfield(E, 'postfilt_CC_ind')
             num_clusters = length(E.prefilt_CC_ind);
             dist_array = E.dist_array;
-            dist_filter_value = E.mask_slider_value;
+            dist_filter_value = exp(E.ui_slider.Value);
             prefilt_CC_ind = E.prefilt_CC_ind;
             new_postfilt_CC_ind = [];
             for i=1:num_clusters
@@ -1399,7 +1538,9 @@ function [modified] = cluster_filter_dist(fig, basemask_modified, slider_modifie
                 rIndices = round(linspace(y(1), y(2), nPoints));
                 cIndices = round(linspace(x(1), x(2), nPoints));
                 indices = sub2ind(array_size, rIndices, cIndices);
-                new_postfilt_array(indices) = true;
+                if all(F.roi(indices))
+                    new_postfilt_array(indices) = true;
+                end
             end
             E.postfilt_array = new_postfilt_array;
         end
@@ -1488,7 +1629,7 @@ function [modified] = cluster_adjust_concavity(fig, prefilt_modified, slider_mod
             end
             B = latest_item.postfilt_bwboundaries;
             num_polys = length(B);
-            K = cellfun(@(x) boundary(x(:,2),x(:,1),E.ui_slider.Value), B, 'UniformOutput',false);
+            K = cellfun(@(x) boundary(x(:,1),x(:,2),E.ui_slider.Value), B, 'UniformOutput',false);
             new_postfilt_polys = cell(num_polys, 1);
             for i=1:num_polys
                 k = K{i};
@@ -1510,7 +1651,7 @@ function [polys] = get_resultmask_polys(fig)
     
     if ~any(F.basemask_array(:))
         if invert_result
-            polys = bwboundaries(F.roi);
+            polys = bwboundaries(F.roi, 'noholes');
         end
         return;
     end
@@ -1521,7 +1662,7 @@ function [polys] = get_resultmask_polys(fig)
             latest_postfilt_array = false(size(F.roi));
             for k = 1:length(polys)
                 p = polys{k};
-                M = poly2mask(p(:,2),p(:,1), size(F.roi,1),size(F.roi,2));
+                M = poly2mask(p(:,1),p(:,2), size(F.roi,1),size(F.roi,2));
                 latest_postfilt_array = latest_postfilt_array | M;
             end
             polys = bwboundaries(~latest_postfilt_array & F.roi, 'noholes');
@@ -1539,7 +1680,7 @@ function [polys] = get_resultmask_polys(fig)
         end
         
         latest_item = F.(latest_item_name);
-        latest_item.postfilt_bwboundaries = bwboundaries(latest_postfilt_array, 'noholes');
+        latest_item.postfilt_bwboundaries = bwboundaries(latest_postfilt_array & F.roi, 'noholes');
         F.(latest_item_name) = latest_item;
         if invert_result
             polys = bwboundaries(~latest_postfilt_array & F.roi, 'noholes');
@@ -1658,11 +1799,11 @@ function recompute_basemask(fig, item_num, modified, redraw)
         modified = modified | recompute_basemask_component(fig, item_num, redraw);
     end
     
-    if modified
-        F = guidata(fig);
-    else
+    if ~modified
         return;
     end
+    
+    F = guidata(fig);
     
     struct_fields = fieldnames(F);
     for i = 1:length(struct_fields)
@@ -1688,7 +1829,7 @@ function recompute_basemask(fig, item_num, modified, redraw)
         end
     end
     
-    new_basemask_array = false(size(F.basemask_array));
+    new_basemask_array = false(size(F.roi));
     if exist('new_basemask_array_or', 'var')
         new_basemask_array = new_basemask_array_or;
     end
@@ -1702,7 +1843,7 @@ function recompute_basemask(fig, item_num, modified, redraw)
     if F.nans.ui_toggle.Value == 1
         new_basemask_array = new_basemask_array | F.nans.mask_array;
     end
-%     new_basemask_array = new_basemask_array & F.roi;
+    new_basemask_array = new_basemask_array & F.roi;
     
     if isequal(new_basemask_array, F.basemask_array)
         modified = false;
@@ -1736,11 +1877,12 @@ function [modified] = recompute_basemask_component(fig, item_num, redraw)
             || (E.item_num == F.entropy.item_num && redraw && E.entropy_kernel_size ~= F.kernel_smooth.ui_slider.Value))
             [E.pixvals_raw, entropy_kernel_size] = get_pixvals_raw(F, item_num);
             E.pixvals_smooth = E.pixvals_raw;
+            E.mask_kernel_size = 1;
             minmax_modified = true;
             modified = true;
             if E.item_num == F.entropy.item_num
                 E.entropy_kernel_size = entropy_kernel_size;
-                E.ui_title.Text = sprintf('Entropy Filter (%dx%d kernel)', entropy_kernel_size, entropy_kernel_size);
+                E.ui_title.Text = sprintf('Entropy Filter (%dx%d kernel) [blue]', entropy_kernel_size, entropy_kernel_size);
                 smooth_entropy = true;
             end
         end
@@ -1767,12 +1909,15 @@ function [modified] = recompute_basemask_component(fig, item_num, redraw)
             if minmax_modified
                 new_slider_min = round(min(E.pixvals_smooth(:)), 2);
                 new_slider_max = round(max(E.pixvals_smooth(:)), 2);
-                if new_slider_min == new_slider_max
-                    new_slider_max = new_slider_min + 0.01;
+                if E.item_num == F.slope.item_num
+                    new_slider_min = round(log(max(1, new_slider_min)), 2);
+                    new_slider_max = round(log(max(1, new_slider_max)), 2);
                 end
-%                 new_range = new_slider_max - new_slider_min;
-%                 new_slider_min = new_slider_min - round(new_range*0.05, 3);
-%                 new_slider_max = new_slider_max + round(new_range*0.05, 3);
+                if isnan(new_slider_min); new_slider_min = 0; end
+                if isnan(new_slider_max); new_slider_max = 0; end
+                if new_slider_min == new_slider_max
+                    new_slider_max = new_slider_min + 1;
+                end
                 new_slider_limits = zeros(1, 2);
                 new_slider_limits(1,1) = new_slider_min;
                 new_slider_limits(1,2) = new_slider_max;
@@ -1781,7 +1926,6 @@ function [modified] = recompute_basemask_component(fig, item_num, redraw)
             if E.mask_logic ~= E.ui_logic.SelectedObject
                 E.mask_logic = E.ui_logic.SelectedObject;
                 return_modified = true;
-                modified = true;
             end
             if E.mask_cond ~= E.ui_cond.SelectedObject
                 E.mask_cond = E.ui_cond.SelectedObject;
@@ -1792,10 +1936,15 @@ function [modified] = recompute_basemask_component(fig, item_num, redraw)
                 modified = true;
             end
             if modified
-                if E.ui_cond.SelectedObject == E.ui_cond_gt
-                    new_mask_array = F.roi & (E.pixvals_smooth > E.mask_slider_value);
+                if E.item_num == F.slope.item_num
+                    filter_value = exp(E.ui_slider.Value);
                 else
-                    new_mask_array = F.roi & (E.pixvals_smooth < E.mask_slider_value);
+                    filter_value = E.ui_slider.Value;
+                end
+                if E.ui_cond.SelectedObject == E.ui_cond_gt
+                    new_mask_array = F.roi & (E.pixvals_smooth > filter_value);
+                else
+                    new_mask_array = F.roi & (E.pixvals_smooth < filter_value);
                 end
                 if isfield(E, 'mask_array') && isequal(new_mask_array, E.mask_array)
                     modified = false;
@@ -1823,63 +1972,78 @@ end
 function create_filter_panel()
     global fig_panel
     
-    fig = uifigure('Name','Filter Controls', 'Position',[0 0 960 410]);
+    fig = uifigure('Name','Filter Controls', 'Position',[0 0 960 470]);
+    uilabel(fig, 'Position',[153 422 273 20],...
+        'VerticalAlignment','Center', 'HorizontalAlignment','Center',...
+        'Text','Filters on Raster Data to Create Basemask', 'FontSize',14);
+    uibuttongroup(fig, 'Position',[500 20 10 430]);
+    uilabel(fig, 'Position',[613 422 273 20],...
+        'VerticalAlignment','Center', 'HorizontalAlignment','Center',...
+        'Text','Filters on Basemask to Modify Result Mask', 'FontSize',14);
+    
     F = guihandles(fig);
+    
+   
+    % SMOOTH KERNEL SIZE %
+    E = struct();
+    E.item_num = 2;
+    E.item_group = 1;
+    max_kernel_size = 30;  % SETTING
+    E.ui_title = uilabel(fig, 'Position',[153 380 273 20],...
+        'VerticalAlignment','Center', 'HorizontalAlignment','Center',...
+        'Text','Smooth Kernel Size (sq. side length)');
+    E.ui_toggle = uibutton(fig, 'state', 'Position',[115 355 35 35],...
+        'ValueChangedFcn',@(btn,event) toggle_item_on(fig, E.item_num, btn, true),...
+        'Value',true, 'Text','ON');  % DEFAULT
+    E.ui_slider_dec = uibutton(fig, 'push', 'Position',[160 360 20 25], 'Text','-',...
+        'ButtonPushedFcn',@(btn,event) slider_step(fig, E.item_num, -1, true, true));
+    E.ui_slider = uislider(fig, 'Position',[190 370 200 3],...
+        'ValueChangedFcn',@(sld,event) slider_drag_integer(fig, E.item_num),...
+        'MajorTicksMode','manual', 'MajorTicks',[0:5:max_kernel_size],...
+        'MinorTicksMode','manual', 'MinorTicks',[0:1:max_kernel_size],...
+        'Limits',[1 max_kernel_size], 'Value',10);  % DEFAULT
+    E.ui_slider_inc = uibutton(fig, 'push', 'Position',[400 360 20 25], 'Text','+',...
+        'ButtonPushedFcn',@(btn,event) slider_step(fig, E.item_num, 1, true, true));
+    E.initial_fieldnames = [];
+    E.initial_fieldnames = fieldnames(E);
+    F.kernel_smooth = E;
     
     % NANS %
     E = struct();
     E.item_num = 1;
     E.item_group = 1;
     E.plot_group = hggroup;
-    E.plot_color = 'magenta';
+    E.plot_color = 'green';
     E.mask_kernel_size = 1;
-    E.ui_title = uilabel(fig, 'Position',[155 362 273 20],...
+    E.ui_title = uilabel(fig, 'Position',[153 45 273 20],...
         'VerticalAlignment','Center', 'HorizontalAlignment','Center',...
-        'Text','Mask NaNs');
-    E.ui_toggle = uibutton(fig, 'state', 'Position',[115 355 35 35],...
+        'Text','Mask NaNs [filled green]');
+    E.ui_colorbar = uilabel(fig, 'Position',[153 40 273 20],...
+        'VerticalAlignment','Center', 'HorizontalAlignment','Center',...
+        'Text','____________________________', 'FontColor',E.plot_color, 'FontWeight','bold');
+    E.ui_toggle = uibutton(fig, 'state', 'Position',[115 35 35 35],...
         'ValueChangedFcn',@(btn,event) toggle_item_on(fig, E.item_num, btn, false),...
         'Value',false, 'Text','OFF');  % DEFAULT
-    E.ui_display = uibutton(fig, 'state', 'Position',[430 355 50 35],...
+    E.ui_display = uibutton(fig, 'state', 'Position',[430 35 50 35],...
         'ValueChangedFcn',@(btn,event) toggle_item_display(fig, E.item_num, btn),...
-        'Value',true, 'Text','SHOW');  % DEFAULT
+        'Value',false, 'Text','HIDE');  % DEFAULT
     E.initial_fieldnames = [];
     E.initial_fieldnames = fieldnames(E);
     F.nans = E;
     
-    % SMOOTH KERNEL SIZE %
+    % ENTROPY FILTER %
     E = struct();
-    E.item_num = 2;
-    E.item_group = 1;
-    max_kernel_size = 30;  % SETTING
-    E.ui_title = uilabel(fig, 'Position',[155 300 273 20],...
-        'VerticalAlignment','Center', 'HorizontalAlignment','Center',...
-        'Text','Smooth Kernel Size (sq. side length)');
-    E.ui_toggle = uibutton(fig, 'state', 'Position',[115 275 35 35],...
-        'ValueChangedFcn',@(btn,event) toggle_item_on(fig, E.item_num, btn, true),...
-        'Value',false, 'Text','OFF');  % DEFAULT
-    E.ui_slider_dec = uibutton(fig, 'push', 'Position',[160 280 20 25], 'Text','-',...
-        'ButtonPushedFcn',@(btn,event) slider_step(fig, E.item_num, -1, true, true));
-    E.ui_slider = uislider(fig, 'Position',[190 290 200 3],...
-        'ValueChangedFcn',@(sld,event) slider_drag_integer(fig, E.item_num),...
-        'MajorTicksMode','manual', 'MajorTicks',[0:5:max_kernel_size],...
-        'MinorTicksMode','manual', 'MinorTicks',[1:1:max_kernel_size],...
-        'Limits',[1 max_kernel_size], 'Value',5);  % DEFAULT
-    E.ui_slider_inc = uibutton(fig, 'push', 'Position',[400 280 20 25], 'Text','+',...
-        'ButtonPushedFcn',@(btn,event) slider_step(fig, E.item_num, 1, true, true));
-    E.initial_fieldnames = [];
-    E.initial_fieldnames = fieldnames(E);
-    F.kernel_smooth = E;
-    
-    % SLOPE FILTER %
-    E = struct();
-    E.item_num = 3;
+    E.item_num = 4;
     E.item_group = 1;
     E.plot_group = hggroup;
-    E.plot_color = 'cyan';
+    E.plot_color = 'blue';
     E.mask_kernel_size = 1;
-    E.ui_title = uilabel(fig, 'Position',[155 220 273 20],...
+    E.ui_title = uilabel(fig, 'Position',[153 220 273 20],...
         'VerticalAlignment','Center', 'HorizontalAlignment','Center',...
-        'Text','Slope Filter (% grade)');
+        'Text','Entropy Filter [blue]');
+    E.ui_colorbar = uilabel(fig, 'Position',[153 215 273 20],...
+        'VerticalAlignment','Center', 'HorizontalAlignment','Center',...
+        'Text','____________________________', 'FontColor',E.plot_color, 'FontWeight','bold');
     E.ui_logic = uibuttongroup(fig, 'Position',[20 192 50 40],...
         'SelectionChangedFcn',@(bg,event) recompute_basemask(fig, E.item_num));
     E.ui_logic_or = uiradiobutton(E.ui_logic, 'Position',[3 7 45 30], 'Text','OR');
@@ -1890,7 +2054,7 @@ function create_filter_panel()
         'SelectionChangedFcn',@(bg,event) recompute_basemask(fig, E.item_num));
     E.ui_cond_gt = uiradiobutton(E.ui_cond, 'Position',[5 7 30 30], 'Text','>');
     E.ui_cond_lt = uiradiobutton(E.ui_cond, 'Position',[5 -11 30 30], 'Text','<');
-    E.ui_cond.SelectedObject = E.ui_cond_gt;  % DEFAULT
+    E.ui_cond.SelectedObject = E.ui_cond_lt;  % DEFAULT
     E.mask_cond = E.ui_cond.SelectedObject;
     E.ui_toggle = uibutton(fig, 'state', 'Position',[115 195 35 35],...
         'ValueChangedFcn',@(btn,event) toggle_item_on(fig, E.item_num, btn, false),...
@@ -1899,27 +2063,30 @@ function create_filter_panel()
         'ButtonPushedFcn',@(btn,event) slider_step(fig, E.item_num, -1, false));
     E.ui_slider = uislider(fig, 'Position',[190 210 200 3],...
         'ValueChangedFcn',@(sld,event) recompute_basemask(fig, E.item_num),...
-        'Limits',[0 100], 'Value',0);  % DEFAULT
+        'Limits',[0 6], 'Value',0);  % DEFAULT
     E.ui_slider_inc = uibutton(fig, 'push', 'Position',[400 200 20 25], 'Text','+',...
         'ButtonPushedFcn',@(btn,event) slider_step(fig, E.item_num, 1, false));
     E.mask_slider_value = E.ui_slider.Value;
     E.ui_display = uibutton(fig, 'state', 'Position',[430 195 50 35],...
         'ValueChangedFcn',@(btn,event) toggle_item_display(fig, E.item_num, btn),...
-        'Value',true, 'Text','SHOW');  % DEFAULT
+        'Value',false, 'Text','HIDE');  % DEFAULT
     E.initial_fieldnames = [];
     E.initial_fieldnames = fieldnames(E);
-    F.slope = E;
+    F.entropy = E;
     
-    % ENTROPY FILTER %
+    % ELEVATION FILTER %
     E = struct();
-    E.item_num = 4;
+    E.item_num = 5;
     E.item_group = 1;
     E.plot_group = hggroup;
-    E.plot_color = 'blue';
+    E.plot_color = 'cyan';
     E.mask_kernel_size = 1;
-    E.ui_title = uilabel(fig, 'Position',[155 140 273 20],...
+    E.ui_title = uilabel(fig, 'Position',[153 140 273 20],...
         'VerticalAlignment','Center', 'HorizontalAlignment','Center',...
-        'Text','Entropy Filter');
+        'Text','Elevation Filter (m) [cyan]');
+    E.ui_colorbar = uilabel(fig, 'Position',[153 135 273 20],...
+        'VerticalAlignment','Center', 'HorizontalAlignment','Center',...
+        'Text','____________________________', 'FontColor',E.plot_color, 'FontWeight','bold');
     E.ui_logic = uibuttongroup(fig, 'Position',[20 112 50 40],...
         'SelectionChangedFcn',@(bg,event) recompute_basemask(fig, E.item_num));
     E.ui_logic_or = uiradiobutton(E.ui_logic, 'Position',[3 7 45 30], 'Text','OR');
@@ -1930,7 +2097,7 @@ function create_filter_panel()
         'SelectionChangedFcn',@(bg,event) recompute_basemask(fig, E.item_num));
     E.ui_cond_gt = uiradiobutton(E.ui_cond, 'Position',[5 7 30 30], 'Text','>');
     E.ui_cond_lt = uiradiobutton(E.ui_cond, 'Position',[5 -11 30 30], 'Text','<');
-    E.ui_cond.SelectedObject = E.ui_cond_gt;  % DEFAULT
+    E.ui_cond.SelectedObject = E.ui_cond_lt;  % DEFAULT
     E.mask_cond = E.ui_cond.SelectedObject;
     E.ui_toggle = uibutton(fig, 'state', 'Position',[115 115 35 35],...
         'ValueChangedFcn',@(btn,event) toggle_item_on(fig, E.item_num, btn, false),...
@@ -1939,56 +2106,59 @@ function create_filter_panel()
         'ButtonPushedFcn',@(btn,event) slider_step(fig, E.item_num, -1, false));
     E.ui_slider = uislider(fig, 'Position',[190 130 200 3],...
         'ValueChangedFcn',@(sld,event) recompute_basemask(fig, E.item_num),...
-        'Limits',[0 10], 'Value',0);  % DEFAULT
+        'Limits',[0 100], 'Value',0);  % DEFAULT
     E.ui_slider_inc = uibutton(fig, 'push', 'Position',[400 120 20 25], 'Text','+',...
         'ButtonPushedFcn',@(btn,event) slider_step(fig, E.item_num, 1, false));
     E.mask_slider_value = E.ui_slider.Value;
     E.ui_display = uibutton(fig, 'state', 'Position',[430 115 50 35],...
         'ValueChangedFcn',@(btn,event) toggle_item_display(fig, E.item_num, btn),...
-        'Value',true, 'Text','SHOW');  % DEFAULT
+        'Value',false, 'Text','HIDE');  % DEFAULT
     E.initial_fieldnames = [];
     E.initial_fieldnames = fieldnames(E);
-    F.entropy = E;
+    F.elev = E;
     
-    % ELEVATION FILTER %
+    % SLOPE FILTER %
     E = struct();
-    E.item_num = 5;
+    E.item_num = 3;
     E.item_group = 1;
     E.plot_group = hggroup;
-    E.plot_color = 'yellow';
+    E.plot_color = 'magenta';
     E.mask_kernel_size = 1;
-    E.ui_title = uilabel(fig, 'Position',[155 60 273 20],...
+    E.ui_title = uilabel(fig, 'Position',[153 300 273 20],...
         'VerticalAlignment','Center', 'HorizontalAlignment','Center',...
-        'Text','Elevation Filter (m)');
-    E.ui_logic = uibuttongroup(fig, 'Position',[20 32 50 40],...
+        'Text','Slope Filter (% grade, ln) [magenta]');
+    E.ui_colorbar = uilabel(fig, 'Position',[153 295 273 20],...
+        'VerticalAlignment','Center', 'HorizontalAlignment','Center',...
+        'Text','____________________________', 'FontColor',E.plot_color, 'FontWeight','bold');
+    E.ui_logic = uibuttongroup(fig, 'Position',[20 272 50 40],...
         'SelectionChangedFcn',@(bg,event) recompute_basemask(fig, E.item_num));
     E.ui_logic_or = uiradiobutton(E.ui_logic, 'Position',[3 7 45 30], 'Text','OR');
     E.ui_logic_and = uiradiobutton(E.ui_logic, 'Position',[3 -11 45 30], 'Text','AND');
     E.ui_logic.SelectedObject = E.ui_logic_or;  % DEFAULT
     E.mask_logic = E.ui_logic.SelectedObject;
-    E.ui_cond = uibuttongroup(fig, 'Position',[70 32 35 40],...
+    E.ui_cond = uibuttongroup(fig, 'Position',[70 272 35 40],...
         'SelectionChangedFcn',@(bg,event) recompute_basemask(fig, E.item_num));
     E.ui_cond_gt = uiradiobutton(E.ui_cond, 'Position',[5 7 30 30], 'Text','>');
     E.ui_cond_lt = uiradiobutton(E.ui_cond, 'Position',[5 -11 30 30], 'Text','<');
     E.ui_cond.SelectedObject = E.ui_cond_gt;  % DEFAULT
     E.mask_cond = E.ui_cond.SelectedObject;
-    E.ui_toggle = uibutton(fig, 'state', 'Position',[115 35 35 35],...
+    E.ui_toggle = uibutton(fig, 'state', 'Position',[115 275 35 35],...
         'ValueChangedFcn',@(btn,event) toggle_item_on(fig, E.item_num, btn, false),...
         'Value',false, 'Text','OFF');  % DEFAULT
-    E.ui_slider_dec = uibutton(fig, 'push', 'Position',[160 40 20 25], 'Text','-',...
+    E.ui_slider_dec = uibutton(fig, 'push', 'Position',[160 280 20 25], 'Text','-',...
         'ButtonPushedFcn',@(btn,event) slider_step(fig, E.item_num, -1, false));
-    E.ui_slider = uislider(fig, 'Position',[190 50 200 3],...
+    E.ui_slider = uislider(fig, 'Position',[190 290 200 3],...
         'ValueChangedFcn',@(sld,event) recompute_basemask(fig, E.item_num),...
-        'Limits',[0 100], 'Value',0);  % DEFAULT
-    E.ui_slider_inc = uibutton(fig, 'push', 'Position',[400 40 20 25], 'Text','+',...
+        'Limits',[0 10], 'Value',10);  % DEFAULT
+    E.ui_slider_inc = uibutton(fig, 'push', 'Position',[400 280 20 25], 'Text','+',...
         'ButtonPushedFcn',@(btn,event) slider_step(fig, E.item_num, 1, false));
     E.mask_slider_value = E.ui_slider.Value;
-    E.ui_display = uibutton(fig, 'state', 'Position',[430 35 50 35],...
+    E.ui_display = uibutton(fig, 'state', 'Position',[430 275 50 35],...
         'ValueChangedFcn',@(btn,event) toggle_item_display(fig, E.item_num, btn),...
-        'Value',true, 'Text','SHOW');  % DEFAULT
+        'Value',false, 'Text','HIDE');  % DEFAULT
     E.initial_fieldnames = [];
     E.initial_fieldnames = fieldnames(E);
-    F.elev = E;
+    F.slope = E;
     
     
     % RESULT MASK %
@@ -1996,10 +2166,13 @@ function create_filter_panel()
     E.item_num = 10;
     E.item_group = 2;
     E.plot_group = hggroup;
-    E.plot_color = 'green';
-    E.ui_title = uilabel(fig, 'Position',[615 362 273 20],...
+    E.plot_color = 'yellow';
+    E.ui_title = uilabel(fig, 'Position',[613 365 273 20],...
         'VerticalAlignment','Center', 'HorizontalAlignment','Center',...
-        'Text','RESULT MASK');
+        'Text','Result Mask [yellow]');
+    E.ui_colorbar = uilabel(fig, 'Position',[613 360 273 20],...
+        'VerticalAlignment','Center', 'HorizontalAlignment','Center',...
+        'Text','____________________________', 'FontColor',E.plot_color, 'FontWeight','bold');
     E.ui_toggle = uibutton(fig, 'state', 'Position',[530 355 80 35],...
         'ValueChangedFcn',@(btn,event) toggle_item_on(fig, E.item_num, btn, false),...
         'Value',false, 'Text','NORMAL');  % DEFAULT
@@ -2014,9 +2187,9 @@ function create_filter_panel()
     E = struct();
     E.item_num = 6;
     E.item_group = 2;
-    E.ui_title = uilabel(fig, 'Position',[615 300 273 20],...
+    E.ui_title = uilabel(fig, 'Position',[613 300 273 20],...
         'VerticalAlignment','Center', 'HorizontalAlignment','Center',...
-        'Text','Cluster Size Filter (px)');
+        'Text','Cluster Size Filter (# px, ln)');
     E.ui_cond = uibuttongroup(fig, 'Position',[530 272 35 40],...
         'SelectionChangedFcn',@(bg,event) recompute_resultmask(fig, E.item_num));
     E.ui_cond_gt = uiradiobutton(E.ui_cond, 'Position',[5 7 30 30], 'Text','>');
@@ -2025,14 +2198,14 @@ function create_filter_panel()
     E.mask_cond = E.ui_cond.SelectedObject;
     E.ui_toggle = uibutton(fig, 'state', 'Position',[575 275 35 35],...
         'ValueChangedFcn',@(btn,event) toggle_item_on(fig, E.item_num, btn, false),...
-        'Value',false, 'Text','OFF');  % DEFAULT
+        'Value',true, 'Text','ON');  % DEFAULT
     E.ui_slider_dec = uibutton(fig, 'push', 'Position',[620 280 20 25], 'Text','-',...
-        'ButtonPushedFcn',@(btn,event) slider_step(fig, E.item_num, -1, true));
+        'ButtonPushedFcn',@(btn,event) slider_step(fig, E.item_num, -1, false));
     E.ui_slider = uislider(fig, 'Position',[650 290 200 3],...
         'ValueChangedFcn',@(sld,event) recompute_resultmask(fig, E.item_num, false, false, true),...
-        'Limits',[0 100], 'Value',0);  % DEFAULT
+        'Limits',[0 10], 'Value',7);  % DEFAULT
     E.ui_slider_inc = uibutton(fig, 'push', 'Position',[860 280 20 25], 'Text','+',...
-        'ButtonPushedFcn',@(btn,event) slider_step(fig, E.item_num, 1, true));
+        'ButtonPushedFcn',@(btn,event) slider_step(fig, E.item_num, 1, false));
     E.mask_slider_value = E.ui_slider.Value;
     E.initial_fieldnames = [];
     E.initial_fieldnames = fieldnames(E);
@@ -2042,9 +2215,9 @@ function create_filter_panel()
     E = struct();
     E.item_num = 8;
     E.item_group = 2;
-    E.ui_title = uilabel(fig, 'Position',[615 220 273 20],...
+    E.ui_title = uilabel(fig, 'Position',[613 220 273 20],...
         'VerticalAlignment','Center', 'HorizontalAlignment','Center',...
-        'Text','Cluster Merge Distance (m)');
+        'Text','Cluster Merge Distance (m, ln)');
     E.ui_toggle = uibutton(fig, 'state', 'Position',[575 195 35 35],...
         'ValueChangedFcn',@(btn,event) toggle_item_on(fig, E.item_num, btn, false),...
         'Value',false, 'Text','OFF');  % DEFAULT
@@ -2064,7 +2237,7 @@ function create_filter_panel()
     E = struct();
     E.item_num = 9;
     E.item_group = 2;
-    E.ui_title = uilabel(fig, 'Position',[615 140 273 20],...
+    E.ui_title = uilabel(fig, 'Position',[613 140 273 20],...
         'VerticalAlignment','Center', 'HorizontalAlignment','Center',...
         'Text','Cluster Concavity');
     E.ui_toggle = uibutton(fig, 'state', 'Position',[575 115 35 35],...
@@ -2087,21 +2260,21 @@ function create_filter_panel()
     E.item_num = 7;
     E.item_group = 2;
     max_kernel_size = 50;  % SETTING
-    E.ui_title = uilabel(fig, 'Position',[615 60 273 20],...
+    E.ui_title = uilabel(fig, 'Position',[613 60 273 20],...
         'VerticalAlignment','Center', 'HorizontalAlignment','Center',...
         'Text','Dilation Kernel Size (sq. side length)');
     E.ui_toggle = uibutton(fig, 'state', 'Position',[575 35 35 35],...
         'ValueChangedFcn',@(btn,event) toggle_item_on(fig, E.item_num, btn, true),...
         'Value',false, 'Text','OFF');  % DEFAULT
     E.ui_slider_dec = uibutton(fig, 'push', 'Position',[620 40 20 25], 'Text','-',...
-        'ButtonPushedFcn',@(btn,event) slider_step(fig, E.item_num, -1, true, true));
+        'ButtonPushedFcn',@(btn,event) slider_step(fig, E.item_num, -1, true, false));
     E.ui_slider = uislider(fig, 'Position',[650 50 200 3],...
         'ValueChangedFcn',@(sld,event) slider_drag_integer(fig, E.item_num),...
         'MajorTicksMode','manual', 'MajorTicks',[0:5:max_kernel_size],...
-        'MinorTicksMode','manual', 'MinorTicks',[1:1:max_kernel_size],...
+        'MinorTicksMode','manual', 'MinorTicks',[0:1:max_kernel_size],...
         'Limits',[1 max_kernel_size], 'Value',5);  % DEFAULT
     E.ui_slider_inc = uibutton(fig, 'push', 'Position',[860 40 20 25], 'Text','+',...
-        'ButtonPushedFcn',@(btn,event) slider_step(fig, E.item_num, 1, true, true));
+        'ButtonPushedFcn',@(btn,event) slider_step(fig, E.item_num, 1, true, false));
     E.mask_slider_value = E.ui_slider.Value;
     if E.ui_toggle.Value == 1
         E.cluster_dilate_size = E.ui_slider.Value;
@@ -2149,4 +2322,50 @@ if c(2) > size(A,2); c(2)=size(A,2); end
 if r(2) > size(A,1); r(2)=size(A,1); end
 
 A = A(r(1):r(2),c(1):c(2));
+end
+
+
+function [dstfile] = make_local_copy(srcfile, dstdir)
+    srcfile_stats = dir(srcfile);
+    srcfname = srcfile_stats.name;
+    dstfile = [dstdir,'\',srcfname];
+    
+    if exist(dstdir, 'dir') ~= 7
+        fprintf('Making local copy of db file at %s ...', dstfile);
+        mkdir(dstdir);
+        
+    elseif exist(dstfile, 'file') == 2
+        dstfile_stats = dir(dstfile);
+        if dstfile_stats.datenum == srcfile_stats.datenum
+            % Local copy doesn't needed to be updated.
+            return;
+        else
+            fprintf('Updating local copy of db file at %s ...', dstfile);
+        end
+        
+    else
+        fprintf('Making local copy of db file at %s ...', dstfile);
+    end
+    
+    status = copyfile(srcfile, dstdir);
+    if status == 0
+        fprintf(' failed!\n');
+        dstfile = '';
+    elseif status == 1
+        fprintf(' success!\n');
+    end
+end
+
+
+function [varargout] = copy_dbase_local(dbasedir_local, varargin)
+    for i = 1:length(varargin)
+        dbasefile = varargin{i};
+        dbasefile_local = make_local_copy(dbasefile, dbasedir_local);
+        if isempty(dbasefile_local)
+            fprintf('Falling back to network load\n');
+        else
+            dbasefile = dbasefile_local;
+        end
+        varargout{i} = dbasefile;
+    end
 end
