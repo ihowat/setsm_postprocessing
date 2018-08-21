@@ -34,7 +34,7 @@ N = isnan(zreg) & ~isnan(zunreg);
 if any(N(:));
 
         % add missing unreg pix to reg
-        zreg = zunreg(N);
+        zreg(N) = zunreg(N);
         mreg.z = zreg;
 
         % load coreg cluster index field from unreg data
