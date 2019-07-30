@@ -98,7 +98,7 @@ while it
     % keep median dz if first iteration
     if it == 1
         meddz=median(dz(n));
-	meddz_err=std(dz(n))./sqrt(sum(n)); 
+	meddz_err=std(dz(n))./sqrt(sum(n(:))); 
         d00=sqrt(mean((dz(n)-meddz).^2));
     end
     
