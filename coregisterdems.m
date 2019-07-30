@@ -44,8 +44,9 @@ end
 rx = x1(2)-x1(1); % coordinate spacing
 p = [0;0;0]; % initial trans variable
 pn = p; % iteration variable
+perr = p; %regression errors
+pnerr = p; %regression errors
 d0 = inf; % initial rmse
-perr = zeros(3,1); %regression errors
 it = 1; % iteration step
 
 while it
