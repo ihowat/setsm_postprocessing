@@ -77,7 +77,8 @@ while it
     % difference grids
     dz = z2n - z1;
    
-    if exist('m1','var') && exist('m2','var'); dz(~m2n | ~m1) = NaN; end
+    if exist('m1','var'); dz(~m1) = NaN; end
+    if exist('m2','var'); dz(~m2n) = NaN; end
     
     if ~any(~isnan(dz(:))); disp('No overlap'); z2out=z2; p=[NaN;NaN;NaN]; d0=NaN; return; end
 	 
