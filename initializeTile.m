@@ -14,13 +14,18 @@ function [x,y,c,C,N,m,meta] = initializeTile(meta,projstr,tilex0,tilex1,tiley0,t
 %
 %   Ian Howat, ihowat@gmail.com, Ohio State
 
+global TILE_UPM;
+if isempty(TILE_UPM)
+    error('Tile-units-per-meter global variable has not been set');
+end
+
 % Initialize new mosaic file if not exists
 if ~exist(outname,'file')
     
     % define mosaic coorinate grid. Add a 100-pixel buffer for aligning/merging
     % the tiles
-    x = tilex0-buff*res: res:tilex1+buff*res;
-    y = tiley1+buff*res:-res:tiley0-buff*res;
+    x = tilex0-buff*res*TILE_UPM: res*TILE_UPM:tilex1+buff*res*TILE_UPM;
+    y = tiley1+buff*res*TILE_UPM:-res*TILE_UPM:tiley0-buff*res*TILE_UPM;
     y = y(:);
     
     % make output file

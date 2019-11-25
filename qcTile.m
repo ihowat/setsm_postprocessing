@@ -6,6 +6,8 @@ function qcTile(tileFile,meta)
 % the qc display and, if not, a hillshade will be created. Hillshades must
 % exist for the individual strips, however.
 
+global TILE_UPM;
+
 global prompt
 global qc
 global IA
@@ -26,6 +28,7 @@ dbasedir_local = [getenv('USERPROFILE'),'\setsm_postprocessing_dbase'];
 
 fprintf('loading tile schema\n');
 tiles=load(tileschema);
+TILE_UPM = tiles.unitsPerMeter;
 
 % get tile with matching name
 [~,tn,~] = fileparts(tileFile);
@@ -77,8 +80,8 @@ end
 res = 40;
 buff = 0;
 
-coverage_tile_x = tile.x0-buff*res: res:tile.x1+buff*res;
-coverage_tile_y = tile.y1+buff*res:-res:tile.y0-buff*res;
+coverage_tile_x = tile.x0-buff*res*TILE_UPM: res*TILE_UPM:tile.x1+buff*res*TILE_UPM;
+coverage_tile_y = tile.y1+buff*res*TILE_UPM:-res*TILE_UPM:tile.y0-buff*res*TILE_UPM;
 coverage_tile_y = coverage_tile_y(:);
 
 

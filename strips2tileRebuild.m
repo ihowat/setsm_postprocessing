@@ -11,6 +11,11 @@ function strips2tileRebuild(varargin)
 
 % Ian Howat, Ohio State University.
 
+global TILE_UPM;
+if isempty(TILE_UPM)
+    error('Tile-units-per-meter global variable has not been set');
+end
+
 %% Set Parameters & Parse args
 % set Y2K as day 0 for the daynumber grid
 dy0 = datenum('jan 1 2000');
@@ -21,6 +26,7 @@ res = varargin{2};
 
 % get old grid spacing
 res0 = m0.x(1,2)-m0.x(1,1);
+res0 = round(res0 / TILE_UPM, 5);
 
 % make outname
 outname=m0.Properties.Source;
@@ -38,8 +44,8 @@ x=[]; y=[]; z=[]; mt=[];  or=[];  dy=[];  f=[];  dtrans=[];  rmse=[];
 
 %% Mosaic Grid Definition and Initialization
 % define mosaic coorinate grid from tile boundaries
-x = tilex0: res:tilex1;
-y = tiley1:-res:tiley0;
+x = tilex0: res*TILE_UPM:tilex1;
+y = tiley1:-res*TILE_UPM:tiley0;
 y = y(:);
 
 % make output file

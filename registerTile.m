@@ -12,6 +12,11 @@ function registerTile(m,gcp)
 %   Ian Howat, Ohio State, ihowat@gmail.com
 %   version 1.0 06-Dec-2016 14:49:11
 
+global TILE_UPM;
+if isempty(TILE_UPM)
+    error('Tile-units-per-meter global variable has not been set');
+end
+
 maxGcps=1000; % maximum number of gcps to use. Will sample gcp vector evenly to give the closest integer N > maxGcps.
 
 %% Check for multiple coregistration clusters
@@ -101,7 +106,7 @@ for i=1:coregClusters
     
     % subset size expect +/- 20m maximum image displacement
     res=diff(x(1:2));
-    dd=20/res;
+    dd=20*TILE_UPM/res;
     
     [xsub,ysub,zsub]=pointAreaSubsets(gcp.x(n),gcp.y(n),x,y,m,dd,N);
     

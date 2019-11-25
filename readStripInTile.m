@@ -41,6 +41,7 @@ end
 demFile= strrep(metaFile,'meta.txt','dem.tif');
 matchFile= strrep(metaFile,'meta.txt','matchtag.tif');
 orthoFile= strrep(metaFile,'meta.txt','ortho.tif');
+maskFile= strrep(metaFile,'meta.txt','bitmask.tif');
 
 % read dem first
 z=readGeotiff(demFile,'target_projstr',projstr,'map_subset',[min(x),max(x),min(y),max(y)]);
@@ -65,6 +66,13 @@ if any(M(:)) && exist('mask','var')
             M(roipoly(xi,yi,M,mask{i,1},mask{i,2}))=0;
         end
     end
+    z(~M) = nan;
+end
+if any(M(:)) && exist(maskFile, 'file') == 2
+    bm = readGeotiff(maskFile,'target_projstr',projstr,'map_subset',[min(x),max(x),min(y),max(y)]);
+    bm = logical(bm.z);
+    M(bm) = 0;
+    clear bm;
     z(~M) = nan;
 end
 

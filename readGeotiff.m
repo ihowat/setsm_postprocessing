@@ -24,6 +24,8 @@ function I= readGeotiff(rasterFile,varargin)
 gdalpath =[]; %set to the path of the gdal binary if not in system path.
 if ismac
     gdalpath = '/Library/Frameworks/GDAL.framework/Versions/1.11/Programs/';
+elseif ispc
+    gdalpath = 'C:/OSGeo4W64/bin/';
 end
 
 Tinfo = imfinfo(rasterFile);
@@ -81,6 +83,8 @@ for i=1:numel(varargin)
             target_projstr = varargin{i+1};
             target_projstr_varargindex = i;
             
+            save_cwd = pwd;
+            cd(fileparts(mfilename('fullpath')));
             cmd = sprintf('python proj_issame.py "%s" "%s" ', rasterFile, target_projstr);
             [status, cmdout] = system(cmd);
             if ~isempty(cmdout)
@@ -89,20 +93,28 @@ for i=1:numel(varargin)
             if status == 0
                 clear target_projstr;
             end
+            cd(save_cwd);
         end
     end
 end
 
 if exist('target_projstr', 'var')
     fprintf('Reprojecting raster on-the-fly to target projection: %s\n', target_projstr);
+    rasterFile_local = [];
+    tempdir = getTempDir();
+    [~, rasterFname, rasterFext] = fileparts(rasterFile);
     
-    tempdir = [char(java.lang.System.getProperty('user.home')),'/scratch/setsm_postprocessing_temp'];
-    if exist(tempdir, 'dir') ~= 7
-        mkdir(tempdir);
+    rasterFile_local = fullfile(tempdir, [rasterFname, rasterFext]);
+    if strcmpi(rasterFile_local, rasterFile)
+        rasterFile_local = [];
+    else
+        copyfile(rasterFile, rasterFile_local);
+        rasterFile = rasterFile_local;
     end
-    f = dir(rasterFile);
-    rasterFile_proj = sprintf('%s_reprojtemp_%s', tempname(tempdir), char(f.name));
-%         char(datetime('now','TimeZone','local','Format','yyyyMMddHHmmss')));
+    
+    [~,~, unitsPerMeter] = getProjInfo(target_projstr, rasterFile);
+    
+    rasterFile_proj = fullfile(tempdir, sprintf('%s_reproj%s', rasterFname, rasterFext));
     
     if endsWith(rasterFile, '_dem.tif') || endsWith(rasterFile, '_dem_smooth.tif')
         interp_str = 'bilinear';
@@ -110,18 +122,20 @@ if exist('target_projstr', 'var')
         interp_str = 'near';
     elseif endsWith(rasterFile, '_ortho.tif')
         interp_str = 'cubic';
+    elseif endsWith(rasterFile, 'mask.tif')
+        interp_str = 'near';
     else
         error(['Unable to determine interpolation method ', ...
                'for reprojection of %s'], rasterFile);
     end
     
-    cmd = 'gdalwarp -q -co tiled=yes -co compress=lzw -co bigtiff=if_safer ';
+    cmd = [fullfile(gdalpath, 'gdalwarp'), ' -q -co tiled=yes -co compress=lzw -co bigtiff=if_safer '];
     cmd = [cmd, sprintf('-t_srs "%s" -r %s ', target_projstr, interp_str)];
-    cmd = [cmd, sprintf('-tap -tr %d %d ', info.map_info.dx, info.map_info.dy)];
-    if exist('map_subset', 'var')
-        % To be written.
-        ;
-    end
+    cmd = [cmd, sprintf('-tap -tr %d %d ', info.map_info.dx*unitsPerMeter, info.map_info.dy*unitsPerMeter)];
+%     if exist('map_subset', 'var')
+%         % To be written.
+%         ;
+%     end
     cmd = [cmd, sprintf('"%s" "%s" ', rasterFile, rasterFile_proj)];
     
     [status, cmdout] = system(cmd);
@@ -132,7 +146,26 @@ if exist('target_projstr', 'var')
     varargin(target_projstr_varargindex:target_projstr_varargindex+1) = [];
     I = readGeotiff(rasterFile_proj, varargin);
     
+    % Create ENVI header for the target projection and keep it for later use when writing output rasters.
+    tempdir = getTempDir();
+    target_proj_envi = fullfile(tempdir, [strrep(target_projstr, ':', '_'), '.envi']);
+    if exist(target_proj_envi, 'file') ~= 2
+        fprintf('Creating dummy raster for reference envi header info in later writeGeotiff operations\n');
+        cmd = sprintf('gdalwarp -overwrite -q -of ENVI -ts 1 1 "%s" "%s" ', rasterFile_proj, target_proj_envi);
+        [status, cmdout] = system(cmd);
+        if ~isempty(cmdout)
+            fprintf([cmdout,'\n']);
+        end
+        if ~exist(target_proj_envi, 'file')
+            error('gdalwarp call failed: %s', cmd);
+        end
+    end
+    
     delete(rasterFile_proj);
+    
+    if ~isempty(rasterFile_local)
+        delete(rasterFile_local);
+    end
     
     return;
 end

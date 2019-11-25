@@ -17,6 +17,8 @@ function writeGeotiff(OutFileName,x,y,z,fmt,nodata,projstr)
 gdalpath =[]; %set to the path of the gdal binary if not in system path.
 if ismac
     gdalpath = '/Library/Frameworks/GDAL.framework/Versions/1.11/Programs/';
+elseif ispc
+    gdalpath = 'C:/OSGeo4W64/bin/';
 end
 
 %if ismac
@@ -28,19 +30,17 @@ end
 outdir=OutFileName(1:find(OutFileName=='/',1,'last'));
 tempfile =  [tempname(outdir),'.envi'];
 
-if strcmpi('polar stereo south',projstr) || strcmpi('polar stereo north',projstr)
-    enviwrite(tempfile,x,y(:),z,'format',fmt,'proj',projstr);
-elseif strcmpi('canada albers equal area conic',projstr)
-    enviwrite(tempfile,x,y(:),z,'format',fmt,'proj',projstr);
-else
+if ~isempty(findstr(projstr,'North')) || ~isempty(findstr(projstr,'South'))
     if ~isempty(findstr(projstr,'North'))
         zone = str2num(strrep(projstr,'North',''));
         hemi = 'north';
-    else
+    elseif ~isempty(findstr(projstr,'South'))
         zone = str2num(strrep(projstr,'South',''));
         hemi = 'south';
     end
     enviwrite(tempfile,x,y(:),z,'format',fmt,'proj','UTM','hemi',hemi,'zone',zone);
+else
+    enviwrite(tempfile,x,y(:),z,'format',fmt,'proj',projstr);
 end
 %enviwrite(tempfile,x,y(:),z,'format',fmt,'proj','polar stereo south');
 %enviwrite(tempfile,x,y(:),z,'format',fmt,'proj','UTM','hemi','south','zone',23);

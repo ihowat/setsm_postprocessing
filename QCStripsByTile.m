@@ -1,5 +1,7 @@
 function [] = QCStripsByTile(regionNum,varargin)
 
+global TILE_UPM;
+
 global fig_qc
 global fig_panel
 global filter_item_plot_groups
@@ -51,6 +53,7 @@ startfrom=str2num(startfrom);
 
 %Get Arctic Tile Defs
 tiles=load(tilefile);
+TILE_UPM = tiles.unitsPerMeter;
 a=load(arcdemfile);
 
 %remove duplicated tile entries keeping just first occurence
@@ -205,8 +208,8 @@ end
 res = 40;
 buff = 0;
 
-x = tiles.x0-buff*res: res:tiles.x1+buff*res;
-y = tiles.y1+buff*res:-res:tiles.y0-buff*res;
+x = tiles.x0-buff*res*TILE_UPM: res*TILE_UPM:tiles.x1+buff*res*TILE_UPM;
+y = tiles.y1+buff*res*TILE_UPM:-res*TILE_UPM:tiles.y0-buff*res*TILE_UPM;
 y = y(:);
 
 N= zeros(length(y),length(x),'uint8');
