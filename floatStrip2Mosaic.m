@@ -1,7 +1,7 @@
 function N = floatStrip2Mosaic(metaFile,m,dy0,N,varargin)
 
 % read this strip data
-[x,y,z,mt,or,c,r] = readStripInTile(metaFile,m.x,m.y);
+[x,y,z,mt,or,c,r] = readStripInTile(metaFile,m.projstr,m.x,m.y);
 
 if isempty(x);
     m.dtrans=[m.dtrans,[NaN;NaN;NaN]];

@@ -57,15 +57,16 @@ buff=100;
 % default merging method for registered files
 mergeMethodReg='underprint';
 
-if nargin >= 7 % number of argins needed for creating a new mosaic from scratch
+if nargin >= 8 % number of argins needed for creating a new mosaic from scratch
     
     meta    = varargin{1};
-    tilex0  = varargin{2};
-    tilex1  = varargin{3};
-    tiley0  = varargin{4};
-    tiley1  = varargin{5};
-    res     = varargin{6};
-    outname = varargin{7};
+    projstr = varargin{2};
+    tilex0  = varargin{3};
+    tilex1  = varargin{4};
+    tiley0  = varargin{5};
+    tiley1  = varargin{6};
+    res     = varargin{7};
+    outname = varargin{8};
     
     % test varargin for flags
     if ~isempty(varargin)
@@ -114,7 +115,7 @@ if isempty(meta); return; end
 
 % Initialize/Restart Mosaic
 [x,y,c,C,N,m,meta] = initializeTile(...
-    meta,tilex0,tilex1,tiley0,tiley1,buff,res,outname,tileVersion,disableReg,...
+    meta,projstr,tilex0,tilex1,tiley0,tiley1,buff,res,outname,tileVersion,disableReg,...
     disableCoregTest,mergeMethod,mergeMethodReg);
 
 % add dummy fields to if dont exist

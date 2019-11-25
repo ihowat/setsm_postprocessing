@@ -1,12 +1,12 @@
-function [x,y,c,C,N,m,meta] = initializeTile(meta,tilex0,tilex1,tiley0,tiley1,buff,res,outname,tileVersion,disableReg, disableCoregTest,mergeMethod,mergeMethodReg);
+function [x,y,c,C,N,m,meta] = initializeTile(meta,projstr,tilex0,tilex1,tiley0,tiley1,buff,res,outname,tileVersion,disableReg, disableCoregTest,mergeMethod,mergeMethodReg);
 
 % initializeTile mosaic tile grid definition and initialization or restart
 %
 % [x,y,c,C,N,m] = initializeTile(...
-%       meta,tilex0,tilex1,tiley0,tiley1,buff,res,outname,... 
-%       ARGINS: meta is the metastruct, tile* are the tile grid ranges,
-%       buff is the number of buffer pixels to add, res is the output 
-%       grid resolution and outname is the output file name. 
+%       meta,projstr,tilex0,tilex1,tiley0,tiley1,buff,res,outname,... 
+%       ARGINS: meta is the metastruct, projstr is the tile grid projection,
+%       tile* are the tile grid ranges, buff is the number of buffer pixels
+%       to add, res is the output grid resolution and outname is the output file name. 
 %       ARGOOUTS: x,y are grid coordinate vectors, C is the coregistration
 %       cluster number array, c is the initial coregisteration cluster
 %       number, N is the grid point data flag and m is the output file
@@ -32,6 +32,7 @@ if ~exist(outname,'file')
     m.disableReg=disableReg;
     m.disableCoregTest=disableCoregTest;
     m.mergeMethodReg=mergeMethodReg;
+    m.projstr =projstr;
 
     % initialize mosaic grids
     m.z = nan(length(y),length(x),'single'); % elevation data grid

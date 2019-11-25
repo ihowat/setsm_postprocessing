@@ -1,4 +1,4 @@
-function [f,creationDate,stripDate,res,x,y,avg_rmse,med_rmse,max_rmse,Nscenes,reg]=compileStripMeta(fdir)
+function [f,creationDate,stripDate,projstr,res,x,y,avg_rmse,med_rmse,max_rmse,Nscenes,reg]=compileStripMeta(fdir)
 meta_str='meta';
 reg_str='reg';
 disableReg=true; 
@@ -7,6 +7,7 @@ f=dir([fdir,'/*',meta_str,'.txt']);
 f={f.name}';
 
 creationDate=nan(size(f));
+projstr=cell(size(f));
 x=cell(size(f));
 y=cell(size(f));
 
@@ -43,6 +44,10 @@ for i=1:length(f)
     
     r=find(~cellfun(@isempty,strfind(c,'Strip creation date:')));
     creationDate(i)=datenum(deblank(strrep(c{r},'Strip creation date:','')));
+    
+    r=find(~cellfun(@isempty,strfind(c,'Strip projection (proj4):')));
+    projstr(i)=cellstr(deblank(strrep(c{r},'Strip projection (proj4):','')));
+    projstr(i) = strtrim(strrep(projstr(i), '''', ''));
     
     info=imfinfo(strrep([fdir,'/',f{i}],'_meta.txt','_dem.tif'));
     res(i)=info.ModelPixelScaleTag(1);

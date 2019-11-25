@@ -109,7 +109,7 @@ end
 
 
 % read this strip data
-[x,y,z,mt,or,c,r] = readStripInTile(metaFile,m.x,m.y,'mask',mask);
+[x,y,z,mt,or,c,r] = readStripInTile(metaFile,m.projstr,m.x,m.y,'mask',mask);
 
 % check for competely masked file
 if isempty(x)

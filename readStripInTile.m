@@ -1,10 +1,10 @@
-function [xi,yi,z,mt,or,c,r] = readStripInTile(metaFile,x,y,varargin)
+function [xi,yi,z,mt,or,c,r] = readStripInTile(metaFile,projstr,x,y,varargin)
 % readStripInTile loads a strip to a predefined grid
 %
 % [xi,yi,z,mt,or,c,r] = readStripInTile(metaFile,x,y) loads the strip data
-% corresponding to the metaFile and grids it to coordinates x and y, with
-% ouput coordinates xi, yi, dem z, matchtag field mt, orthoimage or and and
-% input grid subscripts c and r.
+% corresponding to the metaFile and grids it to coordinates x and y in the
+% map projection specified by projstr with ouput coordinates xi, yi, dem z,
+% matchtag field mt, orthoimage or and and input grid subscripts c and r.
 %
 % [...] = readStripInTile(...,'mask',m) applies the mask polygon
 %
@@ -43,7 +43,7 @@ matchFile= strrep(metaFile,'meta.txt','matchtag.tif');
 orthoFile= strrep(metaFile,'meta.txt','ortho.tif');
 
 % read dem first
-z=readGeotiff(demFile,'map_subset',[min(x),max(x),min(y),max(y)]);
+z=readGeotiff(demFile,'target_projstr',projstr,'map_subset',[min(x),max(x),min(y),max(y)]);
 
 % parse structure into vars
 xi=z.x;
@@ -108,11 +108,11 @@ xi = xi(c(1):c(2));
 yi = yi(r(1):r(2));
 
 % read matchtag subset
-mt=readGeotiff(matchFile,'map_subset',[min(x),max(x),min(y),max(y)]);
+mt=readGeotiff(matchFile,'target_projstr',projstr,'map_subset',[min(x),max(x),min(y),max(y)]);
 mt = mt.z(r(1):r(2),c(1):c(2));
 
 % read orthoimage subset
-or=readGeotiff(orthoFile,'map_subset',[min(x),max(x),min(y),max(y)]);
+or=readGeotiff(orthoFile,'target_projstr',projstr,'map_subset',[min(x),max(x),min(y),max(y)]);
 or = or.z(r(1):r(2),c(1):c(2));
 
 % crop mosic to this DEM's boundary

@@ -51,12 +51,14 @@ mergeMethod     = m0.mergeMethod;
 disableReg      = m0.disableReg;
 disableCoregTest= m0.disableCoregTest;
 mergeMethodReg  = m0.mergeMethodReg;
+projstr         = m0.projstr;
 
 m.version           = tileVersion;
 m.mergeMethod       = mergeMethod;
 m.disableReg        = disableReg;
 m.disableCoregTest  = disableCoregTest;
 m.mergeMethodReg    = mergeMethodReg;
+m.projstr           = projstr;
 
 % initialize mosaic grids
 m.z = nan(length(y),length(x),'single'); % elevation data grid

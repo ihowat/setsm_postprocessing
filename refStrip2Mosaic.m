@@ -2,7 +2,7 @@ function N =refStrip2Mosaic(metaFile,m,dy0,N,varargin)
 % refStrip2Mosaic add a reference strip to the mosaic
 
 % read this strip data
-[x,y,z,mt,or,c,r] = readStripInTile(metaFile,m.x,m.y);
+[x,y,z,mt,or,c,r] = readStripInTile(metaFile,m.projstr,m.x,m.y);
 
 c=find(c);
 r=find(r);
