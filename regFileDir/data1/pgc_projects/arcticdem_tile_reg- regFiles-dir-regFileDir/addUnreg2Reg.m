@@ -6,7 +6,7 @@ i=1;
 for i=1:length(regFiles)
 
 regFile=regFiles{i};
-unregFile=strrep(regFile,'_reg','');
+unregFile=strrep(regFile,'_reg_','_');
 
 mreg=matfile(regFile,'writable',true);
 
@@ -34,7 +34,7 @@ N = isnan(zreg) & ~isnan(zunreg);
 if any(N(:));
 
         % add missing unreg pix to reg
-        zreg = zunreg(N);
+        zreg(N) = zunreg(N);
         mreg.z = zreg;
 
         % load coreg cluster index field from unreg data
