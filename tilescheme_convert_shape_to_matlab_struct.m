@@ -1,0 +1,10 @@
+clear;
+shp = shaperead('EarthDEM_mosaic_tiles_v1.shp');
+tiles.I = {shp.name}';
+tiles.x0 = [shp.x0]';
+tiles.x1 = [shp.x1]';
+tiles.y0 = [shp.y0]';
+tiles.y1 = [shp.y1]';
+epsg = 4326;
+clear shp;
+save('EarthDEM_mosaic_tiles_v1_nocoast.mat');
