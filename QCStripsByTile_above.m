@@ -20,9 +20,9 @@ end
 
 %% Argins
 %regionNum='02'; % region number
-tilefile  = 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/PGC_Imagery_Mosaic_Tiles_Above_nocoast.mat'; %PGC/NGA Tile definition file, required
-arcdemfile= 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/ABoVE_tiles.mat'; % lists which tiles go to which regions, required
-dbasefile = 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/aboveDEMdatabase_2m.mat'; % database file
+tilefile  = 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing/PGC_Imagery_Mosaic_Tiles_Above_nocoast.mat'; %PGC/NGA Tile definition file, required
+arcdemfile= 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing/ABoVE_tiles.mat'; % lists which tiles go to which regions, required
+dbasefile = 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing/aboveDEMdatabase_2m.mat'; % database file
 changePath= 'V:/pgc'; %if set, will change the path to the REMA directory from what's in the database file. set to [] if none.
 
 dbasedir_local = [getenv('USERPROFILE'),'\setsm_postprocessing_dbase'];
@@ -543,9 +543,9 @@ while length(meta.f) >= 1
 
             end
 
-            if flag == 0;  skipn = skipn+1;  clf(fig_qc); continue; end
+            if flag == 0;  skipn = skipn+1;  clf(fig_qc); break; end
 
-            if flag == 9;  skipn = skipn-1;  clf(fig_qc); continue; end
+            if flag == 9;  skipn = skipn-1;  clf(fig_qc); break; end
 
             if flag == 6; clf(fig_qc); return; end
 

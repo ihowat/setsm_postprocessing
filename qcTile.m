@@ -18,7 +18,7 @@ QC_LOCK_FILE = '';
 USERNAME = getenv('username');
 LOCK_FILE_CLEANUP = onCleanup(@() remove_lock());
 
-tileschema='V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/PGC_Imagery_Mosaic_Tiles_Arctic.mat'; %PGC/NGA Tile definition file, required
+tileschema='V:/pgc/data/scratch/claire/repos/setsm_postprocessing/PGC_Imagery_Mosaic_Tiles_Arctic.mat'; %PGC/NGA Tile definition file, required
 changePath= 'V:/pgc'; %if set, will change the path to the REMA directory from what's in the database file. set to [] if none.
 
 dbasedir_local = [getenv('USERPROFILE'),'\setsm_postprocessing_dbase'];
@@ -121,7 +121,7 @@ while true
 %             f(isnan(m.rmse))=[]; % remove unused data
             [~,IA]= intersect(meta.f,f); % find index of tile files in meta
             meta = structfun(@(x) ( x(IA,:) ), meta, 'UniformOutput', false); %crop meta
-            meta = addQC2Meta(meta); % add existing qc data
+            meta = addQC2Meta(meta, changePath); % add existing qc data
         end
         
         [BW_roi,xv,yv] =  roipoly; % draw ROI
@@ -246,8 +246,17 @@ while true
                 end
             end
             qc=load(qcFile);
-            fileNames=strrep(qc.fileNames,'/','\');
+            fileNames = qc.fileNames;
+            if ~isempty(changePath)
+                fileNames=strrep(fileNames,'/mnt/pgc',changePath);
+            end
+            fileNames=strrep(fileNames,'/','\');
             [~,IA]=intersect(fileNames, fileName);
+            
+            if isempty(IA)
+                fprintf(2, 'ERROR: Strip in meta database but not in qc file; DEM browse: %s, QC file: %s\n', fileName, qcFile);
+                continue
+            end
             
             if ~isempty(qc_flag_filter) && qc.flag(IA) ~= qc_flag_filter
                 continue;
