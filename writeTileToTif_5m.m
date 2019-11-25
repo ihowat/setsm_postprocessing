@@ -1,6 +1,11 @@
 function writeTileToTif(tilef,res,projstr)
 % Write dem or reg_dem matfiles to tif
 
+global TILE_UPM;
+if isempty(TILE_UPM)
+    error('Tile-units-per-meter global variable has not been set');
+end
+
 %% Crop Buffers and Write Tiles To Geotiffs 
 fprintf('writing tif %d of %d\n',i,length(tilef))
 
@@ -13,7 +18,7 @@ end
 fprintf('source: %s\n',fi);
 
 % calc buffer to remove
-buffer = floor(200 / res);
+buffer = floor(200*TILE_UPM / res);
 
 load(fi,'x','y');
 % crop buffer tile

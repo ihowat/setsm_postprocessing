@@ -1,34 +1,43 @@
 function reproject_database(dbasefile, tilefile)
 
-tempdir = [char(java.lang.System.getProperty('user.home')),'/setsm_postprocessing_temp'];
-if exist(tempdir, 'dir') ~= 7
-    mkdir(tempdir);
+gdalpath =[]; %set to the path of the gdal binary if not in system path.
+if ismac
+    gdalpath = '/Library/Frameworks/GDAL.framework/Versions/1.11/Programs/';
+elseif ispc
+    gdalpath = 'C:/OSGeo4W64/bin/';
 end
+
+tempdir = getTempDir();
 
 tiles = load(tilefile);
 epsg = tiles.epsg;
-clear tiles;
 a = load(dbasefile);
 
 outname = sprintf('%s_%d.mat', strrep(dbasefile, '.mat', ''), epsg);
 projstr_fwd = ['EPSG:',num2str(epsg)];
-rasterFile = strrep(a.f{1}, 'meta.txt', 'dem.tif');
-rasterFile_proj = sprintf('%s_reprojtemp_%d', tempname(tempdir), epsg);
 
 fprintf('Projection set from tilefile: "%s"\n', projstr_fwd);
 fprintf('Output database name: %s\n', outname);
 
-fprintf('Creating dummy raster for reference geotiff header info in tiling scheme projection\n');
-cmd = sprintf('gdalwarp -overwrite -q -ts 1 1 -t_srs "%s" "%s" "%s" ', projstr_fwd, rasterFile, rasterFile_proj);
+random_rasterFile = strrep(a.f{1}, 'meta.txt', 'dem.tif');
+
+[projinfo_fwd, unit, unitsPerMeter] = getProjInfo(projstr_fwd, random_rasterFile);
+tiles.unit = unit;
+tiles.unitsPerMeter = unitsPerMeter;
+save(tilefile,'-struct','tiles','-v7.3');
+clear tiles;
+
+projstr_fwd_is_wgs84 = false;
+projstr_bwd_is_wgs84 = false;
+cmd = sprintf('python proj_issame.py "%s" "%s" ', 'EPSG:4326', projstr_fwd);
 [status, cmdout] = system(cmd);
 if ~isempty(cmdout)
     fprintf([cmdout,'\n']);
 end
-if ~exist(rasterFile_proj, 'file')
-    error('gdalwarp call failed: %s', cmd);
+if status == 0
+    projstr_fwd_is_wgs84 = true;
 end
-projinfo_fwd = geotiffinfo(rasterFile_proj);
-delete(rasterFile_proj);
+use_gdaltransform = false;
 
 projstr_bwd = '';
 projinfo_bwd = [];
@@ -46,13 +55,27 @@ for i = 1:num_strips
         if status == 0
             projinfo_bwd = [];
         else
-            cmd = sprintf('gdalwarp -overwrite -q -ts 1 1 -t_srs "%s" "%s" "%s" ', projstr_bwd, rasterFile, rasterFile_proj);
+            use_gdaltransform = false;
+            projtif_bwd = fullfile(tempdir, [strrep(strrep(strip(projstr_bwd), ':', '_'), ' ', '_'), '.tif']);
+            if exist(projtif_bwd, 'file') ~= 2
+                cmd = sprintf('%s -overwrite -q -ts 1 1 -t_srs "%s" "%s" "%s" ', fullfile(gdalpath, 'gdalwarp'), projstr_bwd, random_rasterFile, projtif_bwd);
+                [status, cmdout] = system(cmd);
+                if ~isempty(cmdout)
+                    fprintf([cmdout,'\n']);
+                end
+            end
+            projinfo_bwd = geotiffinfo(projtif_bwd);
+            cmd = sprintf('python proj_issame.py "%s" "%s" ', 'EPSG:4326', projstr_bwd);
             [status, cmdout] = system(cmd);
             if ~isempty(cmdout)
                 fprintf([cmdout,'\n']);
             end
-            projinfo_bwd = geotiffinfo(rasterFile_proj);
-            delete(rasterFile_proj);
+            if status == 0
+                projstr_bwd_is_wgs84 = true;
+            else
+                projstr_bwd_is_wgs84 = false;
+            end
+%             projinfo_bwd = 1;
         end
     end
     
@@ -61,8 +84,43 @@ for i = 1:num_strips
     else
         fprintf('(%d/%d) reprojecting Strip Footprint Vertices\n', i, num_strips);
         
-        [lat, lon] = projinv(projinfo_bwd, a.x{i}, a.y{i});
-        [x, y] = projfwd(projinfo_fwd, lat, lon);
+        if ~use_gdaltransform
+            try
+                if projstr_bwd_is_wgs84
+                    lon = a.x{i};
+                    lat = a.y{i};
+                else
+                    [lat, lon] = projinv(projinfo_bwd, a.x{i}, a.y{i});
+                end
+                if projstr_fwd_is_wgs84
+                    x = lon;
+                    y = lat;
+                else
+                    [x, y] = projfwd(projinfo_fwd, lat, lon);
+                end
+            catch ME
+                fprintf('%s\n', ME.identifier);
+                fprintf('%s\n', ME.message);
+                fprintf('Switching to gdaltransform method for handling strip projection: %s\n', projstr_fwd);
+                use_gdaltransform = true;
+            end
+        end
+        
+        if use_gdaltransform
+            coords_in = strrep(mat2str([a.x{i}(:), a.y{i}(:)]), ';', '\n');
+            coords_in = coords_in(2:end-1);
+            cmd = sprintf('echo -e "%s" | %s -s_srs "%s" -t_srs "%s" -output_xy', coords_in, fullfile(gdalpath, 'gdaltransform'), projstr_bwd, projstr_fwd);
+            [status, cmdout] = system(cmd);
+            if status ~= 0
+                if ~isempty(cmdout)
+                    fprintf([cmdout,'\n']);
+                end
+                error('Failed to reproject strip footprint vertices using gdaltransform');
+            end
+            coords_out = str2num(cmdout);
+            x = coords_out(:, 1)';
+            y = coords_out(:, 2)';
+        end
         
         a.projstr{i} = projstr_fwd;
         

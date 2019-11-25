@@ -1,15 +1,14 @@
 % built a searchable index of all data
 
-udir='/mnt/pgc/data/elev/dem/setsm/REMA/region';
-rdir=dir([udir,'/rema_*']);
-outname='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing/REMAdatabase_2m.mat';
+udir='/mnt/pgc/data/elev/dem/setsm/EarthDEM/region';
+rdir=dir([udir,'/earthdem_*']);
+outname='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing/EarthDEMdatabase_2m.mat';
 
 for i=1:length(rdir);
-    demDir{i}=[udir,'/',rdir(i).name,'/strips/2m'];
+    demDir{i}=[udir,'/',rdir(i).name,'/strips_unf/2m'];
 end
 
 f               = cell(length(rdir),1);
-region          = cell(length(rdir),1);
 creationDate    = cell(length(rdir),1);
 stripDate       = cell(length(rdir),1);
 projstr         = cell(length(rdir),1);

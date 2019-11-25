@@ -1,8 +1,8 @@
 % built a searchable index of all data
 
 udir='V:/pgc/data/elev/dem/setsm/ArcticDEM/region';
-rdir=dir([udir,'/region_*']);
-outname='V:/pgc/data/scratch/claire/repos/setsm_postprocessing/arcticDEMdatabase_2m_upd.mat';
+rdir=dir([udir,'/arcticdem_*']);
+outname='V:/pgc/data/scratch/claire/repos/setsm_postprocessing/arcticDEMdatabase_2m.mat';
 
 for i=1:length(rdir);
     demDir{i}=[udir,'/',rdir(i).name,'/strips/2m'];

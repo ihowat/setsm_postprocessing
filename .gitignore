@@ -1,3 +1,5 @@
-*.asv
 *.mat
 *.csv
+*.pyc
+*.asv
+*.txt

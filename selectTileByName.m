@@ -2,6 +2,8 @@ function selectTileByName(dstdir,tile_name,res,varargin)
 % selectTilesByRegion mosaics strips covering tiles within the specified
 % NGA ArcticDEM region
 
+global TILE_UPM;
+
 %tile_name='45_17';
 %res=2;
 % projstr='polar stereo north';
@@ -10,6 +12,7 @@ function selectTileByName(dstdir,tile_name,res,varargin)
 tilefile  = 'PGC_Imagery_Mosaic_Tiles_Arctic.mat'; %PGC/NGA Tile definition file
 tiles=load(tilefile); %PGC/NGA Tile definition file, required
 epsg = tiles.epsg;
+TILE_UPM = tiles.unitsPerMeter;
 tiles = tiles.tiles;
 projstr = ['EPSG:',num2str(epsg)];
 dbasefile = ['arcticDEMdatabase_2m_',num2str(epsg),'.mat']; % strip datbase file
@@ -84,7 +87,7 @@ end
 fprintf('source: %s\n',fi);
 
 % calc buffer to remove
-buffer = floor(200 / res);
+buffer = floor(200*TILE_UPM / res);
 
 load(fi,'x','y');
 % crop buffer tile

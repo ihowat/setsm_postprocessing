@@ -1,4 +1,4 @@
-function selectTileByName(dstdir,tile_name,res,varargin)
+function selectTileByName_Earthdem(dstdir,tile_name,res,varargin)
 % selectTilesByRegion mosaics strips covering tiles within the specified
 % NGA ArcticDEM region
 
@@ -9,13 +9,13 @@ global TILE_UPM;
 % projstr='polar stereo north';
 
 % file names
-tilefile  = 'PGC_Imagery_Mosaic_Tiles_Arctic.mat'; %PGC/NGA Tile definition file
+tilefile  = 'EarthDEM_mosaic_tiles_v1_nocoast.mat'; %PGC/NGA Tile definition file
 tiles=load(tilefile); %PGC/NGA Tile definition file, required
 epsg = tiles.epsg;
 TILE_UPM = tiles.unitsPerMeter;
 tiles = tiles.tiles;
 projstr = ['EPSG:',num2str(epsg)];
-dbasefile = ['arcticDEMdatabase_2m_',num2str(epsg),'.mat']; % strip datbase file
+dbasefile = ['EarthDEMdatabase_2m_',num2str(epsg),'.mat']; % strip datbase file
 %dbasefile = ['GrITdatabase_2m.mat']; % strip datbase file
 %includeListFile = 'includeList_baffin.txt'; % list of strips to include
 
@@ -31,7 +31,6 @@ if ~exist(outdir,'dir'); mkdir(outdir); end
 
 % crop tile structure to overlapping tiles
 tiles = structfun(@(x) ( x(n) ), tiles, 'UniformOutput', false);
-disp(tiles);
 
 % load database file into mat file object
 meta=loadQcData(dbasefile);
@@ -65,11 +64,11 @@ if ~isempty(varargin);
     %gcp = loadGCPFile_is(gcpfile);
     gcp = loadGCPFile_is(gcpfile);
     % send to mosaicker
-    mosaicStripsRebuild(meta,tiles,res,outdir,projstr,gcp);
+    mosaicStrips(meta,tiles,res,outdir,projstr,gcp);
 
 else
     % send to mosaicker
-    mosaicStripsRebuild(meta,tiles,res,outdir,projstr);
+    mosaicStrips(meta,tiles,res,outdir,projstr);
     
 end
 
@@ -88,7 +87,7 @@ end
 fprintf('source: %s\n',fi);
 
 % calc buffer to remove
-buffer = floor(200 / res);
+buffer = floor(200*TILE_UPM / res);
 
 load(fi,'x','y');
 % crop buffer tile

@@ -4,6 +4,11 @@ function mosaicStrips(meta,tiles,res,outdir,projstr,varargin)
 %  mosaicStrips(db,tiles,res,outdir)
 %  mosaicStrips(db,tiles,res,outdir,gcp)
 
+global TILE_UPM;
+if isempty(TILE_UPM)
+    error('Tile-units-per-meter global variable has not been set');
+end
+
 %% parse and error check varargin
 if ~isempty(varargin)
        
@@ -31,7 +36,7 @@ for n=1:length(tiles.I)
         %strips2tile(meta,tiles.x0(n),tiles.x1(n),tiles.y0(n),tiles.y1(n),res,...
         %    outname,'disableReg','disableCoregTest');
         % get buffer pixel count that makes it 200m
-        bufsize = floor(200 / res);
+        bufsize = floor(200*TILE_UPM / res);
         strips2tile(meta,projstr,tiles.x0(n),tiles.x1(n),tiles.y0(n),tiles.y1(n),res,...
             outname,'disableReg','buffer',bufsize);
     end

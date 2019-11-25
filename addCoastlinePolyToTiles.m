@@ -1,9 +1,12 @@
 
+global TILE_UPM;
+
 coastlineShape = 'E:\basemap\world\noaa_bound\GSHHS_shp\f\GSHHS_f_L1_3413.shp';
 
 tilefile = 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing/PGC_Imagery_Mosaic_Tiles_Arctic_coast.mat'; %PGC/NGA Tile definition file
 
 tiles=load(tilefile);
+TILE_UPM = tiles.unitsPerMeter;
 
 S = shaperead(coastlineShape);
 
@@ -96,8 +99,8 @@ for i=1:length(tiles.x0)
                     res = 40;
                     buff = 0;
                     
-                    x = tiles.x0(i)-buff*res: res:tiles.x1(i)+buff*res;
-                    y = tiles.y1(i)+buff*res:-res:tiles.y0(i)-buff*res;
+                    x = tiles.x0(i)-buff*res*TILE_UPM: res*TILE_UPM:tiles.x1(i)+buff*res*TILE_UPM;
+                    y = tiles.y1(i)+buff*res*TILE_UPM:-res*TILE_UPM:tiles.y0(i)-buff*res*TILE_UPM;
                     y = y(:);
                     
                     land =  false(length(y),length(x));
