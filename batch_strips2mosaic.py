@@ -80,7 +80,7 @@ def main():
                 dstfp2 = os.path.join(dstdir,tile,'{}_{}m_dem.mat'.format(tile, args.res))
                 
             if (os.path.isfile(dstfp) or os.path.isfile(dstfp2)) and not args.rerun:
-                print '{} or {} exists, skipping'.format(dstfp, dstfp2)
+                print('{} or {} exists, skipping'.format(dstfp, dstfp2))
             
             else:
                 ## if pbs, submit to scheduler
@@ -110,7 +110,7 @@ def main():
                             args.lib_path,
                             qsubpath
                         )
-                    print cmd
+                    print(cmd)
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)
                 
@@ -136,7 +136,7 @@ def main():
                             tile,
                             args.res
                         )
-                    print "{}, {}".format(i, cmd)
+                    print("{}, {}".format(i, cmd))
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)
 

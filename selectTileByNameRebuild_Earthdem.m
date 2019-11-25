@@ -31,7 +31,6 @@ if ~exist(outdir,'dir'); mkdir(outdir); end
 
 % crop tile structure to overlapping tiles
 tiles = structfun(@(x) ( x(n) ), tiles, 'UniformOutput', false);
-disp(tiles);
 
 % load database file into mat file object
 meta=loadQcData(dbasefile);
@@ -62,7 +61,6 @@ end
 % get gcps into gcp.x, y, and z
 if ~isempty(varargin);
     gcpfile=varargin{1};
-    %gcp = loadGCPFile_is(gcpfile);
     gcp = loadGCPFile_is(gcpfile);
     % send to mosaicker
     mosaicStripsRebuild(meta,tiles,res,outdir,projstr,gcp);
@@ -88,7 +86,7 @@ end
 fprintf('source: %s\n',fi);
 
 % calc buffer to remove
-buffer = floor(200 / res);
+buffer = floor(200*TILE_UPM / res);
 
 load(fi,'x','y');
 % crop buffer tile

@@ -2,15 +2,20 @@ function selectTileByName_Antarctic(dstdir,tile_name,res,varargin)
 % selectTilesByRegion mosaics strips covering tiles within the specified
 % NGA ArcticDEM region
 
+global TILE_UPM;
+
 %tile_name='45_17';
-%res=2;          % strip & tile region
-projstr='polar stereo south';
+%res=2;
+% projstr='polar stereo south';
 
 % file names
 tilefile  = 'PGC_Imagery_Mosaic_Tiles_Antarctic.mat'; %PGC/NGA Tile definition file
-%dbasefile = ['REMAdatabase_',num2str(res),'m.mat']; % strip datbase file
-dbasefile = ['REMAdatabase_2m.mat']; % strip datbase file
-%dbasefile = ['NimrodDatabase2016_2m.mat']; % strip datbase file
+tiles=load(tilefile); %PGC/NGA Tile definition file, required
+epsg = tiles.epsg;
+TILE_UPM = tiles.unitsPerMeter;
+tiles = tiles.tiles;
+projstr = ['EPSG:',num2str(epsg)];
+dbasefile = ['REMAdatabase_2m_',num2str(epsg),'.mat']; % strip datbase file
 %includeListFile = 'includeListRema.txt'; % list of strips to include
 
 % make output directory
@@ -18,8 +23,8 @@ outdir=[dstdir,'/',tile_name];
 
 if ~exist(outdir,'dir'); mkdir(outdir); end
 
-%Get Arctic Tile Defs
-tiles=load(tilefile);
+%%Get Arctic Tile Defs
+%tiles=load(tilefile);
 
 % get target tile
 [~,n]=intersect(tiles.I,tile_name);
@@ -81,7 +86,7 @@ end
 fprintf('source: %s\n',fi);
 
 % calc buffer to remove
-buffer = floor(200 / res);
+buffer = floor(200*TILE_UPM / res);
 
 load(fi,'x','y');
 % crop buffer tile

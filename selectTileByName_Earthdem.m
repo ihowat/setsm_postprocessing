@@ -61,7 +61,6 @@ end
 % get gcps into gcp.x, y, and z
 if ~isempty(varargin);
     gcpfile=varargin{1};
-    %gcp = loadGCPFile_is(gcpfile);
     gcp = loadGCPFile_is(gcpfile);
     % send to mosaicker
     mosaicStrips(meta,tiles,res,outdir,projstr,gcp);
