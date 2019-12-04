@@ -1,56 +1,102 @@
-function [meta] = stripSearch(meta,tilex0,tilex1,tiley0,tiley1)
+function N = stripSearch(varargin)
 % stripSearch filters strip metastruct to strips overlapping tile bounds
 %
-% [meta] = stripSearch(meta,tilex0,tilex1,tiley0,tiley1) where meta is the
-%   arcticDEM meta structure that contains footprint vertices in .x and .y
-%   and ranges in minx, maxx, miny , maxy. Non-overlapping strips are
-%   removed from meta. NOTE:all meta fields must be record-per-row or else
-%   they will be screwed up by the (n,:) removal.
-%
-%   Requires the MFE function intersections.m
-%   https://www.mathworks.com/matlabcentral/fileexchange/11837-fast-and-robust-curve-intersections?focused=5146979&tab=function
+% n = stripSearch(x,y,tilex0,tilex1,tiley0,tiley1) return the index of
+% where x and y are cell arrays containing the x and y footprint vertices.
 %
 % Ian Howat, ihowat@gmail.com, Ohio State
+%03-Dec-2019 12:31:01: 1. takes a polyshape as search region
+%                      2. uses polyshape function "overlaps", no longer uses intersection
 
-% make tile boundary polygon
-tilevx = [tilex0;tilex0;tilex1;tilex1;tilex0];
-tilevy = [tiley0;tiley1;tiley1;tiley0;tiley0];
+x=varargin{1};
+y=varargin{2};
+
+if nargin == 3 % polyShape provided
+    
+    tilePoly = varargin{3};
+    
+    tilex0 = nanmin(tilePoly.Vertices(:,1));
+    tilex1 = nanmax(tilePoly.Vertices(:,1));
+    tiley0 = nanmin(tilePoly.Vertices(:,2));
+    tiley1 = nanmax(tilePoly.Vertices(:,2));
+    
+elseif  nargin == 4  % x,y vertices provided
+    %     tilevx = varargin{3};
+    %     tilevy = varargin{4};
+    
+    tilePoly = polyShape(varargin{3},varargin{4});
+    
+    tilex0 = min(tilevx);
+    tilex1 = max(tilevx);
+    tiley0 = min(tilevy);
+    tiley1 = max(tilevy);
+    
+elseif nargin == 6  % x,y range provided
+    
+    tilex0 = varargin{3};
+    tilex1 = varargin{4};
+    tiley0 = varargin{5};
+    tiley1 = varargin{6};
+    
+    % make tile boundary polygon
+    %     tilevx = [tilex0;tilex0;tilex1;tilex1;tilex0];
+    %     tilevy = [tiley0;tiley1;tiley1;tiley0;tiley0];
+    
+    tilePoly = polyShape([tilex0;tilex0;tilex1;tilex1;tilex0],...
+        [tiley0;tiley1;tiley1;tiley0;tiley0]);
+    
+else
+    
+    error('nargin must be 1,2 or 4\n')
+end
 
 
 % quick search: find strips within range of this tile. This does not
 % account for background area of around strips but just pairs them down to
 % speed the poly intersection loop
-n = meta.xmax > tilex0 & meta.xmin < tilex1 & ...
-    meta.ymax > tiley0 & meta.ymin < tiley1;
+
+xmax=cellfun(@max,x);
+xmin=cellfun(@min,x);
+ymax=cellfun(@max,y);
+ymin=cellfun(@min,y);
+
+
+n = xmax > tilex0 & xmin < tilex1 & ...
+    ymax > tiley0 & ymin < tiley1;
+
+
+N=find(n);
 
 % if no overlap, return
-if ~any(n); fprintf('no strip overlap\n'); meta=[]; return; end
+if isempty(N); return; end
 
-% par down database structure to possible overlapping tiles
-meta = structfun(@(x) ( x(n,:) ), meta, 'UniformOutput', false);
+x=x(n);
+y=y(n);
 
 % search for all strip footprints overlapping this tile
-n=false(size(meta.f));
-for i=1:length(n)
-   
-    n(i) = any(inpolygon(meta.x{i},meta.y{i},tilevx,tilevy)) | ...
-        any(inpolygon(tilevx,tilevy,meta.x{i},meta.y{i}));
-    
-    if ~n(i)
-        
-        [xtest,~] = intersections(meta.x{i},meta.y{i},tilevx,tilevy);
-        
-        if ~isempty(xtest)
-            n(i) = true;
-        end
-    
-   end
+n=false(size(x));
 
+for i=1:length(n)
+    
+    stripPoly = polyshape(x{i},y{i});
+    
+    n(i) = overlaps(stripPoly,tilePoly);
+    
+    
+    %     n(i) = any(inpolygon(x{i},y{i},tilevx,tilevy)) | ...
+    %         any(inpolygon(tilevx,tilevy,x{i},y{i}));
+    %
+    %     if ~n(i)
+    %
+    %         [xtest,~] = intersections(x{i},y{i},tilevx,tilevy);
+    %
+    %         if ~isempty(xtest)
+    %             n(i) = true;
+    %         end
+    %
+    %     end
+    %
+    
 end
 
-% if no overlap, return
-if ~any(n); fprintf('no strip overlap'); meta=[]; return; end
-
-% remove files with no overlap
-meta = structfun(@(x) ( x(n,:) ), meta, 'UniformOutput', false);
-
+N=N(n);

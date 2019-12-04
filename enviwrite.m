@@ -6,18 +6,19 @@ function enviwrite(varargin)
 
 %enviwrite(file,x,y,z,fmt);
 %creates envi ascii data and header files from cartesian x,y,z arrays.
+%keyboard
 minarg = 4;
 maxarg = 12;
 
 % Check input
-error(nargchk(minarg,maxarg,nargin));
+narginchk(minarg,maxarg);
 
 % requisite arguments
 file = varargin{1};
 x = varargin{2};
 y = varargin{3};
 z = varargin{4};
-for i = 1:size(z,3);
+for i = 1:size(z,3)
     zr(:,:,i) = z(:,:,i)';
 end
 
@@ -31,7 +32,7 @@ datum = 'wgs-84';
 units = 'Meters';
 proj_info = [];
 % Alteration of default values
-for n = (minarg+1:2:nargin-1);
+for n = (minarg+1:2:nargin-1)
     % Checks that every value is a numeric value and every property
     % is a sting
     if ~isstr(varargin{n})
@@ -69,10 +70,10 @@ end
 
 switch lower(proj)
     
-    case 'polar stereo north';
+    case 'polar stereo north'
         proj_info = '31, 6378137.0, 6356752.3, 70.000000, -45.000000, 0, 0, WGS-84, Polar Stereo North, units=Meters';
 
-     case 'polar stereo south';   
+     case 'polar stereo south'   
         proj_info = '31, 637813.0, 635674.5, -71.000000, 0.000000, 0, 0, WGS-84, Polar Stereo South, units=Meters';
         
     case 'bamber'
@@ -81,13 +82,13 @@ switch lower(proj)
          proj_info = '31, 6378137.0, 6356752.3, 71.000000, -39.000000, 1, 1, WGS-84, bamber, units=Meters';
 end
 
-if size(x,1) > 1 && size(x,2) > 1;
+if size(x,1) > 1 && size(x,2) > 1
     x = x(1,:);
 else
     x = x(:);
 end;
 
-if size(y,1) > 1 && size(y,2) > 1;
+if size(y,1) > 1 && size(y,2) > 1
     y = y(:,1);
 else
     y = y(:);
@@ -95,7 +96,7 @@ end;
 
 
 d = [datestr(now,8),' ',datestr(now,3),' ',datestr(now,7),' ',datestr(now,13),' ',datestr(now,10)];
-[samples,lines,bands] = size(z);
+[samples,lines] = size(z);
 x1 = min(x);
 y1 = max(y);
 dx = abs(diff(x(1:2)));

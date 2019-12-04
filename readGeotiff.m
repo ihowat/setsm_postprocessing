@@ -1,4 +1,4 @@
-function I= readGeotiff(varargin)
+function I= readGeotiff(name,varargin)
 % readGeotiff: read geotiff using imread and assign map info from infinfo.
 %
 % I = readGeotiff('filename'); reads entire .tif into map structure I
@@ -17,9 +17,6 @@ function I= readGeotiff(varargin)
 % Glacier Dynamics Laboratory, 
 % Byrd Polar Resear Center, Ohio State University 
 % Referenced enviread.m (Ian Howat)
-
-% get name
-name = varargin{1};
 
 Tinfo       = imfinfo(name);
 info.cols   = Tinfo.Width;
@@ -44,15 +41,16 @@ y = maxy - ((0:info.rows  -1).*info.map_info.dy);
 mapInfoOnlyFlag=0;
 
 % get subset bounds if specified
-if nargin > 1;
-    
-    if strcmp(varargin{2},'pixel_subset');
-        subrows = varargin{3}(3:4);
-        subcols = varargin{3}(1:2);
+for i=1:length(varargin);
+	    
+    if strcmpi(varargin{i},'pixel_subset');
+        i=i+1;
+	subrows = varargin{i}(3:4);
+        subcols = varargin{i}(1:2);
         
-    elseif strcmp(varargin{2},'map_subset');
-        
-        map_subset  = varargin{3};
+    elseif strcmpi(varargin{i},'map_subset');
+        i=i+1;
+        map_subset  = varargin{i};
         subcols = (map_subset(1:2)-info.map_info.mapx)./...
             info.map_info.dx+1;
         subrows = (info.map_info.mapy - map_subset([4,3]))./...
@@ -65,7 +63,7 @@ if nargin > 1;
         subcols(subcols > info.cols) = info.cols;
         subrows(subrows > info.rows) = info.rows;
         
-     elseif strcmpi(varargin{2},'mapinfoonly');
+     elseif strcmpi(varargin{i},'mapinfoonly');
          mapInfoOnlyFlag=1;
     end
 

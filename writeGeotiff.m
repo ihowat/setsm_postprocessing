@@ -16,7 +16,7 @@ function writeGeotiff(OutFileName,x,y,z,fmt,nodata,projstr)
 
 gdalpath =[]; %set to the path of the gdal binary if not in system path.
 if ismac
-    gdalpath = '/Library/Frameworks/GDAL.framework/Versions/1.11/Programs/';
+    gdalpath = '/Library/Frameworks/GDAL.framework/Versions/Current/Programs/';
 end
 
 %if ismac
