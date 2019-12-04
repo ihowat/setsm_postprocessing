@@ -16,7 +16,7 @@ if strcmp(subTileDir(end),'/')
 end
 
 outName=[subTileDir,'.mat'];
-subTileFiles=dir([subTileDir,'/*.mat']);
+subTileFiles=dir([subTileDir,'/*_10m.mat']);
 subTileFiles=cellfun( @(x) [subTileDir,'/',x],{subTileFiles.name},'uniformoutput',0);
 
 if exist(outName,'file')
@@ -25,7 +25,7 @@ if exist(outName,'file')
 end
 
 [~,subtileNum] = cellfun(@fileparts,subTileFiles,'uniformoutput',0);
-subtileNum = cellfun(@(x) str2num(x(7:end)),subtileNum);
+subtileNum = cellfun(@(x) str2num(x(7:end-3)),subtileNum);
 
 [~,n] = sort(subtileNum);
 subTileFiles = subTileFiles(n);
