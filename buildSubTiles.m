@@ -100,7 +100,7 @@ for n=1:subN
     
     fprintf('subtile %d of %d\n',n,subN)
     
-    outName = [outDir,'/',tileName,'_',num2str(n),'.mat'];
+    outName = [outDir,'/',tileName,'_',num2str(n),'_10m.mat'];
     
     if exist(outName,'file')
         switch redoFlag
@@ -134,13 +134,13 @@ for n=1:subN
         % ind=stripSearch(meta.x,meta.y,subx0(n),subx1(n),suby0(n),suby1(n));
         
         % check for maximum #'s of overlaps
-        if length(ind) > maxNumberOfStrips
+        if length(ind) > maxNumberOfStrips   
             %first remove single subscenes
             ind(meta.scene_alignment_meanrmse(ind) == 0 |...
                 isnan(meta.scene_alignment_meanrmse(ind))) = [];
         end
         
-        if length(ind) >   maxNumberOfStrips
+        if length(ind) >  maxNumberOfStrips
             % sort by weigthed area and coverage
             scene_alignment_meanrmse_scaled= -(meta.scene_alignment_meanrmse(ind)-mean(meta.scene_alignment_meanrmse(ind)))./std(meta.scene_alignment_meanrmse(ind));
             A_scaled = (meta.A(ind)-mean(meta.A(ind)))./std(meta.A(ind));
