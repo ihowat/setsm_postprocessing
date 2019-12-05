@@ -16,10 +16,10 @@ if ismac
     coastlinePolyFile='gshhg_237_alaska_coastline_3413.mat';
     lakePolyFile='gshhg_237_alaska_lakes_3413.mat';
 else
-    tileDefFile = '~/earthdem/PGC_Imagery_Mosaic_Tiles_Arctic.mat'; %PGC/NGA Tile definition file
-    databaseFile = '~/earthdem/earthdem_database_unf.mat';
-    outDir = ['/home/howat.4/project/earthdem/earthdem_mosaic_testing_1km/',tileName];
-    addpath('/home/howat.4/demtools');
+    tileDefFile = 'arcticdem_tiles_v3'; %PGC/NGA Tile definition file
+    databaseFile = 'arcticdem_database_unf_pgcpaths.mat';
+    outDir = ['/mnt/pgc/data/scratch/claire/pgc/arcticdem/mosaic/2m_v4/',tileName];
+    %addpath('/home/howat.4/demtools');
     coastlinePolyFile='gshhg_237_alaska_coastline_3413.mat';
     lakePolyFile='gshhg_237_alaska_lakes_3413.mat';
 end
@@ -71,6 +71,7 @@ clear coastlinePoly
 i=1;
 count=1;
 clear waterPoly
+waterPoly={};
 for i=1:length(lakePoly)
     if overlaps(tilePoly,lakePoly(i))
         waterPoly(count) = intersect(tilePoly,lakePoly(i));
@@ -203,14 +204,16 @@ for n=1:subN
         land(roipoly(x,y,land,xp,yp))=true;
     end
     
-    if overlaps(subtilePoly,waterPoly)
-        subwaterPoly = intersect(subtilePoly,waterPoly);
-        NR = [0;find(isnan(subwaterPoly.Vertices(:,1)));...
-            length(subwaterPoly.Vertices(:,1))+1];
-        for nr = 1:length(NR)-1
-            xp = subwaterPoly.Vertices(NR(nr)+1:NR(nr+1)-1,1);
-            yp = subwaterPoly.Vertices(NR(nr)+1:NR(nr+1)-1,2);
-            land(roipoly(x,y,land,xp,yp))=false;
+    if ~isempty(waterPoly)
+        if overlaps(subtilePoly,waterPoly)
+            subwaterPoly = intersect(subtilePoly,waterPoly);
+            NR = [0;find(isnan(subwaterPoly.Vertices(:,1)));...
+                length(subwaterPoly.Vertices(:,1))+1];
+            for nr = 1:length(NR)-1
+                xp = subwaterPoly.Vertices(NR(nr)+1:NR(nr+1)-1,1);
+                yp = subwaterPoly.Vertices(NR(nr)+1:NR(nr+1)-1,2);
+                land(roipoly(x,y,land,xp,yp))=false;
+            end
         end
     end
     
