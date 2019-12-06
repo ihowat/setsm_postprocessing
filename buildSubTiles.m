@@ -16,7 +16,7 @@ if ismac
     coastlinePolyFile='gshhg_237_alaska_coastline_3413.mat';
     lakePolyFile='gshhg_237_alaska_lakes_3413.mat';
 else
-    tileDefFile = 'arcticdem_tiles_v3'; %PGC/NGA Tile definition file
+    tileDefFile = 'PGC_Imagery_Mosaic_Tiles_Arctic.mat'; %PGC/NGA Tile definition file
     databaseFile = 'arcticdem_database_unf_pgcpaths.mat';
     outDir = ['/mnt/pgc/data/scratch/claire/pgc/arcticdem/mosaic/2m_v4/',tileName];
     %addpath('/home/howat.4/demtools');
@@ -305,7 +305,8 @@ for n=1:subN
     save(outName,'za','-append');
     
     % apply a pixel-by-pixel filter to remove outliers
-    fa = pairwiseDifferenceFilter(za,'mask',land,'minmad',2);
+    %fa = pairwiseDifferenceFilter(za,'mask',land,'minmad',2);
+    fa=true(size(za));
     fprintf('saving fa to %s\n',outName)
     save(outName,'fa','-append');
     
