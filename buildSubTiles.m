@@ -360,11 +360,11 @@ for n=1:subN
     
     fprintf('making 2m version\n')
     outName2m = strrep(outName,'_10m.mat','_2m.mat');
-    make2m(fileNames,t,x,y,dZ,dX,dY,fa,outName2m);
+    make2m(fileNames,t,x,y,dZ,dX,dY,land,fa,outName2m);
          
 end
 
-function make2m(fileNames,t,x,y,dZ,dX,dY,fa,outName)
+function make2m(fileNames,t,x,y,dZ,dX,dY,land,fa,outName)
 
 % layers with missing adjustments
 n_missing = isnan(dZ);
@@ -402,6 +402,9 @@ za_med = nanmedian(za,3);
 za_mad = mad(za,1,3);
 N = uint8(sum(~isnan(za),3));
 
+% resize land mask
+land = imresize(land,size(za_med),'nearest');
+
 t=t-datenum('1/1/2000 00:00:00');
 t=reshape(t,1,1,[]);
 t=repmat(t,size(za_med));
@@ -415,7 +418,7 @@ tmin = uint16(tmin);
 %tmean = uint16(tmean);
 
 
-% Attempt at code for retrieving dates of median values
+% Incomplete attempt at code for retrieving dates of median values
 % [za_sort,n]  = sort(za,3);
 % isodd=logical(mod(single(N),2));
 % n1=zeros(size(N),'uint8');
@@ -453,8 +456,8 @@ tmin = uint16(tmin);
 % za1 = za_sort(ind1);
 % za2 = za_sort(ind2);
 
-fprintf('saving x, y za_med za_mad N tmax tmin to %s\n',outName)
-save(outName,'x','y','za_med','za_mad','N','tmax','tmin');
+fprintf('saving x, y za_med land za_mad N tmax tmin to %s\n',outName)
+save(outName,'x','y','za_med','land','za_mad','N','tmax','tmin');
 
 
 
