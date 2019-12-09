@@ -14,18 +14,20 @@ end
 if strcmp(subTileDir(end),'/')
 	subTileDir(end)=[];
 end
+[filepath,tileName,ext] = fileparts(subTileDir);
 
-outName=[subTileDir,'.mat'];
-subTileFiles=dir([subTileDir,'/*_10m.mat']);
-subTileFiles=cellfun( @(x) [subTileDir,'/',x],{subTileFiles.name},'uniformoutput',0);
+outName=[subTileDir,'/',tileName,'_10m.mat'];
+subTileFiles=dir([subTileDir,'/subtiles/*_10m.mat']);
+subTileFiles=cellfun( @(x) [subTileDir,'/subtiles/',x],{subTileFiles.name},'uniformoutput',0);
 
 if exist(outName,'file')
     % need to add subtile count to output for restart
     fprintf('%s exists, skipping\n',outName)
 end
 
+fprintf('Loading subtiles\n')
 [~,subtileNum] = cellfun(@fileparts,subTileFiles,'uniformoutput',0);
-subtileNum = cellfun(@(x) str2num(x(7:end-3)),subtileNum);
+subtileNum = cellfun(@(x) str2num(x(7:end-4)),subtileNum);
 
 [~,n] = sort(subtileNum);
 subTileFiles = subTileFiles(n);
@@ -176,5 +178,5 @@ end
 
 save(outName,'x','y','z','N')
 z(isnan(z)) = -9999;
-outNameTif = strrep(outName,'.mat','.tif');
+outNameTif = strrep(outName,'.mat','_dem.tif');
 writeGeotiff(outNameTif,x,y,z,4,-9999,'polar stereo north')
