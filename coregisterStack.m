@@ -1,5 +1,9 @@
-function out=coregisterStack(x,y,z,mask)
-
+function out=coregisterStack(x,y,z,mask,strip_ind)
+% coregisterStack coregister DEM layers in 3D array
+%
+% offsets=coregisterStack(x,y,z,mask,strip_ind)registered each z(:,:,i) to
+% every other, ignoring zero pixels in 2D array mask. Pairs with the same
+% value of strip_ind (vector of length size(z,3)) will be skipped.
 
 N = size(z,3); % # of strips
 
@@ -22,7 +26,14 @@ I = nchoosek(1:N,2); % indices of unique pairs
 i=I(:,1); % first strip in pair
 j=I(:,2); % second strip in pair
 
-Npairs=size(I,1); % # of pairs
+clear I
+
+% remove pairs of segments from same strip
+n = strip_ind(i) == strip_ind(j);
+i(n) = [];
+j(n) = [];
+
+Npairs=size(i,1); % # of pairs
 
 dz = nan(Npairs,1); % initialize pair offset vector
 dx = nan(Npairs,1); % initialize pair offset vector
@@ -43,7 +54,7 @@ sigma_dz_coreg =  nan(Npairs,1);
 % Pair coregistration loop
 for pair_n=1:Npairs
     
-   % fprintf('i:%d, j:%d,pair %d of %d\n',i(pair_n),j(pair_n),pair_n,Npairs)
+    fprintf('i:%d, j:%d,pair %d of %d\n',i(pair_n),j(pair_n),pair_n,Npairs)
     
     % get overlap stats before coregistration
     p = z(:,:,i(pair_n)) - z(:,:,j(pair_n));
