@@ -155,6 +155,7 @@ for n=1:subN
         
         if ~overlaps(subtilePoly,landPoly)
             fprintf('No land in subtile %d, skipping\n',n)
+            continue
         end
         
         % make land surface polygon within this subtile for searching

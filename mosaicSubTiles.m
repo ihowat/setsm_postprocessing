@@ -225,29 +225,33 @@ for filen=1:NsubTileFiles
 
 end
 
-% save matfile outputs 
-if dx == 2
-    save(outName,'x','y','z','N','z_mad','tmax','tmin')
-elseif dx == 10
-    save(outName,'x','y','z','N')
-end
+if ~(isempty(nonzeros(N)))
+    % save matfile outputs 
+    if dx == 2
+        save(outName,'x','y','z','N','z_mad','tmax','tmin')
+    elseif dx == 10
+        save(outName,'x','y','z','N')
+    end
 
-% write tiff files
-z(isnan(z)) = -9999;
-outNameTif = strrep(outName,'.mat','_dem.tif');
-writeGeotiff(outNameTif,x,y,z,4,-9999,'polar stereo north')
+    % write tiff files
+    z(isnan(z)) = -9999;
+    outNameTif = strrep(outName,'.mat','_dem.tif');
+    writeGeotiff(outNameTif,x,y,z,4,-9999,'polar stereo north')
 
-outNameTif = strrep(outName,'.mat','_N.tif');
-writeGeotiff(outNameTif,x,y,N,1,0,'polar stereo north')
+    outNameTif = strrep(outName,'.mat','_N.tif');
+    writeGeotiff(outNameTif,x,y,N,1,0,'polar stereo north')
 
-if dx == 2
-    z_mad(isnan(z_mad)) = -9999;
-    outNameTif = strrep(outName,'.mat','_mad.tif');
-    writeGeotiff(outNameTif,x,y,z_mad,4,-9999,'polar stereo north')
-    
-    outNameTif = strrep(outName,'.mat','_tmax.tif');
-    writeGeotiff(outNameTif,x,y,tmax,2,0,'polar stereo north')
-    
-    outNameTif = strrep(outName,'.mat','_tmin.tif');
-    writeGeotiff(outNameTif,x,y,tmin,2,0,'polar stereo north')
+    if dx == 2
+        z_mad(isnan(z_mad)) = -9999;
+        outNameTif = strrep(outName,'.mat','_mad.tif');
+        writeGeotiff(outNameTif,x,y,z_mad,4,-9999,'polar stereo north')
+
+        outNameTif = strrep(outName,'.mat','_tmax.tif');
+        writeGeotiff(outNameTif,x,y,tmax,2,0,'polar stereo north')
+
+        outNameTif = strrep(outName,'.mat','_tmin.tif');
+        writeGeotiff(outNameTif,x,y,tmin,2,0,'polar stereo north')
+    end
+else
+    fprintf('N array is empty, outputs not written\n');
 end
