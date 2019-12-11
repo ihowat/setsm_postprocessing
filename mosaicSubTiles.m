@@ -26,9 +26,20 @@ subTileName=cellfun(@(x) strsplit(x,'_'),subTileName,'uniformoutput',0);
 subTileNum = cellfun(@(x) str2num(x{3}),subTileName);
 
 % sort subtilefiles by ascending subtile number order
-[~,n] = sort(subTileNum);
+[subTileNum,n] = sort(subTileNum);
 subTileFiles = subTileFiles(n);
 NsubTileFiles = length(subTileFiles);
+
+% find buffer size from first 2 tiles
+n = diff(subTileNum);
+n(mod(subTileNum(1:end-1),100) == 0) = 0;
+n = find(n == 1,1,'first');
+buffcheck1=load(subTileFiles{n},'y');
+buffcheck2=load(subTileFiles{n+1},'y');
+buff = (length(buffcheck2.y)-find(buffcheck1.y(1) == buffcheck2.y))/2;
+buff = round(buff);
+
+fprintf('Using subtile buffer of %d pixels\n',buff)
 
 % make a polyshape out of boundary for checking subtile overlap
 tilePoly = polyshape([x0 x0 x1 x1]',[y0 y1 y1 y0]');
@@ -146,6 +157,7 @@ for filen=1:NsubTileFiles
             z1(isnan(zsub.za_med) & ~isnan(z1));
         
         if dx == 2
+            % also blend za_mad
             zsub.za_mad(isnan(zsub.za_mad) & ~isnan(z_mad1)) =...
                 z1(isnan(zsub.za_mad) & ~isnan(z_mad1));
         end
@@ -188,24 +200,26 @@ for filen=1:NsubTileFiles
         % if no pixels overlap, just add the subset data into the subtile,
         % replacing the NaNs
         zsub.za_med(~isnan(z1(:))) = z1(~isnan(z1(:)));
-        zsub.N(~isnan(z1(:))) = N1(~isnan(z1(:)));
-        
+ 
         if dx == 2
             zsub.za_mad(~isnan(z1(:))) = z_mad1(~isnan(z1(:)));
-            zsub.tmax(~isnan(z1(:))) = tmax1(~isnan(z1(:)));
-            zsub.tmin(~isnan(z1(:))) = tmin1(~isnan(z1(:)));
         end
         
     end
     
     % place the belended substile into the tile
-    z(row0:row1,col0:col1) = zsub.za_med;
-    N(row0:row1,col0:col1) = zsub.N;
+    z(row0:row1,col0:col1) = zsub.za_med; 
+    
+    % place N grid into the tile just within the tile borders
+    N(row0+buff:row1-buff,col0+buff:col1-buff) =...
+        zsub.N(buff+1:end-buff,buff+1:end-buff);
     
     if dx == 2
         z_mad(row0:row1,col0:col1) = zsub.za_mad;
-        tmax(row0:row1,col0:col1) = zsub.tmax;
-        tmin(row0:row1,col0:col1) = zsub.tmin;
+        tmax(row0+buff:row1-buff,col0+buff:col1-buff) =...
+            zsub.tmax(buff+1:end-buff,buff+1:end-buff);
+        tmin(row0+buff:row1-buff,col0+buff:col1-buff) =...
+            zsub.tmin(buff+1:end-buff,buff+1:end-buff);
     end
     
     % count the number of pixels with data after this merge
@@ -225,33 +239,29 @@ for filen=1:NsubTileFiles
 
 end
 
-if ~(isempty(nonzeros(N)))
-    % save matfile outputs 
-    if dx == 2
-        save(outName,'x','y','z','N','z_mad','tmax','tmin')
-    elseif dx == 10
-        save(outName,'x','y','z','N')
-    end
+% save matfile outputs 
+if dx == 2
+    save(outName,'x','y','z','N','z_mad','tmax','tmin')
+elseif dx == 10
+    save(outName,'x','y','z','N')
+end
 
-    % write tiff files
-    z(isnan(z)) = -9999;
-    outNameTif = strrep(outName,'.mat','_dem.tif');
-    writeGeotiff(outNameTif,x,y,z,4,-9999,'polar stereo north')
+% write tiff files
+z(isnan(z)) = -9999;
+outNameTif = strrep(outName,'.mat','_dem.tif');
+writeGeotiff(outNameTif,x,y,z,4,-9999,'polar stereo north')
 
-    outNameTif = strrep(outName,'.mat','_N.tif');
-    writeGeotiff(outNameTif,x,y,N,1,0,'polar stereo north')
+outNameTif = strrep(outName,'.mat','_N.tif');
+writeGeotiff(outNameTif,x,y,N,1,0,'polar stereo north')
 
-    if dx == 2
-        z_mad(isnan(z_mad)) = -9999;
-        outNameTif = strrep(outName,'.mat','_mad.tif');
-        writeGeotiff(outNameTif,x,y,z_mad,4,-9999,'polar stereo north')
-
-        outNameTif = strrep(outName,'.mat','_tmax.tif');
-        writeGeotiff(outNameTif,x,y,tmax,2,0,'polar stereo north')
-
-        outNameTif = strrep(outName,'.mat','_tmin.tif');
-        writeGeotiff(outNameTif,x,y,tmin,2,0,'polar stereo north')
-    end
-else
-    fprintf('N array is empty, outputs not written\n');
+if dx == 2
+    z_mad(isnan(z_mad)) = -9999;
+    outNameTif = strrep(outName,'.mat','_mad.tif');
+    writeGeotiff(outNameTif,x,y,z_mad,4,-9999,'polar stereo north')
+    
+    outNameTif = strrep(outName,'.mat','_tmax.tif');
+    writeGeotiff(outNameTif,x,y,tmax,2,0,'polar stereo north')
+    
+    outNameTif = strrep(outName,'.mat','_tmin.tif');
+    writeGeotiff(outNameTif,x,y,tmin,2,0,'polar stereo north')
 end
