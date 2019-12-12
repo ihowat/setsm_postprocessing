@@ -16,19 +16,23 @@ if ismac
     coastlinePolyFile='gshhg_237_alaska_coastline_3413.mat';
     lakePolyFile='gshhg_237_alaska_lakes_3413.mat';
 else
-    tileDefFile = '~/earthdem/PGC_Imagery_Mosaic_Tiles_Arctic.mat'; %PGC/NGA Tile definition file
-    databaseFile = '~/earthdem/earthdem_database_unf.mat';
-    outDir = ['/home/howat.4/project/earthdem/earthdem_mosaic_testing_1km/',tileName];
-    addpath('/home/howat.4/demtools');
-    coastlinePolyFile='gshhg_237_alaska_coastline_3413.mat';
-    lakePolyFile='gshhg_237_alaska_lakes_3413.mat';
+    tileDefFile = 'PGC_Imagery_Mosaic_Tiles_Arctic.mat'; %PGC/NGA Tile definition file
+     databaseFile = 'arcticdem_database_unf_pgcpaths.mat';
+     outDir = ['/mnt/pgc/data/scratch/claire/pgc/arcticdem/mosaic/2m_v4/',tileName,'/subtiles'];
+     %addpath('/home/howat.4/demtools');
+     waterTileDir='/mnt/pgc/data/scratch/claire/pgc/arcticdem/coastline/water_tiles';
+     %coastlinePolyFile='gshhg_237_alaska_coastline_3413.mat';
+     %lakePolyFile='gshhg_237_alaska_lakes_3413.mat';
+
 end
 
 if ~exist(outDir,'dir')
     mkdir(outDir)
 end
 
+fprintf('Loading tile definition file\n')
 tileDefs=load(tileDefFile);
+fprintf('Loading strip database and getting tile overlaps\n')
 meta=load(databaseFile);
 
 meta.A = cellfun(@(x,y) polyarea(x,y), meta.x,meta.y);
@@ -42,9 +46,28 @@ y0=tileDefs.y0(tileInd)-buffer;
 x1=tileDefs.x1(tileInd)+buffer;
 y1=tileDefs.y1(tileInd)+buffer;
 
-% load polyshapes
-load(coastlinePolyFile);
-load(lakePolyFile);
+% load coastline tile polyshape
+fprintf('Loading tile %s coastline\n',tileName)
+coastlinePolyFile = dir([waterTileDir,'/',tileName,'_coast.mat']);
+coastlinePolyFile = cellfun(@(x) [waterTileDir,'/',x], {coastlinePolyFile.name}, 'uniformOutput',false);
+if isempty(coastlinePolyFile)
+    fprintf('Tile %s coastline file does not exist in %s\n',tileName,waterTileDir)
+    return
+end
+load(coastlinePolyFile{1});
+
+% load lakes tile polyshape
+fprintf('Loading tile %s lakes\n',tileName)
+lakePolyFile = dir([waterTileDir,'/',tileName,'_lakes.mat']);
+lakePolyFile = cellfun(@(x) [waterTileDir,'/',x], {lakePolyFile.name}, 'uniformOutput',false);
+%lakePolyFile{1}='gshhg_237_alaska_lakes_3413.mat';
+if isempty(lakePolyFile)
+    fprintf('Tile %s lakes file does not exist in %s\n',tileName,waterTileDir)
+    waterPoly(1)=polyshape();
+else
+    load(lakePolyFile{1});
+    waterPoly = lakePoly;
+end
 
 % make polyshape of this tile with buffer to ensure coverage of border
 % cells
@@ -67,17 +90,17 @@ end
 landPoly = union(landPoly);
 clear coastlinePoly
 
-% polygons of lakes over this tile
-i=1;
-count=1;
-clear waterPoly
-waterPoly={};
-for i=1:length(lakePoly)
-    if overlaps(tilePoly,lakePoly(i))
-        waterPoly(count) = intersect(tilePoly,lakePoly(i));
-        count=count+1;
-    end
-end
+% % polygons of lakes over this tile
+% i=1;
+% count=1;
+% clear waterPoly
+% waterPoly(1)=polyshape();
+% for i=1:length(lakePoly)
+%     if overlaps(tilePoly,lakePoly(i))
+%         waterPoly(count) = intersect(tilePoly,lakePoly(i));
+%         count=count+1;
+%     end
+% end
 
 if ~isempty(waterPoly)
     waterPoly = union(waterPoly);
@@ -133,6 +156,7 @@ for n=1:subN
         
         if ~overlaps(subtilePoly,landPoly)
             fprintf('No land in subtile %d, skipping\n',n)
+            continue
         end
         
         % make land surface polygon within this subtile for searching
