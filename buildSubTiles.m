@@ -250,6 +250,7 @@ for n=1:subN
         
         if ~any(land(:))
             fprintf('No land in subtile %d, skipping\n',n)
+            continue
         end
         
         fprintf('saving land to %s\n',outName)
@@ -259,6 +260,11 @@ for n=1:subN
         [~,stripid] =  cellfun(@fileparts,fileNames,'uniformoutput',0);
         stripid =  cellfun(@(x) x(1:47),stripid,'uniformoutput',0);
         [~,~,strip_ind] = unique(stripid);
+        
+        if length(unique_stripids) == 1
+            fprintf('only one strip in stack, skipping\n')
+             continue
+        end
         
         fprintf('performing pairwise coregistration, ')
         offsets=coregisterStack(x,y,z,land,strip_ind);
