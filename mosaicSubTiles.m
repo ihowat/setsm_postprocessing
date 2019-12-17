@@ -34,13 +34,18 @@ NsubTileFiles = length(subTileFiles);
 n = diff(subTileNum);
 n(mod(subTileNum(1:end-1),100) == 0) = 0;
 n = find(n == 1,1,'first');
-buffcheck1=load(subTileFiles{n},'y');
-buffcheck2=load(subTileFiles{n+1},'y');
-buff = (length(buffcheck2.y)-find(buffcheck1.y(1) == buffcheck2.y))/2;
-buff = round(buff);
+if ~isempty(n)
+    buffcheck1=load(subTileFiles{n},'y');
+    buffcheck2=load(subTileFiles{n+1},'y');
+    buff = (length(buffcheck2.y)-find(buffcheck1.y(1) == buffcheck2.y))/2;
+    buff = round(buff);
 
-fprintf('Using subtile buffer of %d pixels\n',buff)
-
+    fprintf('Using subtile buffer of %d pixels\n',buff)
+else
+    fprintf('Too few subtiles exist to determine buffer, quitting')
+    return
+end
+    
 % make a polyshape out of boundary for checking subtile overlap
 tilePoly = polyshape([x0 x0 x1 x1]',[y0 y1 y1 y0]');
 

@@ -4,7 +4,8 @@ function buildSubTiles(tileName)
 res=10; % ouput mosaic resolution in meters
 subtileSize=1000; % subtile dimensions in meters
 buffer=100; % size of tile/subtile boundary buffer in meters
-redoFlag = 4; % flag for treating existing subtile .mat files: 1=skip, 2=redo coregistration, 3=redo adjustment
+redoFlag = 2; % flag for treating existing subtile .mat files if not 2m version: 1=skip,
+% 2=redo coregistration, 3=redo adjustment, 4=redo at output
 maxNumberOfStrips=100; % maximum number of strips to load in subtile
 
 %paths/files
@@ -125,6 +126,12 @@ for n=1:subN
     fprintf('subtile %d of %d\n',n,subN)
     
     outName = [outDir,'/',tileName,'_',num2str(n),'_10m.mat'];
+    
+    outName2m = [outDir,'/',tileName,'_',num2str(n),'_2m.mat'];
+    if exist(outName2m,'file')
+        fprintf("2m tile exists: %s", outName2m);
+        continue
+    end
     
     if exist(outName,'file')
         switch redoFlag
@@ -259,11 +266,11 @@ for n=1:subN
         %make a vector of z's that ar belonging to the same strip 
         [~,stripid] =  cellfun(@fileparts,fileNames,'uniformoutput',0);
         stripid =  cellfun(@(x) x(1:47),stripid,'uniformoutput',0);
-        [~,~,strip_ind] = unique(stripid);
+        [unique_stripids,~,strip_ind] = unique(stripid);
         
         if length(unique_stripids) == 1
             fprintf('only one strip in stack, skipping\n')
-             continue
+            continue
         end
         
         fprintf('performing pairwise coregistration, ')
