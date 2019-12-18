@@ -18,12 +18,12 @@ if ismac
     lakePolyFile='gshhg_237_alaska_lakes_3413.mat';
 else
     tileDefFile = 'PGC_Imagery_Mosaic_Tiles_Arctic.mat'; %PGC/NGA Tile definition file
-     databaseFile = 'arcticdem_database_unf_pgcpaths.mat';
-     outDir = ['/mnt/pgc/data/scratch/claire/pgc/arcticdem/mosaic/2m_v4/',tileName,'/subtiles'];
-     %addpath('/home/howat.4/demtools');
-     waterTileDir='/mnt/pgc/data/scratch/claire/pgc/arcticdem/coastline/water_tiles';
-     %coastlinePolyFile='gshhg_237_alaska_coastline_3413.mat';
-     %lakePolyFile='gshhg_237_alaska_lakes_3413.mat';
+    databaseFile = 'arcticdem_database_unf_pgcpaths.mat';
+    outDir = ['/mnt/pgc/data/scratch/claire/pgc/arcticdem/mosaic/2m_v4/',tileName,'/subtiles'];
+    %addpath('/home/howat.4/demtools');
+    waterTileDir='/mnt/pgc/data/scratch/claire/pgc/arcticdem/coastline/water_tiles';
+    %coastlinePolyFile='gshhg_237_alaska_coastline_3413.mat';
+    %lakePolyFile='gshhg_237_alaska_lakes_3413.mat';
 
 end
 

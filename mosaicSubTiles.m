@@ -15,6 +15,8 @@ function mosaicSubTiles(subTileDir,dx,x0,x1,y0,y1,outName)
 % order of number strips in subtile, but problems arose by matches at
 % corner overlaps. A bundle adjustment procedure is in development.
 
+fprintf('Indexing subtiles\n')
+
 % make a cellstr of resolved subtile filenames
 subTileFiles=dir([subTileDir,'/*_',num2str(dx),'m.mat']);
 subTileFiles=cellfun( @(x) [subTileDir,'/',x],{subTileFiles.name},'uniformoutput',0);
@@ -247,9 +249,9 @@ end
 if ~(isempty(nonzeros(N)))
     % save matfile outputs 
     if dx == 2
-        save(outName,'x','y','z','N','z_mad','tmax','tmin')
+        save(outName,'x','y','z','N','z_mad','tmax','tmin','-v7.3')
     elseif dx == 10
-        save(outName,'x','y','z','N')
+        save(outName,'x','y','z','N','-v7.3')
     end
 
     % write tiff files
