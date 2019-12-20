@@ -16,7 +16,15 @@ mt = logical(mt);
 % interpolate ortho to same grid
 or = single(or);
 or(or==0) = NaN; % set border to NaN so wont be interpolated
-or = interp2(x,y,or,xi(:)',yi(:),'*cubic');
+try
 
+ or = interp2(x,y,or,xi(:)',yi(:),'*cubic');
+
+catch
+  save interpolate2grid_dump.mat
+ 
+  error('hit interpolate2grid error, dumped content to  interpolate2grid_dump.mat')
+
+end
 or(isnan(or)) = 0; % convert back to int16
 or = int16(or);

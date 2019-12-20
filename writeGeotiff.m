@@ -30,6 +30,8 @@ tempfile =  [tempname(outdir),'.envi'];
 
 if strcmpi('polar stereo south',projstr) || strcmpi('polar stereo north',projstr)
     enviwrite(tempfile,x,y(:),z,'format',fmt,'proj',projstr);
+elseif strcmpi('canada albers equal area conic',projstr)
+    enviwrite(tempfile,x,y(:),z,'format',fmt,'proj',projstr);
 else
     if ~isempty(findstr(projstr,'North'))
         zone = str2num(strrep(projstr,'North',''));

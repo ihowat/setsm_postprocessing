@@ -198,7 +198,17 @@ for i=1:length(f)
     F = scatteredInterpolant(C(n),R(n),double(Ar(n)));
     warning on    
 
-    Ar(Ar==0)=F(C(Ar==0),R(Ar==0));
+    try
+        Ar(Ar==0)=F(C(Ar==0),R(Ar==0));
+    catch ME
+        % segment break
+        fprintf('Error: %s\n', ME.message);
+        fprintf('Due to this error, breaking segment\n');
+        f=f(1:i-1);
+        trans = trans(:,1:i-1);
+        rmse  = rmse(1:i-1);
+        break
+    end
 
     Ar=imresize(Ar,size(A),'bilinear');
     Ar(A==1 & Ar ~=1)=1;
@@ -249,7 +259,7 @@ for i=1:length(f)
     
     
     % coregister this scene to the strip mosaic, only use areas with > 95%
-    [~,trans(:,i),~,rmse(i)] = ...
+    [~,trans(:,i),rmse(i)] = ...
             coregisterdems(Xsub(c(1):c(2)),Ysub(r(1):r(2)),...
             Zsub(r(1):r(2),c(1):c(2)),...
             x(c(1):c(2)),y(r(1):r(2)),...

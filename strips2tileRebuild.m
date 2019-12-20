@@ -102,7 +102,11 @@ if ~disableReg && any(strcmp(reg,'R'))
         
         fprintf('adding anchor strip: %s\n',f{i})
         if exist('maskPolyx','var')
-            mask=[maskPolyx{i}(:) maskPolyy{i}(:)];
+            if ~isempty(maskPolyx)
+                mask=[maskPolyx{i}(:) maskPolyy{i}(:)];
+            else
+                mask=cell(1,2);
+            end
         else
             mask=cell(1,2);
         end
@@ -143,7 +147,11 @@ for i=1:length(m0.rmse)
     end
 
     if exist('maskPolyx','var')
-        mask=[maskPolyx{i}(:) maskPolyy{i}(:)];
+        if ~isempty(maskPolyx)
+            mask=[maskPolyx{i}(:) maskPolyy{i}(:)];
+        else
+            mask=cell(1,2);
+        end
     else
         mask=cell(1,2);
     end

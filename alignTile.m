@@ -86,7 +86,7 @@ for i=2:nfiles
         mt0c= mt0 & (C0 == j+1);
      
         % co-register floating tile to reference tile
-        [~,dtrans{j,i-1},~,rmse{j,i-1}] = coregisterdems(x0, y0, z0, x1, y1, z1, mt0c);
+        [~,dtrans{j,i-1},rmse{j,i-1}] = coregisterdems(x0, y0, z0, x1, y1, z1, mt0c);
 
     end
     
