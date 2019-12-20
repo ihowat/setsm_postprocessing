@@ -13,17 +13,13 @@ if ismac
     databaseFile = '/Users/ihowat/gdrive/projects/earthdem/earthdem_database_unf.mat';
     outDir = ['/Users/ihowat/project/howat.4/earthdem/earthdem_mosaic_testing_1km/',tileName];
     addpath('/Users/ihowat/unity-home/demtools');
-    coastlinePolyFile='gshhg_237_alaska_coastline_3413.mat';
-    lakePolyFile='gshhg_237_alaska_lakes_3413.mat';
+     waterTileDir='~/data/pgc_projects/ak_water_rasters_v2';
 else
     tileDefFile = 'PGC_Imagery_Mosaic_Tiles_Arctic.mat'; %PGC/NGA Tile definition file
      databaseFile = 'arcticdem_database_unf_pgcpaths.mat';
      outDir = ['/mnt/pgc/data/scratch/claire/pgc/arcticdem/mosaic/2m_v4/',tileName,'/subtiles'];
      %addpath('/home/howat.4/demtools');
-     waterTileDir='/mnt/pgc/data/scratch/claire/pgc/arcticdem/coastline/water_tiles';
-     %coastlinePolyFile='gshhg_237_alaska_coastline_3413.mat';
-     %lakePolyFile='gshhg_237_alaska_lakes_3413.mat';
-
+    waterTileDir='/fs/byo/howat-data/pgc_projects/ak_water_rasters_v2';
 end
 
 if ~exist(outDir,'dir')
@@ -46,66 +42,7 @@ y0=tileDefs.y0(tileInd)-buffer;
 x1=tileDefs.x1(tileInd)+buffer;
 y1=tileDefs.y1(tileInd)+buffer;
 
-% load coastline tile polyshape
-fprintf('Loading tile %s coastline\n',tileName)
-coastlinePolyFile = dir([waterTileDir,'/',tileName,'_coast.mat']);
-coastlinePolyFile = cellfun(@(x) [waterTileDir,'/',x], {coastlinePolyFile.name}, 'uniformOutput',false);
-if isempty(coastlinePolyFile)
-    fprintf('Tile %s coastline file does not exist in %s\n',tileName,waterTileDir)
-    return
-end
-load(coastlinePolyFile{1});
-
-% load lakes tile polyshape
-fprintf('Loading tile %s lakes\n',tileName)
-lakePolyFile = dir([waterTileDir,'/',tileName,'_lakes.mat']);
-lakePolyFile = cellfun(@(x) [waterTileDir,'/',x], {lakePolyFile.name}, 'uniformOutput',false);
-%lakePolyFile{1}='gshhg_237_alaska_lakes_3413.mat';
-if isempty(lakePolyFile)
-    fprintf('Tile %s lakes file does not exist in %s\n',tileName,waterTileDir)
-    waterPoly(1)=polyshape();
-else
-    load(lakePolyFile{1});
-    waterPoly = lakePoly;
-end
-
-% make polyshape of this tile with buffer to ensure coverage of border
-% cells
-tilePoly = polyshape([x0-res;x0-res;x1+res;x1+res],[y0-res;y1+res;y1+res;y0-res]);
-
-% make polygons of land and water over this tile
-i=1;
-count=1;
-clear landPoly
-for i=1:length(coastlinePoly)
-    if overlaps(tilePoly,coastlinePoly(i))
-        landPoly(count) = intersect(tilePoly,coastlinePoly(i));
-        count=count+1;
-    end
-end
-
-if isempty(landPoly)
-    fprintf('No land surface in tile %s, returning\n',tileName)
-end
-landPoly = union(landPoly);
-clear coastlinePoly
-
-% % polygons of lakes over this tile
-% i=1;
-% count=1;
-% clear waterPoly
-% waterPoly(1)=polyshape();
-% for i=1:length(lakePoly)
-%     if overlaps(tilePoly,lakePoly(i))
-%         waterPoly(count) = intersect(tilePoly,lakePoly(i));
-%         count=count+1;
-%     end
-% end
-
-if ~isempty(waterPoly)
-    waterPoly = union(waterPoly);
-end
-clear lakePoly
+landTile = getTileWaterMask(waterTileDir,tileName,x0,x1,y0,y1);
 
 % make array of subtile boundary coordinates
 subx0=x0:subtileSize:tileDefs.x1(tileInd)-subtileSize-buffer;
@@ -154,16 +91,7 @@ for n=1:subN
         subtilePoly = polyshape([subx0(n);subx0(n);subx1(n);subx1(n)],...
             [suby0(n);suby1(n);suby1(n);suby0(n)]);
         
-        if ~overlaps(subtilePoly,landPoly)
-            fprintf('No land in subtile %d, skipping\n',n)
-            continue
-        end
-        
-        % make land surface polygon within this subtile for searching
-        sublandPoly = intersect(subtilePoly,landPoly);
-        
-        ind=stripSearch(meta.x,meta.y,sublandPoly);
-        % ind=stripSearch(meta.x,meta.y,subx0(n),subx1(n),suby0(n),suby1(n));
+        ind=stripSearch(meta.x,meta.y,subtilePoly);
         
         % check for maximum #'s of overlaps
         if length(ind) > maxNumberOfStrips   
@@ -216,37 +144,11 @@ for n=1:subN
     
     
     if ~exist('offsets','var')
-        % make land mask
-        subtilePoly = polyshape([subx0(n)-res;subx0(n)-res;subx1(n)+res;subx1(n)+res],...
-            [suby0(n)-res;suby1(n)+res;suby1(n)+res;suby0(n)-res]);
         
-        if ~overlaps(subtilePoly,landPoly)
-            fprintf('No land in subtile %d, skipping\n',n)
-        end
-        
-        sublandPoly = intersect(subtilePoly,landPoly);
-        
-        NR = [0;find(isnan(sublandPoly.Vertices(:,1)));...
-            length(sublandPoly.Vertices(:,1))+1];
-        
-        land =  false(length(y),length(x)); % land mask
-        
-        for nr = 1:length(NR)-1
-            xp = sublandPoly.Vertices(NR(nr)+1:NR(nr+1)-1,1);
-            yp = sublandPoly.Vertices(NR(nr)+1:NR(nr+1)-1,2);
-            land(roipoly(x,y,land,xp,yp))=true;
-        end
-        
-        if overlaps(subtilePoly,waterPoly)
-            subwaterPoly = intersect(subtilePoly,waterPoly);
-            NR = [0;find(isnan(subwaterPoly.Vertices(:,1)));...
-                length(subwaterPoly.Vertices(:,1))+1];
-            for nr = 1:length(NR)-1
-                xp = subwaterPoly.Vertices(NR(nr)+1:NR(nr+1)-1,1);
-                yp = subwaterPoly.Vertices(NR(nr)+1:NR(nr+1)-1,2);
-                land(roipoly(x,y,land,xp,yp))=false;
-            end
-        end
+        % subset tile land/water mask
+        land = interp2(landTile.x,landTile.y(:),single(landTile.z),x,y(:),'*nearest');
+        land(isnan(land)) = 0;
+        land = logical(land);
         
         if ~any(land(:))
             fprintf('No land in subtile %d, skipping\n',n)
