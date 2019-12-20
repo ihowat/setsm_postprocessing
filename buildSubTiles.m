@@ -129,7 +129,7 @@ for n=1:subN
     
     outName2m = [outDir,'/',tileName,'_',num2str(n),'_2m.mat'];
     if exist(outName2m,'file')
-        fprintf("2m tile exists: %s", outName2m);
+        fprintf('2m tile already exists, skipping\n');
         continue
     end
     
