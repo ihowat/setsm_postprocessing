@@ -1,0 +1,6 @@
+*.mat
+*.csv
+*.pyc
+*.asv
+*.txt
+.idea
