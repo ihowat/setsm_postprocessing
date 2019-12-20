@@ -216,7 +216,10 @@ for i=1:length(voidPolys)
         % make sure more than one unique strip
         if length(unique_stripids) > 1
             
-            landsub = interp2(dem.x,dem.y(:),land,x,y,'*nearest');
+            landsub = interp2(dem.x,dem.y(:),single(land),x,y,'*nearest');
+            landsub(isnan(landSub)) = 0;
+            landsub = logical(landsub);
+            
             
             fprintf('performing pairwise coregistration, ')
             offsets=coregisterStack(x,y,z,landsub,strip_ind);
