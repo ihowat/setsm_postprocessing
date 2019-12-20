@@ -8,7 +8,7 @@ demFiles = cellfun(@(x) [demDir,'/',tileName,'/',x], {demFiles.name}, 'uniformOu
 
 fprintf('Loading tile %s water mask\n',tileName)
 waterMask='~/49_10_water.tif';
-waterTileDir='V:\pgc\data\scratch\claire\pgc\arcticdem\coastline\global_surface_water\tiles_v2';
+waterTileDir='V:\pgc\data\scratch\claire\pgc\arcticdem\coastline\global_surface_water\tiles';
 waterMask = dir([waterTileDir,'/',tileName,'_water.tif']);
 waterMask = cellfun(@(x) [waterTileDir,'/',x], {waterMask.name}, 'uniformOutput',false);
 if isempty(waterMask)
@@ -19,10 +19,13 @@ waterMaskFile = waterMask{1};
 %waterMaskFile='~/49_10_water.tif';
 
 % load strip database
-databaseFile = 'arcticdem_database_unf_pgcpaths.mat';
+databaseFile = 'V:\pgc\data\scratch\claire\repos\setsm_postprocessing_pgc\arcticdem_database_unf_pgcpaths.mat';
+changePath= 'V:/pgc'; %if set, will change the path to the REMA directory from what's in the database file. set to [] if none.
+
 meta=load(databaseFile,'fileName','x','y');
 
 for i=1:length(demFiles)
+    demFile = demFiles{i};
     voidMaskFile=strrep(demFile,'.tif','_voidMask.mat');
     outName=strrep(demFile,'_dem.tif','_voidFilled_dem.tif');
 
@@ -109,11 +112,14 @@ for i=1:length(demFiles)
 
         % convert meta names into dem names
         fileNames =  strrep(meta.fileName(ind),'meta.txt','dem.tif');
-        browseNames = strrep(meta.fileName(ind),'meta.txt','dem_browse.tif');
+        browseNames = strrep(meta.fileName(ind),'meta.txt','dem_10m_shade.tif');
 
         if ismac
             fileNames  = strrep(fileNames,'/fs/project/howat.4','/Users/ihowat/project');
             browseNames  = strrep(browseNames,'/fs/project/howat.4','/Users/ihowat/project');
+        else
+            fileNames  = strrep(fileNames,'/mnt/pgc','V:/pgc');
+            browseNames  = strrep(browseNames,'/mnt/pgc','V:/pgc');
         end
 
         % rectangular coordinate range of polygon with buffer
