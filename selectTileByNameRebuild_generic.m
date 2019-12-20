@@ -8,7 +8,7 @@ projstr='polar stereo north';
 
 % file names
 tilefile  = 'PGC_Imagery_Mosaic_Tiles_Arctic.mat'; %PGC/NGA Tile definition file
-dbasefile = ['arcticDEMdatabase_2m_20191125.mat']; % strip datbase file
+dbasefile = ['arcticDEMdatabase_2m.mat']; % strip datbase file
 %dbasefile = ['GrITdatabase_2m.mat']; % strip datbase file
 %includeListFile = 'includeList_baffin.txt'; % list of strips to include
 
@@ -24,6 +24,7 @@ tiles=load(tilefile);
 
 % crop tile structure to overlapping tiles
 tiles = structfun(@(x) ( x(n) ), tiles, 'UniformOutput', false);
+disp(tiles);
 
 % load database file into mat file object
 meta=loadQcData(dbasefile);
@@ -54,14 +55,13 @@ end
 % get gcps into gcp.x, y, and z
 if ~isempty(varargin);
     gcpfile=varargin{1};
-    %gcp = loadGCPFile_is(gcpfile);
     gcp = loadGCPFile_is(gcpfile);
     % send to mosaicker
-    mosaicStrips(meta,tiles,res,outdir,projstr,gcp);
+    mosaicStripsRebuild(meta,tiles,res,outdir,projstr,gcp);
 
 else
     % send to mosaicker
-    mosaicStrips(meta,tiles,res,outdir,projstr);
+    mosaicStripsRebuild(meta,tiles,res,outdir,projstr);
     
 end
 

@@ -2,7 +2,7 @@
 
 udir='/mnt/pgc/data/elev/dem/setsm/REMA/region';
 rdir=dir([udir,'/region_*']);
-outname='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/Remadatabase_2m.mat';
+outname='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/REMAdatabase_2m.mat';
 
 for i=1:length(rdir);
     demDir{i}=[udir,'/',rdir(i).name,'/strips/2m'];

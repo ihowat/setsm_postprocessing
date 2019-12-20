@@ -26,3 +26,4 @@ echo "addpath('${p1}'); addpath('${p6}'); ${p5}('${p2}','${p3}','${p4}','${p7}')
 
 time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p6}'); ${p5}('${p2}','${p3}','${p4}','${p7}'); exit"
 
+echo "Done"

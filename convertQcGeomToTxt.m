@@ -37,7 +37,7 @@ if ~isempty(qc.fileNames)
     I = qc.flag == 3;
     % get basenames, x, y for those indicies
     f = regexprep(qc.fileNames(I), '[\w\d\\:]+/','');
-    f=strrep(f,'_dem_browse.tif','_v2.0');
+    f=strrep(f,'_dem_10m_shade_masked.tif','_v3.0');
     f=strcat('SETSM_',f);
     
     x=qc.x(I);

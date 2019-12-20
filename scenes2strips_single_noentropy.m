@@ -100,7 +100,7 @@ while ~isempty(n)
     seg = seg + 1;
     
     tempfile = [OutDemName,'_dem_temp.tif'];
-    hillshade = [OutDemName,'_dem_browse.tif'];
+    hillshade = [OutDemName,'_dem_10m_shade_masked.tif'];
     system(['gdal_translate -q -tr 10 10 -r bilinear -co bigtiff=if_safer -a_nodata -9999 ',...
         [OutDemName,'_dem.tif'],' ', tempfile]);
     

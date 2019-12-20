@@ -34,7 +34,7 @@ fprintf('QC records: %d\n',length(qc.fileNames));
 if ~isempty(qc.fileNames)
     
     f = regexprep(qc.fileNames, '[\w\d\\:]+/','');
-    f=strrep(f,'_dem_browse.tif','_v2.0');
+    f=strrep(f,'_dem_10m_shade_masked.tif','_v3.0');
     f=strcat('SETSM_',f);
     
     flag = qc.flag;

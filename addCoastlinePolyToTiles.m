@@ -1,6 +1,8 @@
-coastlineShape ='E:\basemap\world\noaa_bound\GSHHS_shp\f\GSHHS_f_L1_3413.shp';
+
+coastlineShape = 'E:\basemap\world\noaa_bound\GSHHS_shp\f\GSHHS_f_L1_3413.shp';
 
 tilefile = 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/PGC_Imagery_Mosaic_Tiles_Arctic_coast.mat'; %PGC/NGA Tile definition file
+
 tiles=load(tilefile);
 
 S = shaperead(coastlineShape);

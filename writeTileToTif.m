@@ -21,18 +21,16 @@ x=x(buffer+1:end-buffer);
 y=y(buffer+1:end-buffer);
 
 OutDemName = strrep(fi,'.mat','.tif');
-if ~exist(OutDemName,'file');
-    
+if ~exist(OutDemName,'file')
     load(fi,'z');
     z=z(buffer+1:end-buffer,buffer+1:end-buffer);
     z(isnan(z)) = -9999;
-    
     writeGeotiff(OutDemName,x,y,z,4,-9999,projstr)
     clear z
 end
 
 OutMatchtagName = strrep(fi,'dem.mat','matchtag.tif');
-if ~exist(OutMatchtagName,'file');
+if ~exist(OutMatchtagName,'file')
     load(fi,'mt');
     mt =mt(buffer+1:end-buffer,buffer+1:end-buffer);
     writeGeotiff(OutMatchtagName,x,y,mt,1,0,projstr)
@@ -54,5 +52,11 @@ end
 %     writeGeotiff(OutDaynumName,x,y,dy,2,0,projstr)
 %     clear dy
 % end
+
+hillshade=strrep(OutDemName,'dem.tif','dem_shade.tif');
+if ~exist(hillshade,'file');
+    system(['gdaldem hillshade -compute_edges -b 1 -q -of GTiff -co tiled=yes -co compress=lzw -co bigtiff=if_safer ',...
+        OutDemName,' ',hillshade]);
+end
 
 clear x y
