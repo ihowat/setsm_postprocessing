@@ -5,7 +5,7 @@ demdir=$1
 f=(`find $demdir -name '*dem.tif'`)
 for i in ${f[@]}; do
 	
-	hfout=${i/dem.tif/dem_browse.tif}
+	hfout=${i/dem.tif/dem_10m_shade_masked.tif}
 
 	if ! [ -e $hfout ]; then
 	
@@ -20,7 +20,7 @@ for i in ${f[@]}; do
 	fi
 
 	ofin=${i/dem.tif/ortho.tif}
-	ofout=${ofin/ortho.tif/ortho_browse.tif}
+	ofout=${ofin/ortho.tif/ortho_10m.tif}
 	
 	if ! [ -e $ofout ]; then 
 		echo "writing "$ofout

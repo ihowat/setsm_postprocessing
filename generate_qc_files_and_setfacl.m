@@ -1,10 +1,10 @@
 function generate_qc_files_and_setfacl(regionRootDir)
 
-region_dir_prefix = 'region_'
+region_dir_prefix = 'arcticdem_31_';
 region_subdir = 'strips_unf/2m';
 
 d = dir(regionRootDir);
-regionDirs = d(cellfun(@(x) startsWith(x, regionDir_prefix), {d.name}));
+regionDirs = d(cellfun(@(x) startsWith(x, region_dir_prefix), {d.name}));
 if isempty(regionDirs)
     fprintf("No region folders found in root dir matching prefix '%s'\n", region_dir_prefix);
     return;
@@ -41,8 +41,8 @@ for i = 1:numel(regionDirs)
     
         fprintf('Creating %s\n', qcFile);
 
-        fileNames = dir([stripDir,'/*dem_browse.tif']);
-        fileNames = cellfun(@(x) [stripDir,'/',x], {fileNames.name}, 'uniformOutput',false);
+        fileNames = dir([stripDir,'/*/*dem_10m_shade_masked.tif']);
+        fileNames = cellfun(@(y,x) [y,'/',x], {fileNames.folder}, {fileNames.name}, 'uniformOutput',false);
         fileNames = fileNames(:);
 
         flag = zeros(size(fileNames));

@@ -36,7 +36,7 @@ if ~isempty(qc.fileNames)
     qc.fileNames=strrep(qc.fileNames,'V:','/mnt');
     qc.fileNames=strrep(qc.fileNames,'\','/');
     
-    [~,IA,IB]=intersect( strrep(meta.f,'_meta.txt',''), strrep(qc.fileNames,'_dem_browse.tif',''));
+    [~,IA,IB]=intersect( strrep(meta.f,'_meta.txt',''), strrep(qc.fileNames,'_dem_10m_shade_masked.tif',''));
 
     fprintf('%d of %d strips with qc data\n',length(IA),length(meta.f))
 

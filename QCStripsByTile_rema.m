@@ -271,7 +271,7 @@ for i=1:length(meta.f)
     count = fprintf('strip %d of %d',i,size(meta.f,1));
     
     % load strip data coverage
-    coverageFile = strrep(meta.f{i}, 'meta.txt', 'dem_coverage.tif');
+    coverageFile = strrep(meta.f{i}, 'meta.txt', 'dem_40m_coverage.tif');
     if exist(coverageFile, 'file')
         
         BW = get_tile_size_coverage(coverageFile, x, y);
@@ -279,7 +279,7 @@ for i=1:length(meta.f)
             
             BW = roipoly(x, y, N, meta.x{i}, meta.y{i});
             if any(BW)
-                fprintf(2, ['\nno overlap between strip *dem_coverage.tif and tile; ' ...
+                fprintf(2, ['\nno overlap between strip *dem_40m_coverage.tif and tile; ' ...
                             'make sure coverage grid is properly aligned to tile grid\n']);
                 fprintf('strip %d of %d',i,size(meta.f,1));
                 coveragealign_warned = true;
@@ -418,9 +418,9 @@ while length(meta.f) >= 1
     
     fprintf('%d of %d strips remaining\n',skipn+1,length(meta.f));
 
-    hillFile=strrep(meta.f{n},'meta.txt','dem_browse.tif');
+    hillFile=strrep(meta.f{n},'meta.txt','dem_10m_shade_masked.tif');
     demFile=strrep(meta.f{n},'meta.txt','dem_10m.tif');
-    orthoFile=strrep(meta.f{n},'meta.txt','ortho_browse.tif');
+    orthoFile=strrep(meta.f{n},'meta.txt','ortho_10m.tif');
     
     fprintf('%s\n',hillFile);
     fprintf('%d new pointsm, gcp sigma=%.2f, mean coreg RMSE=%.2f, max coreg RMSE=%.2f \n',...
@@ -487,7 +487,7 @@ while length(meta.f) >= 1
 %     set(gcf,'units','normalized');
 %     set(gcf,'position',[0.01,0.01,.35,.9])
     
-    qc=load([fileparts(hillFile),'/qc.mat']);
+    qc=load([fileparts(hillFile),'/../qc.mat']);
     
     fileNames = qc.fileNames;
     
@@ -512,12 +512,12 @@ while length(meta.f) >= 1
         while true
 
             if ~coverageFile_warned && coverageFile_missing_total ~= 0
-                fprintf(2, '** Missing %d *dem_coverage.tif files up to this point; %% filled may be incorrect upon qc revisit **\n', coverageFile_missing_total);
+                fprintf(2, '** Missing %d *dem_40m_coverage.tif files up to this point; %% filled may be incorrect upon qc revisit **\n', coverageFile_missing_total);
                 fprintf('(the preceding warning will now be suppressed)\n');
                 coverageFile_warned = true;
             end
             if ~orthoFile_warned && ~exist(orthoFile, 'file')
-                fprintf(2, '** Missing *ortho_browse.tif file; ortho image layer is NOT available for this image **\n');
+                fprintf(2, '** Missing *ortho_10m.tif file; ortho image layer is NOT available for this image **\n');
                 fprintf('(the preceding warning will now be suppressed)\n');
                 orthoFile_warned = true;
             end
@@ -605,7 +605,7 @@ while length(meta.f) >= 1
                                                 guidata(fig_qc, F);
                                             else
                                                 I_ortho = [];
-                                                fprintf(2, '** Missing *_ortho_browse.tif file; falling back to DEM for entropy filter **\n');
+                                                fprintf(2, '** Missing *ortho_10m.tif file; falling back to DEM for entropy filter **\n');
                                             end
                                         end
                                     end
@@ -718,7 +718,7 @@ while length(meta.f) >= 1
                 continue;
             end
 
-            save([fileparts(hillFile),'/qc.mat'],'-struct','qc');
+            save([fileparts(hillFile),'/../qc.mat'],'-struct','qc');
 
             break;
             

@@ -171,7 +171,7 @@ while true
             count = fprintf('strip %d of %d',v,length(n));
 
             % load strip data coverage
-            coverageFile = strrep(meta.f{i}, 'meta.txt', 'dem_coverage.tif');
+            coverageFile = strrep(meta.f{i}, 'meta.txt', 'dem_40m_coverage.tif');
             if ~isempty(changePath)
                 coverageFile=strrep(coverageFile,'/mnt/pgc',changePath);
                 coverageFile=strrep(coverageFile,'/','\');
@@ -221,16 +221,16 @@ while true
             DELETE_ENABLED = false;
      
             % load and plot strip hillshade
-            fileName=strrep(meta.f{n(i)},'meta.txt','dem_browse.tif');
+            fileName=strrep(meta.f{n(i)},'meta.txt','dem_10m_shade_masked.tif');
             if ~isempty(changePath)
                 fileName=strrep(fileName,'/mnt/pgc',changePath);
                 fileName=strrep(fileName,'/','\');
             end
-            orthoFile=strrep(fileName,'dem_browse.tif','ortho_browse.tif');
+            orthoFile=strrep(fileName,'dem_10m_shade_masked.tif','ortho_10m.tif');
             fprintf('loading %d of %d: %s\n',i,length(n),fileName);
             
             % load qc data
-            qcFile = [fileparts(fileName),'\qc.mat'];
+            qcFile = [fileparts(fileName),'\..\qc.mat'];
             qcLockFile = [qcFile,'.lock'];
             if exist(qcLockFile, 'file') ~= 2
                 fprintf(2, 'Please have an admin generate an empty qc.mat.lock file for this region with proper ACL setting: %s\n', qcLockFile);

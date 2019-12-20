@@ -45,7 +45,7 @@ if ~isempty(qc.fileNames)
         qc.fileNames= strrep(qc.fileNames,'/','\');
     end
     
-    [~,IA,IB]=intersect( strrep(m.f,'_meta.txt',''), strrep(qc.fileNames,'_dem_browse.tif',''));
+    [~,IA,IB]=intersect( strrep(m.f,'_meta.txt',''), strrep(qc.fileNames,'_dem_10m_shade_masked.tif',''));
     
     if isempty(IA)
         [~,IA,IB]=intersect( strrep(m.f,'_meta.txt',''), strrep(qc.fileNames,'_dem.tif',''));

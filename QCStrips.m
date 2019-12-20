@@ -5,7 +5,7 @@ outFile=[stripDir,'/qc.mat'];
 
 %system(['rm ',stripDir,'/._*']);
 
-fileNames=dir([stripDir,'/*dem_browse.tif']);
+fileNames=dir([stripDir,'/*/*dem_10m_shade_masked.tif']);
 
 fileNames=cellfun( @(x) [stripDir,'/',x], {fileNames.name},'uniformOutput',false);
 fileNames=fileNames(:);
@@ -62,7 +62,7 @@ end
 function [x,y,flag]=imedit(fileName)
 
 I=readGeotiff(fileName);
-%Ior=readGeotiff(strrep(fileName,'_dem_browse.tif','_ortho_browse.tif'));
+%Ior=readGeotiff(strrep(fileName,'_dem_10m_shade_masked.tif','_ortho_10m.tif'));
 
 % %%
 % landclass = subsetGimpIceMask(...
@@ -149,4 +149,3 @@ end
 clf
 
         
-    
