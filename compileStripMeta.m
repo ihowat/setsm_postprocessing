@@ -54,7 +54,7 @@ for i=1:length(f)
     y{i}=str2num(strrep(c{r},'Y:',''));
     
     
-    r=find(~cellfun(@isempty,strfind(c,'Mosaicking Alignment Statistics (meters)')));
+    r=find(~cellfun(@isempty,strfind(c,'Mosaicking Alignment Statistics')));
     r=r+3;
     A=[];
     while r
@@ -68,6 +68,7 @@ for i=1:length(f)
     if isempty(A);
         Nscenes(i)=1;
     else
+        A(:,1) = round(A(:,1), 2);
         
         avg_rmse(i)=mean(A(:,1));
         med_rmse(i)=median(A(:,1));
