@@ -54,7 +54,7 @@ for i=1:length(f)
     y{i}=str2num(strrep(c{r},'Y:',''));
     
     
-    r=find(~cellfun(@isempty,strfind(c,'Mosaicking Alignment Statistics (meters)')));
+    r=find(~cellfun(@isempty,strfind(c,'Mosaicking Alignment Statistics')));
     r=r+3;
     A=[];
     while r
