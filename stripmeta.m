@@ -65,11 +65,11 @@ fprintf(fid,'\n');
 
 load(transfile);
 fprintf(fid,'Mosaicking Alignment Statistics (meters) \n');
-fprintf(fid,'scene, rmse, dz, dx, dy\n');
+fprintf(fid,'scene, rmse, dz, dx, dy, dz_err, dx_err, dy_err\n');
 i=1;
 N=length(scene);
 for i=1:N
-    fprintf(fid,'%s %.2f %.4f %.4f %.4f\n',scene{i},rmse(i),trans(:,i)'); 
+    fprintf(fid,'%s %.2f %.4f %.4f %.4f %.4f %.4f %.4f\n',scene{i},rmse(i),trans(:,i)');
 end
 
 fprintf(fid,'\n');
