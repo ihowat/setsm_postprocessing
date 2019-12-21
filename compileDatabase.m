@@ -2,7 +2,7 @@
 
 udir='/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region';
 rdir=dir([udir,'/arcticdem_3*']);
-outname='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticDEMdatabase_2m_20191125.mat';
+outname='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticDEMdatabase_2m_20191221.mat';
 
 k=0;
 for i=1:length(rdir);
