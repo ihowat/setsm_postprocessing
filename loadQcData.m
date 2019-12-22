@@ -6,9 +6,10 @@ function meta = loadQcData(dbasefile)
 % load database file into mat file object
 meta=load(dbasefile);
 
-regionDir = regexprep(meta.f, '[\d\w]*[/\\][\d\w]*.txt$', '');
-%disp(regionDir);
-uniqueRegionDir=unique(regionDir);
+%regionDir = regexprep(meta.f, '[\d\w]*[/\\][\d\w]*.txt$', '');
+%%disp(regionDir);
+%uniqueRegionDir=unique(regionDir);
+uniqueRegionDir=unique(meta.region);
 %disp(uniqueRegionDir);
 i=1;
 qc.fileNames=[];
