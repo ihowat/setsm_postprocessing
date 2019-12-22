@@ -78,7 +78,7 @@ a.projstr=[]; i=1; for i=1:length(projstr); a.projstr = [a.projstr;projstr{i}]; 
 a.region=cell(size(a.f));
 i=1;
 for i=1:length(a.f); 
-        a.region{i} = fileparts(a.f{i});
+        a.region{i} = fileparts(fileparts(a.f{i}));
 end
 
 a.creationDate=cell2mat(creationDate(:)); clear creationDate
