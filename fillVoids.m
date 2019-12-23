@@ -7,7 +7,7 @@ demFiles = cellfun(@(x) [demDir,'/',tileName,'/',x], {demFiles.name}, 'uniformOu
 %demFile='~/49_10_1_1_2m_dem.tif';
 
 fprintf('Loading tile %s water mask\n',tileName)
-waterMask='~/49_10_water.tif';
+%waterMask='~/49_10_water.tif';
 waterTileDir='V:\pgc\data\scratch\claire\pgc\arcticdem\coastline\global_surface_water\tiles';
 waterMask = dir([waterTileDir,'/',tileName,'_water.tif']);
 waterMask = cellfun(@(x) [waterTileDir,'/',x], {waterMask.name}, 'uniformOutput',false);
@@ -189,6 +189,7 @@ for i=1:length(demFiles)
                 case 's' % stop selecting
                     usevec(usevec ~= 2) = 0;
                     clf
+
                     break
                 otherwise % unrecognized input, do over
                     clf
@@ -237,7 +238,9 @@ for i=1:length(demFiles)
             % make sure more than one unique strip
             if length(unique_stripids) > 1
 
-                landsub = interp2(dem.x,dem.y(:),land,x,y,'*nearest');
+                landsub = interp2(dem.x,dem.y(:),single(land),x,y,'*nearest');
+                landsub(isnan(landsub)) = 0;
+                landsub = logical(landsub);
 
                 fprintf('performing pairwise coregistration, ')
                 offsets=coregisterStack(x,y,z,landsub,strip_ind);
