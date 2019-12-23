@@ -1,14 +1,17 @@
-function makeVoidMask(tileName)
+function makeVoidMask(subTileName)
 % makeVoidMask
 % load a dem file and make a void mask by drawing polygons on the hillshade
 % image. Outputs the voidMask and polygons to a .mat file. The output
 % will then be used to fill gaps in the dem using "fillGaps.m". Currently
 % set up to read a 2m tile and rescale to 10m for editing.
 
+% subTileName example: 49_10_1_1
+
+sl = split(subTileName,'_');
+tileName = strjoin(sl(1:2),'_');
 demDir = 'V:\pgc\data\scratch\claire\pgc\arcticdem\mosaic\2m_v4';
-demFiles = dir([demDir,'/',tileName,'/',tileName,'*_2m_dem.tif']);
-demFiles = cellfun(@(x) [demDir,'/',tileName,'/',x], {demFiles.name}, 'uniformOutput', false);
-%demFile='V:\pgc\data\scratch\claire\pgc\arcticdem\mosaic\2m_v4\44_18\44_18_1_1_2m_dem.tif';
+demFile = dir([demDir,'/',tileName,'/',subTileName,'_2m_dem.tif']);
+demFile = cellfun(@(x) [demDir,'/',tileName,'/',x], {demFile.name}, 'uniformOutput', false);
 
 fprintf('Loading tile %s water mask\n',tileName)
 waterMask='~/49_10_water.tif';
@@ -21,39 +24,37 @@ if isempty(waterMask)
 end
 waterMask = waterMask{1};
 
-for i=1:length(demFiles)
-    demFile = demFiles{i};
-    voidMaskFile=strrep(demFile,'.tif','_voidMask.mat');
+voidMaskFile=strrep(demFile,'.tif','_voidMask.mat');
 
-    %% load data and resize to 10m
-    fprintf('loading dem file: %s\n',demFile)
-    dem = readGeotiff(demFile);
-    sz = size(dem.z);
-    
-    % convert nodata to nans
-    dem.z(dem.z == -9999) = NaN;
+%% load data and resize to 10m
+fprintf('loading dem file: %s\n',demFile)
+dem = readGeotiff(demFile);
+sz = size(dem.z);
 
-    %downsize dem to 10m
-    dem10.x = imresize(dem.x,.2);
-    dem10.y = imresize(dem.y,.2);
-    dem10.z = imresize(dem.z,.2);
-    
-    clear dem
+% convert nodata to nans
+dem.z(dem.z == -9999) = NaN;
 
-    % build hillshade
-    h10 = hillshade(dem10.z,dem10.x,dem10.y);
+%downsize dem to 10m
+dem10.x = imresize(dem.x,.2);
+dem10.y = imresize(dem.y,.2);
+dem10.z = imresize(dem.z,.2);
 
-    %% build land10 mask
-    land = readGeotiff(waterMask);
-    land.z = land.z==0;
+clear dem
 
-    land10=interp2(land.x,land.y(:),single(land.z),...
-        dem10.x,dem10.y(:),'*nearest');
+% build hillshade
+h10 = hillshade(dem10.z,dem10.x,dem10.y);
 
-    land10(isnan(land10)) = 0;
-    land10 = logical(land10);
+%% build land10 mask
+land = readGeotiff(waterMask);
+land.z = land.z==0;
 
-    clear land
+land10=interp2(land.x,land.y(:),single(land.z),...
+    dem10.x,dem10.y(:),'*nearest');
+
+land10(isnan(land10)) = 0;
+land10 = logical(land10);
+
+clear land
 
 %     % make polyshape of this tile with buffer to ensure coverage of border
 %     % cells
@@ -83,17 +84,15 @@ for i=1:length(demFiles)
 %         end
 %     end
 
-    %% build void mask with manual editing
+%% build void mask with manual editing
 
-    % make mask of missing data that's not water
-    voidMask = ~isnan(dem10.z) | ~land10;
+% make mask of missing data that's not water
+voidMask = ~isnan(dem10.z) | ~land10;
 
-    [voidMask,voidPolys] = manualEdit(dem10.x,dem10.y,h10,voidMask,land10);
-    close
+[voidMask,voidPolys] = manualEdit(dem10.x,dem10.y,h10,voidMask,land10);
+close
 
-    % resize to 2m
-    voidMask = imresize(voidMask,sz,'nearest');
+% resize to 2m
+voidMask = imresize(voidMask,sz,'nearest');
 
-    save(voidMaskFile,'voidMask','voidPolys');
-    
-end
+save(voidMaskFile,'voidMask','voidPolys');
