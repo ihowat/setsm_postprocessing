@@ -100,10 +100,13 @@ def main():
         for task in tasks:
             dstfn = "{}{}_{}m.mat".format(task.t,task.st,args.res)
             dstfp = os.path.join(srcdir, task.t, dstfn)
+            sem = os.path.join(srcdir, task.t, dstfn.replace('.mat','_empty.txt'))
             subtile_dir = os.path.join(srcdir,task.t,'subtiles')
 
             if os.path.isfile(dstfp):
                 print 'Output exists, skipping {}'.format(dstfn)
+            elif os.path.isfile(sem):
+                print 'N array was empty on last run, skipping {}'.format(dstfn)
 
             else:
                 ## if pbs, submit to scheduler
