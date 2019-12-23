@@ -275,4 +275,8 @@ if ~(isempty(nonzeros(N)))
     end
 else
     fprintf('N array is empty, outputs not written\n');
+    % Write semophone file so that rerunning does not try this tile again
+    outNameSem = strrep(outName,'.mat','_empty.txt');
+    fileID = fopen(outNameSem,'w');
+    fclose(fileID);
 end
