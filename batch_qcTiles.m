@@ -3,7 +3,7 @@ function batch_qcTiles(tileNames)
 FIGURE_CLEANUP = onCleanup(@() eval('close all'));
 
 %tileFile = '/data4/REMA/region_06_luitpold_coast/mosaic_reg_qc_feather2/40m/36_18_40m_dem.mat';
-dbasefile  = 'V:\pgc\data\scratch\claire\repos\setsm_postprocessing_pgc\arcticDEMdatabase_2m_20191125.mat'; % database file
+dbasefile  = 'V:\pgc\data\scratch\claire\repos\setsm_postprocessing_pgc\arcticDEMdatabase_2m_20191221.mat'; % database file
 tileDir = 'V:\pgc\data\elev\dem\setsm\ArcticDEM\mosaic\2m_v4_tileqc'; %directory containing tiles
 %tileName = '31_39';
 
