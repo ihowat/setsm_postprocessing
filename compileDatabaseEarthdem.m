@@ -1,13 +1,13 @@
 % built a searchable index of all data
 
-udir='/mnt/pgc/data/elev/dem/setsm/aboveDEM/region';
-rdir=dir([udir,'/*']);
-outname='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/aboveDEMdatabase_2m.mat';
+udir='/mnt/pgc/data/elev/dem/setsm/EarthDEM/region';
+rdir=dir([udir,'/earthdem_*']);
+outname='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing/EarthDEMdatabase_2m.mat';
 
 k=0;
 for i=1:length(rdir);
     fprintf('Building array of DEM paths in %s\n',rdir(i).name);
-    pdir=dir([udir,'/',rdir(i).name,'/strips_102001/2m/*_2m_lsf']);
+    pdir=dir([udir,'/',rdir(i).name,'/strips_unf/2m/*_2m_lsf']);
     for j=1:length(pdir);
         k=k+1;
         demDir{k}=[pdir(j).folder,'/',pdir(j).name];
@@ -79,6 +79,7 @@ for i=1:length(demDir);
 end
 
 a.f=[]; i=1; for i=1:length(f); a.f = [a.f;f{i}]; end; clear f;
+a.projstr=[]; i=1; for i=1:length(projstr); a.projstr = [a.projstr;projstr{i}]; end; clear projstr;
 
 a.region=cell(size(a.f));
 i=1;
