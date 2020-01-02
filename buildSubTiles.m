@@ -295,7 +295,6 @@ for n=1:subN
                 % loop through dems in subtile stack and calculate vertical
                 % difference between dem and reference dem, saving the
                 % standard deviation over land.
-                i=1;
                 for i=1:size(z,3)
                     dz =  zri - z(:,:,i);
                     dz_std(i) = nanstd(dz(land));
@@ -303,22 +302,20 @@ for n=1:subN
                 
                 % sort the dems by lowest std dev from reference and select
                 % the least number of dems needed for 100% cover
-                [~,n] = sort(dz_std,'ascend');
+                [~,nsort] = sort(dz_std,'ascend');
                 
                 % successively calculate coverage provided by each ith dem
                 % in order of increasing std dev from reference, breaking
                 % when coverage is 100%
-                i=1;
-                c1 = nan(size(n));
-                for i=1:length(n)
-                    c = any(z(:,:,n(1:i)),3);
+                for i=1:length(nsort)
+                    c = any(z(:,:,nsort(1:i)),3);
                     if sum(c(:)) == c0
                         break
                     end
                 end
                 
                 % only retain the top ith dems
-                n = n(1:i);
+                nsort = nsort(1:i);
                 
                 % set adjustment thresholds to inf to shut them off or
                 % indicate no adjustment
@@ -328,20 +325,20 @@ for n=1:subN
                 min_abs_median_dz_coregMax = inf;
                 
                 % only perform adjustment if more than 1 dem
-                if length(n) > 1
+                if length(nsort) > 1
                     
-                    % find coregistration offsets for pairs of n dems
-                    in = ismember(offsets.i,n) & ismember(offsets.j,n);
+                    % find coregistration offsets for pairs of nsort dems
+                    in = ismember(offsets.i,nsort) & ismember(offsets.j,nsort);
                     
                     % if these DEMs dont overlap, or are of the same strip,
                     % they wont have offsets: skip
                     if any(in)
                         
-                        % sample the offset structure for the pairs of n
+                        % sample the offset structure for the pairs of nsort
                         offsets_sub = structfun(@(x) x(in), offsets,'uniformoutput',0);
                         
-                        % perform adjustment for pairs of n
-                        [dZ(n),dX(n),dY(n)] = adjustOffsets(offsets_sub,...
+                        % perform adjustment for pairs of nsort
+                        [dZ(nsort),dX(nsort),dY(nsort)] = adjustOffsets(offsets_sub,...
                             'offsetErrMax',offsetErrMax,...
                             'min_sigma_dz_coregMax',min_sigma_dz_coregMax,...
                             'min_abs_mean_dz_coregMax',min_abs_mean_dz_coregMax,...
@@ -350,11 +347,11 @@ for n=1:subN
                 end
                 
                 % if adjustment still fails, or just one dem, just set to
-                % zero for n "best" dems.
+                % zero for nsort "best" dems.
                 if ~any(~isnan(dZ))
-                    dZ(n) = 0;
-                    dX(n) = 0;
-                    dY(n) = 0;
+                    dZ(nsort) = 0;
+                    dX(nsort) = 0;
+                    dY(nsort) = 0;
                 end
                 
             end
