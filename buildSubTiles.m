@@ -108,6 +108,7 @@ for n=1:subN
             clear za za_med dZ dX dY
             
         end
+    end
     
     % find overlapping strips
     if ~exist('fileNames','var')
