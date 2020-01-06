@@ -11,9 +11,6 @@ mosaic_schemes = {
 
 Task = namedtuple('Task', 't st x0 x1 y0 y1')
 
-
-
-
 def main():
 
     ## args

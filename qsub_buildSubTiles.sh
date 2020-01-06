@@ -26,9 +26,14 @@ echo "var1: ${p1}"
 echo "var2: ${p2}"
 echo "var3: ${p3}"
 echo "var4: ${p4}"
+echo "var4: ${p5}"
+echo "var5: ${p6}"
+echo "var6: ${p7}"
+echo "var7: ${p8}"
+echo "var8: ${p9}"
 echo
 
-echo matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p4}'); ${p2}('${p3}'); exit"
-time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p4}'); ${p2}('${p3}'); exit"
+echo matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}','${p5}','${p6}','${p7}','${p8}','${p9}'); exit"
+time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}','${p5}','${p6}','${p7}','${p8}','${p9}'); exit"
 
 echo "Done"
