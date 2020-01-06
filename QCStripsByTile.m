@@ -355,7 +355,7 @@ while length(meta.f) >= 1
     %set(gcf,'position',[0.01,0.01,.35,.9])
     
     
-    qc=load([fileparts(fileName),'/qc.mat']);
+    qc=load([fileparts(fileparts(fileName)),'/qc.mat']);
     
     % qc.fileNames=strrep(qc.fileNames,'/data2','/data3');
     
@@ -439,7 +439,7 @@ while length(meta.f) >= 1
             end
         end
         
-        save([fileparts(fileName),'/qc.mat'],'-struct','qc');
+        save([fileparts(fileparts(fileName)),'/qc.mat'],'-struct','qc');
         
     end
     

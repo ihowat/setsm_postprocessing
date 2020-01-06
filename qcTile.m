@@ -94,7 +94,7 @@ while k
             set(gca,'xlim',[min(I.x)-500 max(I.x)+500],'ylim',[min(I.y)-500 max(I.y)+500])
             
             % load qc data
-            qc=load([fileparts(fileName),'/qc.mat']);
+            qc=load([fileparts(fileparts(fileName)),'/qc.mat']);
             [~,IA]=intersect(qc.fileNames, fileName);
             
             % existing qc is 3, plot the mask polys
@@ -210,7 +210,7 @@ while k
             
             clf
             
-            save([fileparts(fileName),'/qc.mat'],'-struct','qc');
+            save([fileparts(fileparts(fileName)),'/qc.mat'],'-struct','qc');
             
             
         end
