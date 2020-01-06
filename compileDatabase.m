@@ -15,6 +15,7 @@ for i=1:length(rdir);
 end
 
 f               = cell(length(rdir),1);
+region          = cell(length(rdir),1);
 creationDate    = cell(length(rdir),1);
 stripDate       = cell(length(rdir),1);
 res             = cell(length(rdir),1);
