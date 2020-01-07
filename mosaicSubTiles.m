@@ -50,10 +50,10 @@ if exist('quadrant','var')
         case lower('1_1') %lower left quadrant
             n = mod(subTileNum,100) > 0 & mod(subTileNum,100) <= 51 &...
                 subTileNum <= 5151;
-        case lower('1_2') %upper left quadrant
+        case lower('2_1') %upper left quadrant
             n =  (mod(subTileNum,100) == 0 | mod(subTileNum,100) >= 50) &...
                 subTileNum <= 5200;
-        case lower('2_1') %lower right quadrant
+        case lower('1_2') %lower right quadrant
             n = mod(subTileNum,100) > 0 & mod(subTileNum,100) <= 51 &...
                 subTileNum >= 5001;
         case lower('2_2') %upper right quadrant
@@ -77,6 +77,7 @@ if ~isempty(n)
     buffcheck2=load(subTileFiles{n+1},'y');
     buff = (length(buffcheck2.y)-find(buffcheck1.y(1) == buffcheck2.y))/2;
     buff = round(buff);
+end
 
 fprintf('performing coregistration & adjustment between adjoining subtiles\n')
 dZ = getOffsets(subTileFiles,subTileNum,buff,outName);
