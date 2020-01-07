@@ -21,7 +21,8 @@ i=1;
 for i=1:length(tileRow)
     
     % get this tile
-    waterTileName=[waterTileDir,'/',num2str(tileCol(i)),'_',num2str(tileRow(i)),'_water.tif'];
+    waterTileName=[waterTileDir,'/',sprintf('%02d',tileCol(i)),'_',...
+        sprintf('%02d',tileRow(i)),'_water.tif'];
     
     if ~exist(waterTileName,'file')
         continue
