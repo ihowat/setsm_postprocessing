@@ -33,7 +33,7 @@ out.mean_dz_coreg=NaN;
 out.median_dz_coreg=NaN;
 out.sigma_dz_coreg=NaN;
 
-if N < 2
+if N < 2 || length(unique(strip_ind)) < 2
     fprintf('less than two DEMs in the stack, skipping\n')
     return
 end
