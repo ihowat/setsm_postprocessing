@@ -15,8 +15,25 @@ N = size(z,3); % # of strips
 %     end
 %
 
+out.i=NaN;
+out.j=NaN;
+out.dz = NaN;
+out.dx = NaN;
+out.dy = NaN;
+
+out.dze = NaN;
+out.dxe = NaN;
+out.dye = NaN;
+
+out.mean_dz_uncoreg=NaN;
+out.median_dz_uncoreg=NaN;
+out.sigma_dz_uncoreg=NaN;
+
+out.mean_dz_coreg=NaN;
+out.median_dz_coreg=NaN;
+out.sigma_dz_coreg=NaN;
+
 if N < 2
-    out=[];
     fprintf('less than two DEMs in the stack, skipping\n')
     return
 end
@@ -92,10 +109,6 @@ for pair_n=1:Npairs
         sigma_dz_coreg(pair_n) = NaN;
     end
 end
-
-
-
-
 
 out.i=i;
 out.j=j;
