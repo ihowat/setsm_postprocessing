@@ -294,7 +294,13 @@ for n=1:subN
                     'map_subset',[x(1)-90 x(end)+90 y(end)-90 y(1)+90]);
                 
                 % interpolate reference dem to subtile
-                zri = interp2(zr.x,zr.y(:),zr.z,x,y(:),'*linear');
+                try
+                   zri = interp2(zr.x,zr.y(:),zr.z,x,y(:),'*linear');
+                catch
+                   fprintf('Reference dem failed to interpolate to subtile, skipping\n');
+                    continue
+                end
+                
                 
                 % create vertical std dev vector
                 dz_std = nan(size(z,3),1);
