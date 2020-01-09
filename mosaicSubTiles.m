@@ -24,7 +24,7 @@ dx = varargin{2};
 outName = varargin{3};
 
 if nargin == 4
-    quad = varargin{4};
+    quadrant = varargin{4};
 end
 
 fprintf('Indexing subtiles\n')
@@ -43,10 +43,10 @@ subTileNum = cellfun(@(x) str2num(x{3}),subTileName);
 [subTileNum,n] = sort(subTileNum);
 subTileFiles = subTileFiles(n);
 
-if exist('quad','var')
-    fprintf('selecting subtiles in quadrant %s\n',quad)
+if exist('quadrant','var')
+    fprintf('selecting subtiles in quadrant %s\n',quadrant)
     % select subtiles by quadrant
-    switch quad
+    switch quadrant
         case lower('1_1') %lower left quadrant
             n = mod(subTileNum,100) > 0 & mod(subTileNum,100) <= 51 &...
                 subTileNum <= 5151;
