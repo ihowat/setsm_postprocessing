@@ -64,14 +64,8 @@ for n=1:subN
     
     outName = [outDir,'/',tileName,'_',num2str(n),'_10m.mat'];
     
-    outName2m = [outDir,'/',tileName,'_',num2str(n),'_2m.mat'];
-    if exist(outName2m,'file')
-        fprintf('2m tile already exists, skipping\n');
-        continue
-    end
-    
     if exist(outName,'file')
-
+        
         % if file exists, make sure it has a za_med array that isnt all
         % NaNs
         mvars  = who('-file',outName);
@@ -188,8 +182,38 @@ for n=1:subN
         [x,y,z] =extractSubGrid(fileNames,subx0(n),subx1(n),...
             suby0(n),suby1(n),res);
         
+        % save full filename list with repeat segments for 2m
+        fileNames0 = fileNames;
+        
+        % merge segmentsfrom same strips
+        % dont get offsets between segs in same strip:make a vector of z's
+        % that ar belonging to the same strip
+        [~,stripid] =  cellfun(@fileparts,fileNames,'uniformoutput',0);
+        stripid =  cellfun(@(x) x(1:47),stripid,'uniformoutput',0);
+        unique_stripid = unique(stripid);
+        
+        r=[];
+        it=1;
+        for it=1:length(unique_stripid)
+            
+            segs = find(strcmp(stripid,unique_stripid(it)));
+            
+            if length(segs) > 1
+                
+                z(:,:,segs(1)) = nanmedian(z(:,:,segs),3);
+                
+                r = [r,segs(2:end)];
+            end
+        end
+        
+        z(:,:,r) = [];
+        fileNames(r) = [];
+        t(r) = [];
+        
+        clear it segs r
+        
         fprintf('saving x,y,z,t,fileNames to %s\n',outName)
-        save(outName,'x','y','z','t','fileNames','-v7.3');
+        save(outName,'x','y','z','t','fileNames','fileNames0','-v7.3');
         
     end
     
@@ -214,7 +238,7 @@ for n=1:subN
         % that ar belonging to the same strip
         [~,stripid] =  cellfun(@fileparts,fileNames,'uniformoutput',0);
         stripid =  cellfun(@(x) x(1:47),stripid,'uniformoutput',0);
-        [unique_stripids,~,strip_ind] = unique(stripid);
+        [~,~,strip_ind] = unique(stripid);
         
         fprintf('performing pairwise coregistration, ')
         offsets=coregisterStack(x,y,z,land,strip_ind);
@@ -247,7 +271,7 @@ for n=1:subN
             dZ = zeros(size(z,3),1);
             dX = zeros(size(z,3),1);
             dY = zeros(size(z,3),1);
-       
+            
         else
             
             %number of grid points with coverage
@@ -295,12 +319,11 @@ for n=1:subN
                 
                 % interpolate reference dem to subtile
                 try
-                   zri = interp2(zr.x,zr.y(:),zr.z,x,y(:),'*linear');
+                    zri = interp2(zr.x,zr.y(:),zr.z,x,y(:),'*linear');
                 catch
-                   fprintf('Reference dem failed to interpolate to subtile, skipping\n');
+                    fprintf('Reference dem failed to interpolate to subtile, skipping\n');
                     continue
                 end
-                
                 
                 % create vertical std dev vector
                 dz_std = nan(size(z,3),1);
@@ -376,7 +399,7 @@ for n=1:subN
             'min_abs_mean_dz_coregMax','min_abs_median_dz_coregMax','-append');
         
     end
-
+    
     % apply adustment
     if ~exist('za','var')
         
@@ -420,11 +443,16 @@ for n=1:subN
     
     fprintf('making 2m version\n')
     outName2m = strrep(outName,'_10m.mat','_2m.mat');
-    make2m(fileNames,t,x,y,dZ,dX,dY,land,fa,outName2m);
+    make2m(fileNames0,x,y,dZ,dX,dY,land,fa,outName2m);
     
 end
 
-function make2m(fileNames,t,x,y,dZ,dX,dY,land,fa,outName)
+function make2m(fileNames,x,y,dZ,dX,dY,land,fa,outName)
+
+% make date vector
+[~,name] =  cellfun(@fileparts,fileNames,'uniformoutput',0);
+t=cellfun(@(x) datenum(x(6:13),'yyyymmdd'),name)';
+
 
 % layers with missing adjustments
 n_missing = isnan(dZ);
@@ -440,6 +468,33 @@ fileNames = strrep(fileNames,'_10m.tif','.tif');
 
 [x,y,z] =extractSubGrid(fileNames,min(x),max(x),...
     min(y),max(y),2);
+
+% merge segmentsfrom same strips
+% dont get offsets between segs in same strip:make a vector of z's
+% that ar belonging to the same strip
+[~,stripid] =  cellfun(@fileparts,fileNames,'uniformoutput',0);
+stripid =  cellfun(@(x) x(1:47),stripid,'uniformoutput',0);
+unique_stripid = unique(stripid);
+
+r=[];
+it=1;
+for it=1:length(unique_stripid)
+    
+    segs = find(strcmp(stripid,unique_stripid(it)));
+    
+    if length(segs) > 1
+        
+        z(:,:,segs(1)) = nanmedian(z(:,:,segs),3);
+        
+        r = [r,segs(2:end)];
+    end
+end
+
+z(:,:,r) = [];
+fileNames(r) = [];
+t(r) = [];
+
+clear it segs r
 
 % make adjusted z array
 za=nan(size(z),'single');
