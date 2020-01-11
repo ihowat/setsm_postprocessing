@@ -443,6 +443,23 @@ for n=1:subN
     
     fprintf('making 2m version\n')
     outName2m = strrep(outName,'_10m.mat','_2m.mat');
+    
+    % if strip segments were combined, need to expand offset vectors and fa
+    % array to match orginal file list
+    if length(fileNames0) ~= length(fileNames) 
+
+        [~,stripid] =  cellfun(@fileparts,fileNames0,'uniformoutput',0);
+        stripid =  cellfun(@(x) x(1:47),stripid,'uniformoutput',0);
+        [~,~,strip_ind] = unique(stripid);
+         
+         dZ = dZ(strip_ind);
+         dX = dX(strip_ind);
+         dY = dY(strip_ind);
+         
+         fa = fa(:,:,strip_ind);
+    
+    end
+    
     make2m(fileNames0,x,y,dZ,dX,dY,land,fa,outName2m);
     
 end
@@ -452,7 +469,6 @@ function make2m(fileNames,x,y,dZ,dX,dY,land,fa,outName)
 % make date vector
 [~,name] =  cellfun(@fileparts,fileNames,'uniformoutput',0);
 t=cellfun(@(x) datenum(x(6:13),'yyyymmdd'),name)';
-
 
 % layers with missing adjustments
 n_missing = isnan(dZ);
@@ -493,6 +509,9 @@ end
 z(:,:,r) = [];
 fileNames(r) = [];
 t(r) = [];
+dZ(r) = [];
+dX(r) = [];
+dY(r) = [];
 
 clear it segs r
 
