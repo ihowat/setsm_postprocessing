@@ -549,7 +549,7 @@ za_med = nanmedian(za,3);
 %za_std =  nanstd(za,[],3);
 za_mad = mad(za,1,3);
 N = uint8(sum(~isnan(za),3));
-Nmt = sum(mta,3);
+Nmt = uint8(sum(mta,3));
 
 % resize land mask
 land = imresize(land,size(za_med),'nearest');
