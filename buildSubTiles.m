@@ -179,9 +179,13 @@ for n=1:subN
     if ~exist('z','var')
         
         fprintf('extracting %d strip subsets ',length(fileNames))
-        [x,y,z] =extractSubGrid(fileNames,subx0(n),subx1(n),...
+        [x,y,z,missingFlag] =extractSubGrid(fileNames,subx0(n),subx1(n),...
             suby0(n),suby1(n),res);
         
+        % remove layers missing data
+        z = z(:,:,~missingFlag);
+        fileNames=fileNames(~missingFlag);
+
         % save full filename list with repeat segments for 2m
         fileNames0 = fileNames;
         
@@ -482,7 +486,7 @@ t(n_missing) = [];
 
 fileNames = strrep(fileNames,'_10m.tif','.tif');
 
-[x,y,z] =extractSubGrid(fileNames,min(x),max(x),...
+[x,y,z,~,mt] =extractSubGrid(fileNames,min(x),max(x),...
     min(y),max(y),2);
 
 % merge segmentsfrom same strips
@@ -502,11 +506,14 @@ for it=1:length(unique_stripid)
         
         z(:,:,segs(1)) = nanmedian(z(:,:,segs),3);
         
+        mt(:,:,segs(1)) = any(mt(:,:,segs),3);
+        
         r = [r,segs(2:end)];
     end
 end
 
 z(:,:,r) = [];
+mt(:,:,r) = [];
 fileNames(r) = [];
 t(r) = [];
 dZ(r) = [];
@@ -515,26 +522,34 @@ dY(r) = [];
 
 clear it segs r
 
-% make adjusted z array
+% make adjusted z and mt arrays
 za=nan(size(z),'single');
-
+mta = false(size(mt));
 for k=1:size(z,3)
     zak = interp2(x + dX(k),y + dY(k), z(:,:,k) + dZ(k),...
         x,y,'*linear');
     
+    mtak = interp2(x + dX(k),y + dY(k), single(mt(:,:,k)),...
+        x,y,'*nearest');
+    
+    mtak(isnan(mtak)) = 0;
+    mtak = logical(mtak);
+    
     if any(any(~fa(:,:,k)))
-        
-        zak(~imresize(fa(:,:,k),size(za(:,:,k)),'nearest'))=NaN;
+        fak = imresize(fa(:,:,k),size(za(:,:,k)),'nearest');
+        zak(~fak)=NaN;
+        mtak(~fak) = false;
     end
     
     za(:,:,k) = zak;
-    
+    mta(:,:,k) = mtak;
 end
 
 za_med = nanmedian(za,3);
 %za_std =  nanstd(za,[],3);
 za_mad = mad(za,1,3);
 N = uint8(sum(~isnan(za),3));
+Nmt = sum(mta,3);
 
 % resize land mask
 land = imresize(land,size(za_med),'nearest');
@@ -591,5 +606,5 @@ tmin = uint16(tmin);
 % za2 = za_sort(ind2);
 
 fprintf('saving x, y za_med land za_mad N tmax tmin to %s\n',outName)
-save(outName,'x','y','za_med','land','za_mad','N','tmax','tmin','-v7.3');
+save(outName,'x','y','za_med','land','za_mad','N','Nmt','tmax','tmin','-v7.3');
 
