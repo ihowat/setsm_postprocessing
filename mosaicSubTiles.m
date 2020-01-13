@@ -115,6 +115,7 @@ z = nan(length(y),length(x));
 N = zeros(length(y),length(x),'uint8');
 
 if dx == 2
+    Nmt = zeros(length(y),length(x),'uint8');
     z_mad = z;
     tmax = zeros(length(y),length(x),'uint16');
     tmin = zeros(length(y),length(x),'uint16');
@@ -159,11 +160,11 @@ for filen=1:NsubTileFiles
     % load subtile into structure
     if dx == 2
         if ismember(mvars,'land')
-            zsub=load(subTileFiles{filen},'x','y','za_med','land','N','za_mad','tmax','tmin');
+            zsub=load(subTileFiles{filen},'x','y','za_med','land','N','Nmt','za_mad','tmax','tmin');
         else
             % if 2m subtile .mat doesnt include a land array, load it from
             % the 10m subtile and resize it
-            zsub=load(subTileFiles{filen},'x','y','za_med','N','za_mad','tmax','tmin');
+            zsub=load(subTileFiles{filen},'x','y','za_med','N','Nmt','za_mad','tmax','tmin');
             subTileFile10m = strrep(subTileFiles{filen},'_2m','_10m');
             land = load(subTileFile10m,'land');
             if any(~land.land(:))
@@ -273,6 +274,8 @@ for filen=1:NsubTileFiles
         zsub.N(buff+1:end-buff,buff+1:end-buff);
     
     if dx == 2
+        Nmt(row0+buff:row1-buff,col0+buff:col1-buff) =...
+            zsub.Nmt(buff+1:end-buff,buff+1:end-buff);
         z_mad(row0:row1,col0:col1) = zsub.za_mad;
         tmax(row0+buff:row1-buff,col0+buff:col1-buff) =...
             zsub.tmax(buff+1:end-buff,buff+1:end-buff);
@@ -489,6 +492,8 @@ while ~isempty(nf)
         zsub.N(buff+1:end-buff,buff+1:end-buff);
     
     if dx == 2
+        Nmt(row0+buff:row1-buff,col0+buff:col1-buff) =...
+            zsub.Nmt(buff+1:end-buff,buff+1:end-buff);
         z_mad(row0:row1,col0:col1) = zsub.za_mad;
         tmax(row0+buff:row1-buff,col0+buff:col1-buff) =...
             zsub.tmax(buff+1:end-buff,buff+1:end-buff);
@@ -516,7 +521,7 @@ end
 %% Write Output
 % save matfile outputs
 if dx == 2
-    save(outName,'x','y','z','N','z_mad','tmax','tmin','-v7.3')
+    save(outName,'x','y','z','N','Nmt','z_mad','tmax','tmin','-v7.3')
 elseif dx == 10
     save(outName,'x','y','z','N','-v7.3')
 end
@@ -530,6 +535,10 @@ outNameTif = strrep(outName,'.mat','_N.tif');
 writeGeotiff(outNameTif,x,y,N,1,0,'polar stereo north')
 
 if dx == 2
+    
+    outNameTif = strrep(outName,'.mat','_Nmt.tif');
+    writeGeotiff(outNameTif,x,y,Nmt,1,0,'polar stereo north')
+    
     z_mad(isnan(z_mad)) = -9999;
     outNameTif = strrep(outName,'.mat','_mad.tif');
     writeGeotiff(outNameTif,x,y,z_mad,4,-9999,'polar stereo north')
@@ -552,9 +561,7 @@ regFile=strrep(outName,'.mat','tileReg.mat');
 
 % check if coregistration file exists and load it if so
 if exist(regFile,'file')
-    
     load(regFile)
-    
 else
     % no coregistration file, so calculate all suntile offsets
 
