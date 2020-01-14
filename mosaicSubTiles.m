@@ -364,11 +364,11 @@ while ~isempty(nf)
     % load subtile into structure
     if dx == 2
         if ismember(mvars,'land')
-            zsub=load(subTileFiles{filen},'x','y','za_med','land','N','za_mad','tmax','tmin');
+            zsub=load(subTileFiles{filen},'x','y','za_med','land','N','Nmt','za_mad','tmax','tmin');
         else
             % if 2m subtile .mat doesnt include a land array, load it from
             % the 10m subtile and resize it
-            zsub=load(subTileFiles{filen},'x','y','za_med','N','za_mad','tmax','tmin');
+            zsub=load(subTileFiles{filen},'x','y','za_med','N','Nmt','za_mad','tmax','tmin');
             subTileFile10m = strrep(subTileFiles{filen},'_2m','_10m');
             land = load(subTileFile10m,'land');
             if any(~land.land(:))
