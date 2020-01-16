@@ -4,6 +4,8 @@ function mergeTileBuffer(f0,f1)
 % mergeTileBuffer(f0,f1) where f0 and f1 are the file names or mat file
 % handles of neighboring tiles.
 
+% top = 1, Bottom = 2, left = 3, right = 4;
+
 %% first test if input args are either valid filenames or mat file handles
 fprintf('Merging tile %s with %s\n', f0, f1)
 
@@ -16,7 +18,8 @@ if isstr(f0) % it's a string, might be a filename
 elseif isvalid(f0) % not a string, is it a valid file handle?
     m0 = f0; % yes, so set m to f and get the filename for f
     f0 = m0.Properties.Source;
-else error('input arg must be a filename or valid matfile handle')
+else
+    error('input arg must be a filename or valid matfile handle')
 end
 
 if isstr(f1) % it's a string, might be a filename
@@ -28,16 +31,13 @@ if isstr(f1) % it's a string, might be a filename
 elseif isvalid(f1) % not a string, is it a valid file handle?
     m1 = f1; % yes, so set m to f and get the filename for f
     f1 = m1.Properties.Source;
-else error('input arg must be a filename or valid matfile handle')
+else
+    error('input arg must be a filename or valid matfile handle')
 end
 
 % make sure writeable
 m0.Properties.Writable = true;
 m1.Properties.Writable = true;
-
-% get variable names in m files to check if already merged
-m0vars = whos(m0); m0vars = {m0vars.name};
-m1vars = whos(m1); m1vars = {m1vars.name};
 
 %% crop tiles to buffer
 c0 = m0.x >= min(m1.x) & m0.x <= max(m1.x);
@@ -55,32 +55,36 @@ r1 = [find(r1,1,'first'),find(r1,1,'last')];
 %% Make weight array based on boundary being merged
 info0=whos(m0,'z');
 sz0=info0.size;
+varlist0 = who(m0);
+varlist1 = who(m1);
 
-if c0(1) > 1; % merging on f0's right boundary
+if c0(1) > 1 % merging on f0's right boundary
     
-    % check for pre-merged
-    m0check = any(strcmp(m0vars,'mergedRight'));
-    m1check = any(strcmp(m1vars,'mergedLeft'));
-    
-    if m0check; warning('tile %s already merged, skipping\n', f0); end;
-    if m1check; warning('tile %s already merged, skipping\n', f1); end;
-    if m0check | m1check; return; end
-
+    if  any(strcmp(varlist0,'mergedRight')) && any(strcmp(varlist1,'mergedLeft'))
+        if m0.mergedRight && m1.mergedLeft
+            disp('already merged');
+            return;
+        end
+    end
+      
     W0 = linspace(1,0,diff(c0)+1);
     W0 = repmat(W0,diff(r0)+1,1);
     
     m0.mergedRight=true;
     m1.mergedLeft=true;
     
+    n0 = 4;
+    n1 = 3;
+
 elseif c0(2) < sz0(2) % merging on f0's left boundary
     
-    % check for pre-merged
-    m0check = any(strcmp(m0vars,'mergedLeft'));
-    m1check = any(strcmp(m1vars,'mergedRight'));
+    if  any(strcmp(varlist0,'mergedLeft')) && any(strcmp(varlist1,'mergedRight'))
+        if m0.mergedLeft && m1.mergedRight
+            disp('already merged');
+            return;
+        end
+    end
     
-    if m0check; warning('tile %s already merged, skipping\n', f0); end;
-    if m1check; warning('tile %s already merged, skipping\n', f1); end;
-    if m0check | m1check; return; end
     
     W0 = linspace(0,1,diff(c0)+1);
     W0 = repmat(W0,diff(r0)+1,1);
@@ -88,31 +92,35 @@ elseif c0(2) < sz0(2) % merging on f0's left boundary
     m0.mergedLeft=true;
     m1.mergedRight=true;
     
-elseif r0(2) < sz0(2) % merging on f0's top boundary
+    n0 = 3;
+    n1 = 4;
+
+elseif r0(2) < sz0(1) % merging on f0's top boundary
     
-    % check for pre-merged
-    m0check = any(strcmp(m0vars,'mergedTop'));
-    m1check = any(strcmp(m1vars,'mergedBottom'));
-    
-    if m0check; warning('tile %s already merged, skipping\n', f0); end;
-    if m1check; warning('tile %s already merged, skipping\n', f1); end;
-    if m0check | m1check; return; end
+    if  any(strcmp(varlist0,'mergedTop')) && any(strcmp(varlist1,'mergedBottom'))
+        if m0.mergedTop && m1.mergedBottom
+            disp('already merged');
+            return;
+        end
+    end
     
     W0 = linspace(0,1,diff(r0)+1);
     W0 = repmat(W0(:),1,diff(c0)+1);
     
     m0.mergedTop=true;
     m1.mergedBottom=true;
-
+    
+    n0 =1;
+    n1 =2;
+    
 elseif r0(1) > 1 % merging on f0's bottom boundary
     
-    % check for pre-merged
-    m0check = any(strcmp(m0vars,'mergedBottom'));
-    m1check = any(strcmp(m1vars,'mergedTop'));
-    
-    if m0check; warning('tile %s already merged, skipping\n', f0); end;
-    if m1check; warning('tile %s already merged, skipping\n', f1); end;
-    if m0check | m1check; return; end
+    if  any(strcmp(varlist0,'mergedBottom')) && any(strcmp(varlist1,'mergedTop'))
+        if m0.mergedBottom && m1.mergedTop
+            disp('already merged');
+            return;
+        end
+    end
     
     W0 = linspace(1,0,diff(r0)+1);
     W0 = repmat(W0(:),1,diff(c0)+1);
@@ -120,15 +128,34 @@ elseif r0(1) > 1 % merging on f0's bottom boundary
     m0.mergedBottom=true;
     m1.mergedTop=true;
     
+    n0 =2;
+    n1 = 1;
+    
 else
-    
     error('buffer region is same size as full grid')
-    
 end
 
 %% merge z
-z0= m0.z(r0(1):r0(2),c0(1):c0(2));
-z1= m1.z(r1(1):r1(2),c1(1):c1(2));
+if any(strcmp(varlist0,'zbuff'))
+	z0=m0.zbuff(n0,1);
+	z0=z0{1};
+else
+	z0= m0.z(r0(1):r0(2),c0(1):c0(2));
+	m0.zbuff = cell(4,1);
+	m0.zbuff(n0,1) = {z0};
+end	
+
+if any(strcmp(varlist1,'zbuff'))
+        z1=m1.zbuff(n1,1);
+	z1=z1{1};
+else
+        z1= m1.z(r1(1):r1(2),c1(1):c1(2));
+        m1.zbuff = cell(4,1);
+        m1.zbuff(n1,1) = {z1};
+end
+
+z0=real(z0);
+z1=real(z1);
 
 z=(z0.*W0)+(z1.*(1-W0));
 
@@ -141,52 +168,176 @@ m0.z(r0(1):r0(2),c0(1):c0(2))=z;
 m1.z(r1(1):r1(2),c1(1):c1(2))=z;
 clear z0 z1 z;
 
-%% merge mt
-mt0= m0.mt(r0(1):r0(2),c0(1):c0(2));
-mt1= m1.mt(r1(1):r1(2),c1(1):c1(2));
+%% merge z_mad
+if any(strcmp(varlist0,'z_madbuff'))
+        z_mad0=m0.z_madbuff(n0,1);
+	z_mad0=z_mad0{1};
+else
+        z_mad0= m0.z_mad(r0(1):r0(2),c0(1):c0(2));
+        m0.z_madbuff = cell(4,1);
+        m0.z_madbuff(n0,1) = {z_mad0};
+end
 
-mt = mt0 | mt1;
+if any(strcmp(varlist1,'z_madbuff'))
+        z_mad1=m1.z_madbuff(n1,1);
+	z_mad1=z_mad1{1};
+else
+        z_mad1= m1.z_mad(r1(1):r1(2),c1(1):c1(2));
+        m1.z_madbuff = cell(4,1);
+        m1.z_madbuff(n1,1) = {z_mad1};
+end
 
-m0.mt(r0(1):r0(2),c0(1):c0(2))=mt;
-m1.mt(r1(1):r1(2),c1(1):c1(2))=mt;
-clear mt0 mt1 mt;
+z_mad0 = real(z_mad0);
+z_mad1 = real(z_mad1);
 
-%% merge or
-or0= m0.or(r0(1):r0(2),c0(1):c0(2));
-or1= m1.or(r1(1):r1(2),c1(1):c1(2));
+z_mad=(z_mad0.*W0)+(z_mad1.*(1-W0));
 
-or0=single(or0);
-or1=single(or1);
+n=isnan(z_mad0) & ~isnan(z_mad1);
+z_mad(n)=z_mad1(n);
+n=~isnan(z_mad0) & isnan(z_mad1);
+z_mad(n)=z_mad0(n);
 
-or=(or0.*W0)+(or1.*(1-W0));
+m0.z_mad(r0(1):r0(2),c0(1):c0(2))=z_mad;
+m1.z_mad(r1(1):r1(2),c1(1):c1(2))=z_mad;
+clear z_mad0 z_mad1 z_mad;
 
-n= or0 == 0 & or1 ~= 0;
-or(n)=or1(n);
-n= or0 ~= 0 & or1 == 0;
-or(n)=or0(n);
+%% merge N
+if any(strcmp(varlist0,'Nbuff'))
+        N0=m0.Nbuff(n0,1);
+	N0=N0{1};
+else
+        N0= m0.N(r0(1):r0(2),c0(1):c0(2));
+        m0.Nbuff = cell(4,1);
+        m0.Nbuff(n0,1) = {N0};
+end
 
-or=int16(or);
+if any(strcmp(varlist1,'Nbuff'))
+        N1=m1.Nbuff(n1,1);
+	N1=N1{1};
+else
+        N1= m1.N(r1(1):r1(2),c1(1):c1(2));
+        m1.Nbuff = cell(4,1);
+        m1.Nbuff(n1,1) = {N1};
+end
 
-m0.or(r0(1):r0(2),c0(1):c0(2))=or;
-m1.or(r1(1):r1(2),c1(1):c1(2))=or;
-clear or0 or1 or;
+N0=single(N0);
+N1=single(N1);
 
-%% merge dy
-dy0= m0.dy(r0(1):r0(2),c0(1):c0(2));
-dy1= m1.dy(r1(1):r1(2),c1(1):c1(2));
+N=(N0.*W0)+(N1.*(1-W0));
 
-dy0=single(dy0);
-dy1=single(dy1);
+n= N0 == 0 & N1 ~= 0;
+N(n)=N1(n);
+n= N0 ~= 0 & N1 == 0;
+N(n)=N0(n);
 
-dy=(dy0.*W0)+(dy1.*(1-W0));
+N=uint8(N);
 
-n= dy0 == 0 & dy1 ~= 0;
-dy(n)=dy1(n);
-n= dy0 ~= 0 & dy1 == 0;
-dy(n)=dy0(n);
+m0.N(r0(1):r0(2),c0(1):c0(2))=N;
+m1.N(r1(1):r1(2),c1(1):c1(2))=N;
+clear N0 N1 N;
 
-dy=int16(dy);
+%% merge Nmt
+if any(strcmp(varlist0,'Nmtbuff'))
+        Nmt0=m0.Nmtbuff(n0,1);
+	Nmt0=Nmt0{1};
+else
+        Nmt0= m0.Nmt(r0(1):r0(2),c0(1):c0(2));
+        m0.Nmtbuff = cell(4,1);
+        m0.Nmtbuff(n0,1) = {Nmt0};
+end
 
-m0.dy(r0(1):r0(2),c0(1):c0(2))=dy;
-m1.dy(r1(1):r1(2),c1(1):c1(2))=dy;
-clear dy0 dy1 dy;
+if any(strcmp(varlist1,'Nmtbuff'))
+        Nmt1=m1.Nmtbuff(n1,1);
+	Nmt1=Nmt1{1};
+else
+        Nmt1= m1.Nmt(r1(1):r1(2),c1(1):c1(2));
+        m1.Nmtbuff = cell(4,1);
+        m1.Nmtbuff(n1,1) = {Nmt1};
+end
+
+Nmt0=single(Nmt0);
+Nmt1=single(Nmt1);
+
+Nmt=(Nmt0.*W0)+(Nmt1.*(1-W0));
+
+n= Nmt0 == 0 & Nmt1 ~= 0;
+Nmt(n)=Nmt1(n);
+n= Nmt0 ~= 0 & Nmt1 == 0;
+Nmt(n)=Nmt0(n);
+
+Nmt=uint8(Nmt);
+
+m0.Nmt(r0(1):r0(2),c0(1):c0(2))=Nmt;
+m1.Nmt(r1(1):r1(2),c1(1):c1(2))=Nmt;
+clear Nmt0 Nmt1 Nmt;
+
+%% merge tmin
+if any(strcmp(varlist0,'tminbuff'))
+        tmin0=m0.tminbuff(n0,1);
+	tmin0=tmin0{1};
+else
+        tmin0= m0.tmin(r0(1):r0(2),c0(1):c0(2));
+        m0.tminbuff = cell(4,1);
+        m0.tminbuff(n0,1) = {tmin0};
+end
+
+if any(strcmp(varlist1,'tminbuff'))
+        tmin1=m1.tminbuff(n1,1);
+	tmin1=tmin1{1};
+else
+        tmin1= m1.tmin(r1(1):r1(2),c1(1):c1(2));
+        m1.tminbuff = cell(4,1);
+        m1.tminbuff(n1,1) = {tmin1};
+end
+
+tmin0=single(tmin0);
+tmin1=single(tmin1);
+
+tmin=(tmin0.*W0)+(tmin1.*(1-W0));
+
+n= tmin0 == 0 & tmin1 ~= 0;
+tmin(n)=tmin1(n);
+n= tmin0 ~= 0 & tmin1 == 0;
+tmin(n)=tmin0(n);
+
+tmin= uint16(tmin);
+
+m0.tmin(r0(1):r0(2),c0(1):c0(2))=tmin;
+m1.tmin(r1(1):r1(2),c1(1):c1(2))=tmin;
+clear tmin0 tmin1 tmin;
+
+
+%% merge tmax
+if any(strcmp(varlist0,'tmaxbuff'))
+        tmax0=m0.tmaxbuff(n0,1);
+	tmax0=tmax0{1};
+else
+        tmax0= m0.tmax(r0(1):r0(2),c0(1):c0(2));
+        m0.tmaxbuff = cell(4,1);
+        m0.tmaxbuff(n0,1) = {tmax0};
+end
+
+if any(strcmp(varlist1,'tmaxbuff'))
+        tmax1=m1.tmaxbuff(n1,1);
+	tmax1=tmax1{1};
+else
+        tmax1= m1.tmax(r1(1):r1(2),c1(1):c1(2));
+        m1.tmaxbuff = cell(4,1);
+        m1.tmaxbuff(n1,1) = {tmax1};
+end
+
+tmax0=single(tmax0);
+tmax1=single(tmax1);
+
+tmax=(tmax0.*W0)+(tmax1.*(1-W0));
+
+n= tmax0 == 0 & tmax1 ~= 0;
+tmax(n)=tmax1(n);
+n= tmax0 ~= 0 & tmax1 == 0;
+tmax(n)=tmax0(n);
+
+tmax= uint16(tmax);
+
+m0.tmax(r0(1):r0(2),c0(1):c0(2))=tmax;
+m1.tmax(r1(1):r1(2),c1(1):c1(2))=tmax;
+clear tmax0 tmax1 tmax;

@@ -2,68 +2,51 @@ function batchMergeTileBuffer(f)
 % batchMergeTileBuffer: mergeTileBuffer to all neighboring files
 %
 % batchMergeTileBuffer(f) where f is a cellstr of files to be merged.
-%   Filenames must be in the format /rr_cc_*.mat where rr and cc are the 
-%   tile row and column numbers.
 
 
-[~,fname]=cellfun(@fileparts, f, 'UniformOutput',false);
+f=f(:);
 
-% tile row/col index from filename
-tc = char(fname(:));
-tr= str2num(tc(:,1:2));
-tc= str2num(tc(:,4:5));
-
-% get up/down/right/left neighbors
-A = [[0 1];[1 0];[-1 0];[0 -1]];
-
-% pair counter
-c=0;
-
-% pair index variables
-n0=0;
-n1=0;
-
-% loop through each file and see if neighbors exist, only keeping unique
-% pairs
+% loop through each tile and get extents
+x0 = nan(size(f));
+x1= nan(size(f));
+y0= nan(size(f));
+y1= nan(size(f));
 i=1;
-for i=1:length(f);
+for i=1:length(f)
+    m = matfile(f{i});
+    x0(i)  = min(m.x);
+    x1(i) = max(m.x);
+    y0(i)  = min(m.y);
+    y1(i) = max(m.y);
+end
     
-    % this row_col string
-    si=[num2str(tr(i),'%02d'),'_',num2str(tc(i),'%02d')];
-    
-    j=1;
-    for j=1:4
-        
-        % that row_col string
-        sj=[num2str(tr(i)+A(j,1),'%02d'),'_',num2str(tc(i)+A(j,2),'%02d')];
-        
-        % make filename
-        fj=strrep(f{i},si,sj);
-        
-        % test if it exists in list
-        n = find(strcmp(fj,f));
-        
-        if ~isempty(n)
-            
-            % exists, but is it aleady matched?
-            [~,ia]=intersect([n i],[n0 n1],'rows');
-            
-            if ~isempty(ia); continue; end
-            
-            % new pair, add to count and vectors
-            
-            c=c+1;
-            n0(c,1)=i;
-            n1(c,1)=n;
-            
-        end
-        
+% using ranges, find neighbors on each side
+nright= nan(length(f),2);
+ntop= nan(length(f),2);
+i=1;
+for i=1:length(f)
+
+    %right
+    n = find(x0(i) < x0 & x1(i) > x0 & (y0(i)+y1(i))./2 > y0 & (y0(i)+y1(i))./2 < y1);
+    if ~isempty(n)
+        nright(i,:) = [i,n];
     end
+    
+    %top
+    n = find(y0(i) < y0 & y1(i) > y0 & (x0(i)+x1(i))./2 > x0 & (x0(i)+x1(i))./2 < x1);
+    if ~isempty(n)
+        ntop(i,:) = [i,n];
+    end
+    
 end
 
+n0 = [nright(~isnan(nright(:,1)),1);ntop(~isnan(ntop(:,1)),1)];
+n1 = [nright(~isnan(nright(:,1)),2);ntop(~isnan(ntop(:,1)),2)];
+    
+
 % run mergeTileBuffer on each pair in list
-if ~(n0==0)
-    for i=1:length(n0); mergeTileBuffer(f{n0(i)},f{n1(i)}); end
+for i=1:length(n0)
+    mergeTileBuffer(f{n0(i)},f{n1(i)}); 
 end
     
     
