@@ -69,7 +69,11 @@ for i=2:length(tileFiles)
     m.icesat_dz_mad = dz_mad;
     m.icesat_dz_N = N;
     
-    m.z = m.z -  m.icesat_dz_med;
+    if ~isnan(dz_med)
+        z=  m.z;
+        z = z - dz_med
+        m.z = z;
+     end
     
 end
 
