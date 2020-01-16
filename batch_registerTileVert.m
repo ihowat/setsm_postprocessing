@@ -71,10 +71,10 @@ for i=2:length(tileFiles)
     
     if ~isnan(dz_med)
         z=  m.z;
-        z = z - dz_med
+        z = z - dz_med;
         m.z = z;
-     end
-    
+        clear z
+    end
 end
 
 
