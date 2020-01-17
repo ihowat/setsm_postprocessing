@@ -25,7 +25,7 @@ gcp=load(gcpFile);
 
 % tile file loop
 i=1;
-for i=2:length(tileFiles)
+for i=1:length(tileFiles)
     
     fprintf('processing %d of %d: %s ',i,length(tileFiles),tileFiles{i})
     
