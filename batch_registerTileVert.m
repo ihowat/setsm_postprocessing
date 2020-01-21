@@ -3,7 +3,7 @@ if ismac
     addpath('/Users/ihowat/unity-home/demtools');
     tileDir=['/Users/ihowat/project/howat.4/earthdem/earthdem_mosaic_testing_1km/'];
     waterTileDir='~/data/pgc_projects/ak_water_rasters_v2';
-    gcpFile='~/GLA14_rel634.mat';
+    gcpFile='~/GLA14_rel634.csv';
 else
     %addpath('/home/howat.4/demtools');
     tileDir=['/mnt/pgc/data/scratch/claire/pgc/arcticdem/mosaic/2m_v4.2/test'];
@@ -19,13 +19,18 @@ tileFiles = dir([tileDir,'/*2m.mat']);
 tileFiles = cellfun( @(x) [tileDir,'/',x], {tileFiles.name},'uniformoutput',0);
 
 % load gcp file
-%gcp=loadGCPFile_is(gcpFile);
-gcp=load(gcpFile);
-
+[~,~,ext] = fileparts(gcpFile);
+if strcmpi(ext,'.csv')
+    gcp=loadGCPFile_is(gcpFile);
+elseif  strcmpi(ext,'.mat')
+    gcp=load(gcpFile);
+else
+    error('file extension for %s not recognized',gcpFile)
+end
 
 % tile file loop
 i=1;
-for i=2:length(tileFiles)
+for i=1:length(tileFiles)
     
     fprintf('processing %d of %d: %s ',i,length(tileFiles),tileFiles{i})
     
@@ -75,6 +80,7 @@ for i=2:length(tileFiles)
         m.z = z;
         clear z
     end
+    
 end
 
 
