@@ -67,6 +67,9 @@ mtFile= strrep(demFile,'dem.tif','matchtag.tif');
 % read DEM data
 z = readGeotiff(demFile);
 
+%convert nodata to nans
+z.z(z.z == -9999) = NaN;
+
 % orignal size for rescaling
 sz0=size(z.z);
 
