@@ -5,10 +5,10 @@ if ismac
     waterTileDir='~/data/pgc_projects/ak_water_rasters_v2';
     gcpFile='~/GLA14_rel634.mat';
 else
-    addpath('/home/howat.4/demtools');
-    TtileDir=['/fs/project/howat.4/howat.4/earthdem/earthdem_mosaic_testing_1km/'];
-    waterTileDir='/fs/byo/howat-data/pgc_projects/ak_water_rasters_v2';
-    gcpFile='GLA14_rel634.mat';
+    %addpath('/home/howat.4/demtools');
+    tileDir=['/mnt/pgc/data/scratch/claire/pgc/arcticdem/mosaic/2m_v4.2/test'];
+    waterTileDir='/mnt/pgc/data/scratch/claire/pgc/arcticdem/coastline/global_surface_water/tiles_v2';
+    gcpFile='/mnt/pgc/data/scratch/claire/pgc/arcticdem/gcp/icesat/mat/GLA14_rel634.mat';
 end
 
 % set to true to overwite existing offsets, false will skip
