@@ -6,8 +6,6 @@ footprintRadius = 30;
 
 % initialize output
 dz_med =NaN;
-dz_mad =NaN;
-N =0;
 
 %subset gcps over this tile
 n =find(gcp.x > min(m.x) & gcp.x < max(m.x) & gcp.y > min(m.y) & gcp.y < max(m.y));
