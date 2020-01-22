@@ -31,6 +31,10 @@ fprintf('Indexing subtiles\n')
 
 % make a cellstr of resolved subtile filenames
 subTileFiles=dir([subTileDir,'/*_',num2str(dx),'m.mat']);
+if isempty(subTileFiles)
+    error('No files found matching %s',...
+        [subTileDir,'/*_',num2str(dx),'m.mat']);
+end
 subTileFiles=cellfun( @(x) [subTileDir,'/',x],{subTileFiles.name},'uniformoutput',0);
 
 % Get column-wise number of subtile from file names - assumes the subtile
@@ -62,6 +66,11 @@ if exist('quadrant','var')
             error('quadrant string not recognized')
     end
     
+    if ~any(n)
+        fprintf('No subtiles within quadrant %s\n',quadrant)
+        return
+    end
+    
     subTileNum = subTileNum(n);
     subTileFiles = subTileFiles(n); 
 end
@@ -77,6 +86,8 @@ if ~isempty(n)
     buffcheck2=load(subTileFiles{n+1},'y');
     buff = (length(buffcheck2.y)-find(buffcheck1.y(1) == buffcheck2.y))/2;
     buff = round(buff);
+else
+    error('no neighboring tiles to determine buffer size')
 end
 
 fprintf('performing coregistration & adjustment between adjoining subtiles\n')
