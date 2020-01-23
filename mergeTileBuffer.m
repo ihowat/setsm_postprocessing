@@ -233,12 +233,12 @@ if isempty(N0)
         m0.Nbuff(n0,1) = {N0};
 end
 
-N1=m1.Nbuff(n0,1);
+N1=m1.Nbuff(n1,1);
 N1=N1{1};
 
 if isempty(N1)
-        N1= m0.N(r0(1):r0(2),c0(1):c0(2));
-        m1.Nbuff(n0,1) = {N1};
+        N1= m0.N(r1(1):r1(2),c1(1):c1(2));
+        m1.Nbuff(n1,1) = {N1};
 end
 
 N0=single(N0);
@@ -274,12 +274,12 @@ if isempty(Nmt0)
         m0.Nmtbuff(n0,1) = {Nmt0};
 end
 
-Nmt1=m1.Nmtbuff(n0,1);
+Nmt1=m1.Nmtbuff(n1,1);
 Nmt1=Nmt1{1};
 
 if isempty(Nmt1)
-        Nmt1= m0.Nmt(r0(1):r0(2),c0(1):c0(2));
-        m1.Nmtbuff(n0,1) = {Nmt1};
+        Nmt1= m0.Nmt(r1(1):r1(2),c1(1):c1(2));
+        m1.Nmtbuff(n1,1) = {Nmt1};
 end
 
 Nmt0=single(Nmt0);
@@ -315,12 +315,12 @@ if isempty(tmin0)
         m0.tminbuff(n0,1) = {tmin0};
 end
 
-tmin1=m1.tminbuff(n0,1);
+tmin1=m1.tminbuff(n1,1);
 tmin1=tmin1{1};
 
 if isempty(tmin1)
-        tmin1= m0.tmin(r0(1):r0(2),c0(1):c0(2));
-        m1.tminbuff(n0,1) = {tmin1};
+        tmin1= m1.tmin(r1(1):r1(2),c1(1):c1(2));
+        m1.tminbuff(n1,1) = {tmin1};
 end
 
 tmin0=single(tmin0);
@@ -356,12 +356,12 @@ if isempty(tmax0)
         m0.tmaxbuff(n0,1) = {tmax0};
 end
 
-tmax1=m1.tmaxbuff(n0,1);
+tmax1=m1.tmaxbuff(n1,1);
 tmax1=tmax1{1};
 
 if isempty(tmax1)
-        tmax1= m0.tmax(r0(1):r0(2),c0(1):c0(2));
-        m1.tmaxbuff(n0,1) = {tmax1};
+        tmax1= m1.tmax(r1(1):r1(2),c1(1):c1(2));
+        m1.tmaxbuff(n1,1) = {tmax1};
 end
 
 tmax0=single(tmax0);
