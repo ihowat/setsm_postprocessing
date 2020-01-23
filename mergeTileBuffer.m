@@ -136,26 +136,31 @@ else
 end
 
 %% merge z
-if any(strcmp(varlist0,'zbuff'))
-	z0=m0.zbuff(n0,1);
-	z0=z0{1};
-else
-	z0= m0.z(r0(1):r0(2),c0(1):c0(2));
+if ~any(strcmp(varlist0,'zbuff'))
 	m0.zbuff = cell(4,1);
+end
+
+if ~any(strcmp(varlist1,'zbuff'))
+        m1.zbuff = cell(4,1);
+end
+
+z0=m0.zbuff(n0,1);
+z0=z0{1};
+
+if isempty(z0)
+	z0= m0.z(r0(1):r0(2),c0(1):c0(2));
+	z0 = real(z0);
 	m0.zbuff(n0,1) = {z0};
 end	
 
-if any(strcmp(varlist1,'zbuff'))
-        z1=m1.zbuff(n1,1);
-	z1=z1{1};
-else
-        z1= m1.z(r1(1):r1(2),c1(1):c1(2));
-        m1.zbuff = cell(4,1);
-        m1.zbuff(n1,1) = {z1};
-end
+z1=m1.zbuff(n1,1);
+z1=z1{1};
 
-z0=real(z0);
-z1=real(z1);
+if isempty(z1)
+ 	z1= m1.z(r1(1):r1(2),c1(1):c1(2));
+	z1 = real(z1);
+    m1.zbuff(n1,1) = {z1};
+end
 
 z=(z0.*W0)+(z1.*(1-W0));
 
@@ -169,26 +174,31 @@ m1.z(r1(1):r1(2),c1(1):c1(2))=z;
 clear z0 z1 z;
 
 %% merge z_mad
-if any(strcmp(varlist0,'z_madbuff'))
-        z_mad0=m0.z_madbuff(n0,1);
-	z_mad0=z_mad0{1};
-else
-        z_mad0= m0.z_mad(r0(1):r0(2),c0(1):c0(2));
+if ~any(strcmp(varlist0,'z_madbuff'))
         m0.z_madbuff = cell(4,1);
+end
+
+if ~any(strcmp(varlist1,'z_madbuff'))
+        m1.z_madbuff = cell(4,1);
+end
+
+z_mad0=m0.z_madbuff(n0,1);
+z_mad0=z_mad0{1};
+
+if isempty(z_mad0)
+        z_mad0= m0.z_mad(r0(1):r0(2),c0(1):c0(2));
+        z_mad0 = real(z_mad0);
         m0.z_madbuff(n0,1) = {z_mad0};
 end
 
-if any(strcmp(varlist1,'z_madbuff'))
-        z_mad1=m1.z_madbuff(n1,1);
-	z_mad1=z_mad1{1};
-else
+z_mad1=m1.z_madbuff(n1,1);
+z_mad1=z_mad1{1};
+
+if isempty(z_mad1)
         z_mad1= m1.z_mad(r1(1):r1(2),c1(1):c1(2));
-        m1.z_madbuff = cell(4,1);
+        z_mad1 = real(z_mad1);
         m1.z_madbuff(n1,1) = {z_mad1};
 end
-
-z_mad0 = real(z_mad0);
-z_mad1 = real(z_mad1);
 
 z_mad=(z_mad0.*W0)+(z_mad1.*(1-W0));
 
@@ -202,22 +212,28 @@ m1.z_mad(r1(1):r1(2),c1(1):c1(2))=z_mad;
 clear z_mad0 z_mad1 z_mad;
 
 %% merge N
-if any(strcmp(varlist0,'Nbuff'))
-        N0=m0.Nbuff(n0,1);
-	N0=N0{1};
-else
-        N0= m0.N(r0(1):r0(2),c0(1):c0(2));
+if ~any(strcmp(varlist0,'Nbuff'))
         m0.Nbuff = cell(4,1);
+end
+
+if ~any(strcmp(varlist1,'Nbuff'))
+        m1.Nbuff = cell(4,1);
+end
+
+N0=m0.Nbuff(n0,1);
+N0=N0{1};
+
+if isempty(N0)
+        N0= m0.N(r0(1):r0(2),c0(1):c0(2));
         m0.Nbuff(n0,1) = {N0};
 end
 
-if any(strcmp(varlist1,'Nbuff'))
-        N1=m1.Nbuff(n1,1);
-	N1=N1{1};
-else
-        N1= m1.N(r1(1):r1(2),c1(1):c1(2));
-        m1.Nbuff = cell(4,1);
-        m1.Nbuff(n1,1) = {N1};
+N1=m1.Nbuff(n0,1);
+N1=N1{1};
+
+if isempty(N1)
+        N1= m0.N(r0(1):r0(2),c0(1):c0(2));
+        m1.Nbuff(n0,1) = {N1};
 end
 
 N0=single(N0);
@@ -237,22 +253,28 @@ m1.N(r1(1):r1(2),c1(1):c1(2))=N;
 clear N0 N1 N;
 
 %% merge Nmt
-if any(strcmp(varlist0,'Nmtbuff'))
-        Nmt0=m0.Nmtbuff(n0,1);
-	Nmt0=Nmt0{1};
-else
-        Nmt0= m0.Nmt(r0(1):r0(2),c0(1):c0(2));
+if ~any(strcmp(varlist0,'Nmtbuff'))
         m0.Nmtbuff = cell(4,1);
+end
+
+if ~any(strcmp(varlist1,'Nmtbuff'))
+        m1.Nmtbuff = cell(4,1);
+end
+
+Nmt0=m0.Nmtbuff(n0,1);
+Nmt0=Nmt0{1};
+
+if isempty(Nmt0)
+        Nmt0= m0.Nmt(r0(1):r0(2),c0(1):c0(2));
         m0.Nmtbuff(n0,1) = {Nmt0};
 end
 
-if any(strcmp(varlist1,'Nmtbuff'))
-        Nmt1=m1.Nmtbuff(n1,1);
-	Nmt1=Nmt1{1};
-else
-        Nmt1= m1.Nmt(r1(1):r1(2),c1(1):c1(2));
-        m1.Nmtbuff = cell(4,1);
-        m1.Nmtbuff(n1,1) = {Nmt1};
+Nmt1=m1.Nmtbuff(n0,1);
+Nmt1=Nmt1{1};
+
+if isempty(Nmt1)
+        Nmt1= m0.Nmt(r0(1):r0(2),c0(1):c0(2));
+        m1.Nmtbuff(n0,1) = {Nmt1};
 end
 
 Nmt0=single(Nmt0);
@@ -272,22 +294,28 @@ m1.Nmt(r1(1):r1(2),c1(1):c1(2))=Nmt;
 clear Nmt0 Nmt1 Nmt;
 
 %% merge tmin
-if any(strcmp(varlist0,'tminbuff'))
-        tmin0=m0.tminbuff(n0,1);
-	tmin0=tmin0{1};
-else
-        tmin0= m0.tmin(r0(1):r0(2),c0(1):c0(2));
+if ~any(strcmp(varlist0,'tminbuff'))
         m0.tminbuff = cell(4,1);
+end
+
+if ~any(strcmp(varlist1,'tminbuff'))
+        m1.tminbuff = cell(4,1);
+end
+
+tmin0=m0.tminbuff(n0,1);
+tmin0=tmin0{1};
+
+if isempty(tmin0)
+        tmin0= m0.tmin(r0(1):r0(2),c0(1):c0(2));
         m0.tminbuff(n0,1) = {tmin0};
 end
 
-if any(strcmp(varlist1,'tminbuff'))
-        tmin1=m1.tminbuff(n1,1);
-	tmin1=tmin1{1};
-else
-        tmin1= m1.tmin(r1(1):r1(2),c1(1):c1(2));
-        m1.tminbuff = cell(4,1);
-        m1.tminbuff(n1,1) = {tmin1};
+tmin1=m1.tminbuff(n0,1);
+tmin1=tmin1{1};
+
+if isempty(tmin1)
+        tmin1= m0.tmin(r0(1):r0(2),c0(1):c0(2));
+        m1.tminbuff(n0,1) = {tmin1};
 end
 
 tmin0=single(tmin0);
@@ -300,30 +328,35 @@ tmin(n)=tmin1(n);
 n= tmin0 ~= 0 & tmin1 == 0;
 tmin(n)=tmin0(n);
 
-tmin= uint16(tmin);
+tmin=uint16(tmin);
 
 m0.tmin(r0(1):r0(2),c0(1):c0(2))=tmin;
 m1.tmin(r1(1):r1(2),c1(1):c1(2))=tmin;
 clear tmin0 tmin1 tmin;
 
-
 %% merge tmax
-if any(strcmp(varlist0,'tmaxbuff'))
-        tmax0=m0.tmaxbuff(n0,1);
-	tmax0=tmax0{1};
-else
-        tmax0= m0.tmax(r0(1):r0(2),c0(1):c0(2));
+if ~any(strcmp(varlist0,'tmaxbuff'))
         m0.tmaxbuff = cell(4,1);
+end
+
+if ~any(strcmp(varlist1,'tmaxbuff'))
+        m1.tmaxbuff = cell(4,1);
+end
+
+tmax0=m0.tmaxbuff(n0,1);
+tmax0=tmax0{1};
+
+if isempty(tmax0)
+        tmax0= m0.tmax(r0(1):r0(2),c0(1):c0(2));
         m0.tmaxbuff(n0,1) = {tmax0};
 end
 
-if any(strcmp(varlist1,'tmaxbuff'))
-        tmax1=m1.tmaxbuff(n1,1);
-	tmax1=tmax1{1};
-else
-        tmax1= m1.tmax(r1(1):r1(2),c1(1):c1(2));
-        m1.tmaxbuff = cell(4,1);
-        m1.tmaxbuff(n1,1) = {tmax1};
+tmax1=m1.tmaxbuff(n0,1);
+tmax1=tmax1{1};
+
+if isempty(tmax1)
+        tmax1= m0.tmax(r0(1):r0(2),c0(1):c0(2));
+        m1.tmaxbuff(n0,1) = {tmax1};
 end
 
 tmax0=single(tmax0);
@@ -336,7 +369,7 @@ tmax(n)=tmax1(n);
 n= tmax0 ~= 0 & tmax1 == 0;
 tmax(n)=tmax0(n);
 
-tmax= uint16(tmax);
+tmax=uint16(tmax);
 
 m0.tmax(r0(1):r0(2),c0(1):c0(2))=tmax;
 m1.tmax(r1(1):r1(2),c1(1):c1(2))=tmax;
