@@ -1,4 +1,4 @@
-function mergeTileBuffer(f0,f1)
+function mergeTileBuffer(f0,f1,varargin)
 % mergeTileBuffer: merge the edge buffers two tiles with linear feathering
 %
 % mergeTileBuffer(f0,f1) where f0 and f1 are the file names or mat file
@@ -35,6 +35,11 @@ else
     error('input arg must be a filename or valid matfile handle')
 end
 
+overwriteBuffer=false;
+if nargin==3
+    overwriteBuffer=true;
+end
+
 % make sure writeable
 m0.Properties.Writable = true;
 m1.Properties.Writable = true;
@@ -60,7 +65,7 @@ varlist1 = who(m1);
 
 if c0(1) > 1 % merging on f0's right boundary
     
-    if  any(strcmp(varlist0,'mergedRight')) && any(strcmp(varlist1,'mergedLeft'))
+    if  any(strcmp(varlist0,'mergedRight')) && any(strcmp(varlist1,'mergedLeft')) && ~overwriteBuffer
         if m0.mergedRight && m1.mergedLeft
             disp('already merged');
             return;
@@ -78,7 +83,7 @@ if c0(1) > 1 % merging on f0's right boundary
 
 elseif c0(2) < sz0(2) % merging on f0's left boundary
     
-    if  any(strcmp(varlist0,'mergedLeft')) && any(strcmp(varlist1,'mergedRight'))
+    if  any(strcmp(varlist0,'mergedLeft')) && any(strcmp(varlist1,'mergedRight')) && ~overwriteBuffer
         if m0.mergedLeft && m1.mergedRight
             disp('already merged');
             return;
@@ -97,7 +102,7 @@ elseif c0(2) < sz0(2) % merging on f0's left boundary
 
 elseif r0(2) < sz0(1) % merging on f0's top boundary
     
-    if  any(strcmp(varlist0,'mergedTop')) && any(strcmp(varlist1,'mergedBottom'))
+    if  any(strcmp(varlist0,'mergedTop')) && any(strcmp(varlist1,'mergedBottom')) && ~overwriteBuffer
         if m0.mergedTop && m1.mergedBottom
             disp('already merged');
             return;
@@ -115,7 +120,7 @@ elseif r0(2) < sz0(1) % merging on f0's top boundary
     
 elseif r0(1) > 1 % merging on f0's bottom boundary
     
-    if  any(strcmp(varlist0,'mergedBottom')) && any(strcmp(varlist1,'mergedTop'))
+    if  any(strcmp(varlist0,'mergedBottom')) && any(strcmp(varlist1,'mergedTop')) && ~overwriteBuffer
         if m0.mergedBottom && m1.mergedTop
             disp('already merged');
             return;
