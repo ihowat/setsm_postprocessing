@@ -237,7 +237,7 @@ N1=m1.Nbuff(n1,1);
 N1=N1{1};
 
 if isempty(N1)
-        N1= m0.N(r1(1):r1(2),c1(1):c1(2));
+        N1= m1.N(r1(1):r1(2),c1(1):c1(2));
         m1.Nbuff(n1,1) = {N1};
 end
 
@@ -278,7 +278,7 @@ Nmt1=m1.Nmtbuff(n1,1);
 Nmt1=Nmt1{1};
 
 if isempty(Nmt1)
-        Nmt1= m0.Nmt(r1(1):r1(2),c1(1):c1(2));
+        Nmt1= m1.Nmt(r1(1):r1(2),c1(1):c1(2));
         m1.Nmtbuff(n1,1) = {Nmt1};
 end
 
