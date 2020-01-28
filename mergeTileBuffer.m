@@ -59,19 +59,15 @@ r1 = [find(r1,1,'first'),find(r1,1,'last')];
 
 %% Make weight array based on boundary being merged
 info0=whos(m0,'z');
-info1=whos(m1,'z');
 sz0=info0.size;
-sz1=info1.size;
 varlist0 = who(m0);
 varlist1 = who(m1);
 
-% use relative position of center of m1 to determine which boundary
-x1m = mean(m1.x);
-y1m = mean(m1.y);
-
 %if c0(1) > 1 % merging on f0's right boundary [old method can't account
 %for deviations in tile sizes]
-if y1m > min(m0.y) && y1m < max(m0.y) && x1m > max(m0.x)    
+%if y1m > min(m0.y) && y1m < max(m0.y) && x1m > max(m0.x) [rev1 fails in
+%cases where m0 is < 1/2 size of m1
+if diff(c0) < diff(r0) && c0(2) == sz0(2)
     if  any(strcmp(varlist0,'mergedRight')) && any(strcmp(varlist1,'mergedLeft')) && ~overwriteBuffer
         if m0.mergedRight && m1.mergedLeft
             disp('already merged');
@@ -89,7 +85,8 @@ if y1m > min(m0.y) && y1m < max(m0.y) && x1m > max(m0.x)
     n1 = 3;
 
 %elseif c0(2) < sz0(2) % merging on f0's left boundary
-elseif y1m > min(m0.y) && y1m < max(m0.y) && x1m < min(m0.x)  
+%elseif y1m > min(m0.y) && y1m < max(m0.y) && x1m < min(m0.x)
+elseif diff(c0) < diff(r0) && c0(1) == 1
     if  any(strcmp(varlist0,'mergedLeft')) && any(strcmp(varlist1,'mergedRight')) && ~overwriteBuffer
         if m0.mergedLeft && m1.mergedRight
             disp('already merged');
@@ -108,7 +105,8 @@ elseif y1m > min(m0.y) && y1m < max(m0.y) && x1m < min(m0.x)
     n1 = 4;
 
 %elseif r0(2) < sz0(1) % merging on f0's top boundary
-elseif x1m > min(m0.x) && x1m < max(m0.x) && y1m > max(m0.y)
+%elseif x1m > min(m0.x) && x1m < max(m0.x) && y1m > max(m0.y)
+elseif diff(c0) > diff(r0) && r0(1) == 1
     
     if  any(strcmp(varlist0,'mergedTop')) && any(strcmp(varlist1,'mergedBottom')) && ~overwriteBuffer
         if m0.mergedTop && m1.mergedBottom
@@ -127,8 +125,9 @@ elseif x1m > min(m0.x) && x1m < max(m0.x) && y1m > max(m0.y)
     n1 =2;
     
 %elseif r0(1) > 1 % merging on f0's bottom boundary
-elseif x1m > min(m0.x) && x1m < max(m0.x) && y1m < min(m0.y)
-    
+%elseif x1m > min(m0.x) && x1m < max(m0.x) && y1m < min(m0.y)
+elseif diff(c0) > diff(r0) && r0(2) == sz0(1)
+
     if  any(strcmp(varlist0,'mergedBottom')) && any(strcmp(varlist1,'mergedTop')) && ~overwriteBuffer
         if m0.mergedBottom && m1.mergedTop
             disp('already merged');
