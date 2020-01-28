@@ -59,12 +59,19 @@ r1 = [find(r1,1,'first'),find(r1,1,'last')];
 
 %% Make weight array based on boundary being merged
 info0=whos(m0,'z');
+info1=whos(m1,'z');
 sz0=info0.size;
+sz1=info1.size;
 varlist0 = who(m0);
 varlist1 = who(m1);
 
-if c0(1) > 1 % merging on f0's right boundary
-    
+% use relative position of center of m1 to determine which boundary
+x1m = mean(m1.x);
+y1m = mean(m1.y);
+
+%if c0(1) > 1 % merging on f0's right boundary [old method can't account
+%for deviations in tile sizes]
+if y1m > min(m0.y) && y1m < max(m0.y) && x1m > max(m0.x)    
     if  any(strcmp(varlist0,'mergedRight')) && any(strcmp(varlist1,'mergedLeft')) && ~overwriteBuffer
         if m0.mergedRight && m1.mergedLeft
             disp('already merged');
@@ -81,8 +88,8 @@ if c0(1) > 1 % merging on f0's right boundary
     n0 = 4;
     n1 = 3;
 
-elseif c0(2) < sz0(2) % merging on f0's left boundary
-    
+%elseif c0(2) < sz0(2) % merging on f0's left boundary
+elseif y1m > min(m0.y) && y1m < max(m0.y) && x1m < min(m0.x)  
     if  any(strcmp(varlist0,'mergedLeft')) && any(strcmp(varlist1,'mergedRight')) && ~overwriteBuffer
         if m0.mergedLeft && m1.mergedRight
             disp('already merged');
@@ -100,7 +107,8 @@ elseif c0(2) < sz0(2) % merging on f0's left boundary
     n0 = 3;
     n1 = 4;
 
-elseif r0(2) < sz0(1) % merging on f0's top boundary
+%elseif r0(2) < sz0(1) % merging on f0's top boundary
+elseif x1m > min(m0.x) && x1m < max(m0.x) && y1m > max(m0.y)
     
     if  any(strcmp(varlist0,'mergedTop')) && any(strcmp(varlist1,'mergedBottom')) && ~overwriteBuffer
         if m0.mergedTop && m1.mergedBottom
@@ -118,7 +126,8 @@ elseif r0(2) < sz0(1) % merging on f0's top boundary
     n0 =1;
     n1 =2;
     
-elseif r0(1) > 1 % merging on f0's bottom boundary
+%elseif r0(1) > 1 % merging on f0's bottom boundary
+elseif x1m > min(m0.x) && x1m < max(m0.x) && y1m < min(m0.y)
     
     if  any(strcmp(varlist0,'mergedBottom')) && any(strcmp(varlist1,'mergedTop')) && ~overwriteBuffer
         if m0.mergedBottom && m1.mergedTop
@@ -137,7 +146,7 @@ elseif r0(1) > 1 % merging on f0's bottom boundary
     n1 = 1;
     
 else
-    error('buffer region is same size as full grid')
+    error('cant determine side being merged')
 end
 
 %% merge z
