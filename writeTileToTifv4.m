@@ -69,8 +69,8 @@ y=y(ny(1):ny(2));
 fprintf('Writing DEM\n')
 z=m.z(ny(1):ny(2),nx(1):nx(2));
 z(isnan(z)) = -9999;
-outNameTif = strrep(tilef,'.mat','_dem.tif');
-writeGeotiff(outNameTif,x,y,z,4,-9999,projstr)
+outNameDem = strrep(tilef,'.mat','_dem.tif');
+writeGeotiff(outNameDem,x,y,z,4,-9999,projstr)
 clear z
 
 flds=fields(m);
@@ -128,9 +128,9 @@ fprintf('Writing browse\n')
 if dx == 2
     outNameTemp = strrep(tilef,'.mat','_temp.tif');
     system(['gdal_translate -q -tr 10 10 -r bilinear -co bigtiff=if_safer -a_nodata -9999 ',...
-        outNameTif,' ', outNameTemp]);
+        outNameDem,' ', outNameTemp]);
 elseif dx == 10
-    outNameTemp = outNameTif;
+    outNameTemp = outNameDem;
 end
 
 % convert to hillshade
