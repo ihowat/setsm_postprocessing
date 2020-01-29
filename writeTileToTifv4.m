@@ -97,7 +97,7 @@ end
 if contains('Nmt',flds)
     fprintf('Writing Nmt\n')
     Nmt=m.Nmt(ny(1):ny(end),nx(1):nx(end));
-    outNameTif = strrep(tilef,'.mat','_matchtagcount.tif');
+    outNameTif = strrep(tilef,'.mat','_countmt.tif');
     writeGeotiff(outNameTif,x,y,Nmt,1,0,projstr)
     clear Nmt
 end
