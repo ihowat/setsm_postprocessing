@@ -2,6 +2,9 @@ function addInfoToSubtileMosaic(varargin)
 % addInfoToSubtileMosaic loop through subtiles for info and add to
 % existing mosaic file
 
+subTileDir = varargin{1};
+dx = varargin{2};
+
 outName = varargin{3};
 
 if ~exist(outName,'file')
