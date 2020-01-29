@@ -101,7 +101,7 @@ for filen=1:NsubTileFiles
     end
    % stripid =  cellfun(@(x) x(1:47),stripid,'uniformoutput',0);
        
-    stripList=[stripList,stripid];
+    stripList=unique([stripList,stripid]);
 
 end
 
