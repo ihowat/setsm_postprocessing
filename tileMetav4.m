@@ -29,7 +29,7 @@ if exist(outfile,'file')
 end
     
 %% Read and format strip info
-strip.name=m.stripList;
+strip.name=unique(m.stripList);
 strip.name=strip.name(:);
 
 %% Get tile version
