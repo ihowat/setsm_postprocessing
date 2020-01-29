@@ -63,11 +63,11 @@ nx(end) = nx(end)-1;
 ny(end) = ny(end)-1;
 
 %crop coordinate vectors
-x=x(nx);
-y=y(ny);
+x=x(nx(1):nx(2));
+y=y(ny(1):ny(2));
 
 fprintf('Writing DEM\n')
-z=m.z(ny(1):ny(end),nx(1):nx(end));
+z=m.z(ny(1):ny(2),nx(1):nx(2));
 z(isnan(z)) = -9999;
 outNameTif = strrep(tilef,'.mat','_dem.tif');
 writeGeotiff(outNameTif,x,y,z,4,-9999,projstr)
