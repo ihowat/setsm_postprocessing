@@ -36,6 +36,8 @@ strip.name=strip.name(:);
 tileVersion='4.0';
 if ~isempty(whos(m,'version')); tileVersion=m.version; end
 
+fprintf('writing meta\n')
+
 %% Write File
 fid=fopen(outfile,'w');
 fprintf(fid,'ArcticDEM Mosaic Tile Metadata \n');

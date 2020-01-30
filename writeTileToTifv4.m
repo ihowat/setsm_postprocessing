@@ -67,57 +67,81 @@ x=x(nx(1):nx(2));
 y=y(ny(1):ny(2));
 
 fprintf('Writing DEM\n')
-z=m.z(ny(1):ny(2),nx(1):nx(2));
-z(isnan(z)) = -9999;
 outNameDem = strrep(tilef,'.mat','_dem.tif');
-writeGeotiff(outNameDem,x,y,z,4,-9999,projstr)
-clear z
+if exist(outNameDem,'file')
+    fprintf('%s exists, skipping\n',outNameDem);
+else
+    z=m.z(ny(1):ny(2),nx(1):nx(2));
+    z(isnan(z)) = -9999;
+    writeGeotiff(outNameDem,x,y,z,4,-9999,projstr)
+    clear z
+end
 
 flds=fields(m);
 
 if contains('z_mad',flds)
     fprintf('Writing mad\n')
-    z_mad=m.z_mad(ny(1):ny(end),nx(1):nx(end));
-    z_mad(isnan(z_mad)) = -9999;
     outNameTif = strrep(tilef,'.mat','_mad.tif');
-    writeGeotiff(outNameTif,x,y,z_mad,4,-9999,projstr)
-    clear z_mad
+    if exist(outNameTif,'file')
+        fprintf('%s exists, skipping\n',outNameTif);
+    else
+        z_mad=m.z_mad(ny(1):ny(end),nx(1):nx(end));
+        z_mad(isnan(z_mad)) = -9999;
+        writeGeotiff(outNameTif,x,y,z_mad,4,-9999,projstr)
+        clear z_mad
+    end
 end
 
 % data count
 if contains('N',flds)
     fprintf('Writing N\n')
-    N=m.N(ny(1):ny(end),nx(1):nx(end));
     outNameTif = strrep(tilef,'.mat','_count.tif');
-    writeGeotiff(outNameTif,x,y,N,1,0,projstr)
-    clear N
+    if exist(outNameTif,'file')
+        fprintf('%s exists, skipping\n',outNameTif);
+    else
+        N=m.N(ny(1):ny(end),nx(1):nx(end));
+        writeGeotiff(outNameTif,x,y,N,1,0,projstr)
+        clear N
+    end
 end
 
 % matchtag count
 if contains('Nmt',flds)
     fprintf('Writing Nmt\n')
-    Nmt=m.Nmt(ny(1):ny(end),nx(1):nx(end));
     outNameTif = strrep(tilef,'.mat','_countmt.tif');
-    writeGeotiff(outNameTif,x,y,Nmt,1,0,projstr)
-    clear Nmt
+    if exist(outNameTif,'file')
+        fprintf('%s exists, skipping\n',outNameTif);
+    else
+        Nmt=m.Nmt(ny(1):ny(end),nx(1):nx(end));
+        writeGeotiff(outNameTif,x,y,Nmt,1,0,projstr)
+        clear Nmt
+    end
 end
 
 % Maximum date
 if contains('tmax',flds)
     fprintf('Writing tmax\n')
-    tmax=m.tmax(ny(1):ny(end),nx(1):nx(end));
     outNameTif = strrep(tilef,'.mat','_maxdate.tif');
-    writeGeotiff(outNameTif,x,y,tmax,2,0,projstr)
-    clear tmax
+    if exist(outNameTif,'file')
+        fprintf('%s exists, skipping\n',outNameTif);
+    else
+        tmax=m.tmax(ny(1):ny(end),nx(1):nx(end));
+        writeGeotiff(outNameTif,x,y,tmax,2,0,projstr)
+        clear tmax
+    end
 end
     
     % Minimum date
 if contains('tmin',flds)
     fprintf('Writing tmin\n')
-    tmin=m.tmin(ny(1):ny(end),nx(1):nx(end));
     outNameTif = strrep(tilef,'.mat','_mindate.tif');
-    writeGeotiff(outNameTif,x,y,tmin,2,0,projstr)
-    clear tmin
+    if exist(outNameTif,'file')
+        fprintf('%s exists, skipping\n',outNameTif);
+    else
+        tmin=m.tmin(ny(1):ny(end),nx(1):nx(end));
+       writeGeotiff(outNameTif,x,y,tmin,2,0,projstr)
+        clear tmin
+    end
 end
 
 
@@ -125,21 +149,25 @@ end
 fprintf('Writing browse\n')
 
 % if 2m posting, first downsample to 10m
-if dx == 2
-    outNameTemp = strrep(tilef,'.mat','_temp.tif');
-    system(['gdal_translate -q -tr 10 10 -r bilinear -co bigtiff=if_safer -a_nodata -9999 ',...
-        outNameDem,' ', outNameTemp]);
-elseif dx == 10
-    outNameTemp = outNameDem;
-end
-
-% convert to hillshade
 outNameBrowse = strrep(tilef,'.mat','_browse.tif');
-system(['gdaldem hillshade -q -z 3 -compute_edges -of GTiff -co TILED=YES -co BIGTIFF=IF_SAFER -co COMPRESS=LZW ',...
-    outNameTemp,' ', outNameBrowse]);
+if exist(outNameBrowse,'file')
+    fprintf('%s exists, skipping\n',outNameBrowse);
+else
+    if dx == 2
+        outNameTemp = strrep(tilef,'.mat','_temp.tif');
+        system(['gdal_translate -q -tr 10 10 -r bilinear -co bigtiff=if_safer -a_nodata -9999 ',...
+            outNameDem,' ', outNameTemp]);
+    elseif dx == 10
+        outNameTemp = outNameDem;
+    end
 
-if dx == 2
-    delete(outNameTemp);
+    % convert to hillshade
+    system(['gdaldem hillshade -q -z 3 -compute_edges -of GTiff -co TILED=YES -co BIGTIFF=IF_SAFER -co COMPRESS=LZW ',...
+        outNameTemp,' ', outNameBrowse]);
+    
+    if dx == 2
+        delete(outNameTemp);
+    end
 end
 
 
