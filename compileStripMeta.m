@@ -69,7 +69,7 @@ for i=1:length(f)
         Nscenes(i)=1;
     else
         A(:,1) = round(A(:,1), 2);
-
+        
         avg_rmse(i)=mean(A(:,1));
         med_rmse(i)=median(A(:,1));
         max_rmse(i)=max(A(:,1));

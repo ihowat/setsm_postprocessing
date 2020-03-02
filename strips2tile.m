@@ -212,11 +212,14 @@ while length(meta.f) >= 1
         i= 1; % set iteration variable
         for i=1:length(n)
             
-            fprintf('testing %d of %d\n',i,length(n))
+            fprintf('testing %d of %d: %s\n',i,length(n),meta.f{n(i)})
             
             % check for mask fields and make mask cell if exists
             if isfield(meta,'maskPolyx')
                 mask=[meta.maskPolyx{n(i)}(:) meta.maskPolyy{n(i)}(:)];
+                if isempty(mask)
+                    mask=cell(1,2);
+                end
             else
                 mask=cell(1,2);
             end
@@ -268,6 +271,9 @@ while length(meta.f) >= 1
             
             if isfield(meta,'maskPolyx')
                 mask=[meta.maskPolyx{i}(:) meta.maskPolyy{i}(:)];
+                if isempty(mask)
+                    mask=cell(1,2);
+                end
             else
                 mask=cell(1,2);
             end
