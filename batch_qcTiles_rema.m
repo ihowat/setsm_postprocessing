@@ -20,7 +20,7 @@ end
 %tileFiles = cellfun( @(x) [tileDir,'\',tileName,'\',x], tileFiles,'uniformoutput',0);
 
 % use this if to only look at recently created files
-% n = fileDates > datenum('31-Jan-2018 12:00:00'); 
+% n = fileDates > datenum('31-Jan-2018 12:00:00');
 % tileFiles = tileFiles(n);
 
 fprintf('Loading db\n');
@@ -45,11 +45,11 @@ function [dstfile] = make_local_copy(srcfile, dstdir)
     srcfile_stats = dir(srcfile);
     srcfname = srcfile_stats.name;
     dstfile = [dstdir,'\',srcfname];
-    
+
     if exist(dstdir, 'dir') ~= 7
         fprintf('Making local copy of db file at %s ...', dstfile);
         mkdir(dstdir);
-        
+
     elseif exist(dstfile, 'file') == 2
         dstfile_stats = dir(dstfile);
         if dstfile_stats.datenum == srcfile_stats.datenum
@@ -58,11 +58,11 @@ function [dstfile] = make_local_copy(srcfile, dstdir)
         else
             fprintf('Updating local copy of db file at %s ...', dstfile);
         end
-        
+
     else
         fprintf('Making local copy of db file at %s ...', dstfile);
     end
-    
+
     status = copyfile(srcfile, dstdir);
     if status == 0
         fprintf(' failed!\n');

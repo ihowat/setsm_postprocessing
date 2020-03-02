@@ -42,7 +42,7 @@ fprintf('ordering %d scenes\n',length(f))
 f = orderPairs(demdir,f);
 
 % intialize output stats
-trans=zeros(6,length(f));
+trans=zeros(3,length(f));
 rmse=zeros(1,length(f));
 
 % file loop
@@ -259,13 +259,12 @@ for i=1:length(f)
     
     
     % coregister this scene to the strip mosaic, only use areas with > 95%
-    [~,p,perr,rmse(i)] = ...
+    [~,trans(:,i),rmse(i)] = ...
             coregisterdems(Xsub(c(1):c(2)),Ysub(r(1):r(2)),...
             Zsub(r(1):r(2),c(1):c(2)),...
             x(c(1):c(2)),y(r(1):r(2)),...
             z(r(1):r(2),c(1):c(2)),...
             P0,P1);
-    trans(:,i) = [p;perr];
     
     %check for segment break
     if isnan(rmse(i)) || (rmse(i) > max_coreg_rmse)

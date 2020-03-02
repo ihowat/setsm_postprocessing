@@ -1,22 +1,22 @@
 function [C_out,i_rem]=DecimatePoly(C,opt)
-% Reduce the complexity of a 2D simple (i.e. non-self intersecting), closed 
-% piecewise linear contour by specifying boundary offset tolerance. 
-% IMPORTANT: This function may not preserve the topology of the original 
-% polygon. 
+% Reduce the complexity of a 2D simple (i.e. non-self intersecting), closed
+% piecewise linear contour by specifying boundary offset tolerance.
+% IMPORTANT: This function may not preserve the topology of the original
+% polygon.
 %
 % INPUT ARGUMENTS:
-%   - C     : N-by-2 array of polygon co-ordinates, such that the first, 
-%             C(1,:), and last, C(end,:), points are the same. 
-%   - opt   : opt can be specified in one of two ways: 
+%   - C     : N-by-2 array of polygon co-ordinates, such that the first,
+%             C(1,:), and last, C(end,:), points are the same.
+%   - opt   : opt can be specified in one of two ways:
 %             ----------------------APPROACH #1 (default) -----------------
-%             - opt : opt=[B_tol 1], where B_tol is the maximum acceptible 
-%                     offset from the original boundary, B_tol must be 
-%                     expressed in the same lenth units as the co-ords in 
+%             - opt : opt=[B_tol 1], where B_tol is the maximum acceptible
+%                     offset from the original boundary, B_tol must be
+%                     expressed in the same lenth units as the co-ords in
 %                     C. Default setting is B_tol=Emin/2, where Emin is the
-%                     length of the shortest edge.  
+%                     length of the shortest edge.
 %             ----------------------APPROACH #2----------------------------
-%              - opt : opt=[P_tol 2], where P_tol is the fraction of the 
-%                      total number of polygon's vertices to be retained. 
+%              - opt : opt=[P_tol 2], where P_tol is the fraction of the
+%                      total number of polygon's vertices to be retained.
 %                      Accordingly, P_tol must be a real number on the
 %                      interval (0,1).
 %
@@ -26,11 +26,11 @@ function [C_out,i_rem]=DecimatePoly(C,opt)
 %             removed during decimation.
 %
 % ALGORITHM:
-% 1) For every vertex compute the boundary offset error.  
+% 1) For every vertex compute the boundary offset error.
 % 2) Rank all vertics according to the error score from step 1.
 % 3) Remove the vertex with the lowest error.
 % 4) Recompute and accumulate the errors for the two neighbours adjacent to
-%    the deleted vertex and go back to step 2. 
+%    the deleted vertex and go back to step 2.
 % 5) Repeat step 2 to 4 until no more vertices can be removed or the number
 %    of vertices has reached the desired number.
 %
@@ -43,9 +43,9 @@ if nargin<2, opt={}; end
 opt=CheckInputArgs(C,opt);
 
 N=size(C,1);
-i_rem=false(N,1); 
-if N<=4, 
-    C_out=C; 
+i_rem=false(N,1);
+if N<=4,
+    C_out=C;
     return
 end
 
@@ -75,7 +75,7 @@ D21=C-circshift(C,[1 0]);
 dE_new2=sum(D31.^2,2); % length^2 of potential new edges
 
 % Find the closest point to the current vertex on the new edge
-t=sum(D21.*D31,2)./dE_new2; 
+t=sum(D21.*D31,2)./dE_new2;
 if t<0, t(t<0)=0; end %#ok<*BDSCI>
 if t>1, t(t>1)=1; end
 V=circshift(C,[1 0])+bsxfun(@times,t,D31);
@@ -83,14 +83,14 @@ V=circshift(C,[1 0])+bsxfun(@times,t,D31);
 % Evaluate the distance^2
 Err_D2=sum((V-C).^2,2);
 
-% Initialize distance error accumulation array 
+% Initialize distance error accumulation array
 DEAA=zeros(N,1);
 
 
 % Begin decimation --------------------------------------------------------
 idx_ret=1:N; % keep track of retained vertices
 while true
-    
+
     % Find the vertices whose removal will satisfy the decimation criterion
     idx_i=Err_D2<B_tol;
     if sum(idx_i)==0 && N>Nmin && opt(2)==2
@@ -101,43 +101,43 @@ while true
     idx_i=find(idx_i);
     if isempty(idx_i) || N==Nmin, break; end
     N=N-1;
-    
+
     % Vertex with the smallest net error
     [~,i_min]=min(Err_D2(idx_i));
     idx_i=idx_i(i_min);
 
-    
-    % Update the distance error accumulation array 
+
+    % Update the distance error accumulation array
     DEAA(idx_i)=DEAA(idx_i)+sqrt(Err_D2(idx_i));
-    
+
     i1=idx_i-1; if i1<1, i1=N; end
     i3=idx_i+1; if i3>N, i3=1; end
-    
+
     DEAA(i1)=DEAA(idx_i);
     DEAA(i3)=DEAA(idx_i);
-    
+
     % Recompute the errors for the vertices neighbouring the vertex marked
     % for deletion
     i1_1=i1-1; if i1_1<1, i1_1=N; end
     i1_3=i3;
-    
+
     i3_1=i1;
     i3_3=i3+1; if i3_3>N, i3_3=1; end
-    
+
     err_D1=RecomputeErrors(C([i1_1,i1,i1_3],:));
     err_D3=RecomputeErrors(C([i3_1,i3,i3_3],:));
-    
+
     % Upadate the errors
     Err_D2(i1)=(sqrt(err_D1)+ DEAA(i1)).^2;
     Err_D2(i3)=(sqrt(err_D3)+ DEAA(i3)).^2;
-        
+
     % Remove the vertex
     C(idx_i,:)=[];
     idx_ret(idx_i)=[];
     DEAA(idx_i)=[];
-    
+
     Err_D2(idx_i)=[];
-    
+
 end
 C=[C;C(1,:)]; C_out=C;
 
@@ -159,8 +159,8 @@ fprintf('change\t%-5.2f%%\t\t\t%-5.2f%%\t\t\t%-5.2f%%\n\n',(N-No)/No*100,(P-Po)/
 
 %==========================================================================
 function err_D2=RecomputeErrors(V)
-% Recompute the distance offset error for a small subset of polygonal 
-% vertices.  
+% Recompute the distance offset error for a small subset of polygonal
+% vertices.
 %
 %   - V     : 3-by-2 array of triangle vertices, where V(2,:) is the vertex
 %             marked for removal.
@@ -171,7 +171,7 @@ D21=V(2,:)-V(1,:);
 dE_new2=sum(D31.^2,2); % length^2 of potential new edge
 
 % Find the closest point to the current vertex on the new edge
-t=sum(D21.*D31,2)/dE_new2; 
+t=sum(D21.*D31,2)/dE_new2;
 if t<0, t(t<0)=0; end
 if t>1, t(t>1)=1; end
 p=V(1,:)+bsxfun(@times,t,D31);
