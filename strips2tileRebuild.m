@@ -104,6 +104,9 @@ if ~disableReg && any(strcmp(reg,'R'))
         if exist('maskPolyx','var')
             if ~isempty(maskPolyx)
                 mask=[maskPolyx{i}(:) maskPolyy{i}(:)];
+                if isempty(mask)
+                    mask=cell(1,2);
+                end
             else
                 mask=cell(1,2);
             end
@@ -149,6 +152,9 @@ for i=1:length(m0.rmse)
     if exist('maskPolyx','var')
         if ~isempty(maskPolyx)
             mask=[maskPolyx{i}(:) maskPolyy{i}(:)];
+            if isempty(mask)
+                mask=cell(1,2);
+            end
         else
             mask=cell(1,2);
         end
