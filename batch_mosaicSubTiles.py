@@ -1,15 +1,9 @@
 import os, string, sys, argparse, glob, subprocess
 from collections import namedtuple
 matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing4'
-default_buffer = 100
+quads = ['1_1','1_2','2_1','2_2']
 
-MosaicScheme = namedtuple('MosaicOrigin', 'xorigin yorigin xsize ysize')
-mosaic_schemes = {
-    'arctic' :      MosaicScheme(-4000000, -4000000, 100000, 100000),
-    'artarctic' :   MosaicScheme(-4000000, -4000000, 100000, 100000),
-}
-
-Task = namedtuple('Task', 't st x0 x1 y0 y1')
+Task = namedtuple('Task', 't st')
 
 def main():
 
@@ -18,18 +12,13 @@ def main():
     parser.add_argument("srcdir", help="source root dir (level above tile name dir)")
     parser.add_argument("tiles", help="list of tiles, comma delimited")
     parser.add_argument("res", choices=['2','10'], help="resolution (2 or 10)")
-    parser.add_argument("region", choices=['arctic','antarctic'], help="region (arctic, antarctic)")
 
 
     parser.add_argument("--lib-path", default=matlab_scripts,
             help="path to referenced Matlab functions (default={}".format(matlab_scripts))
 
-    parser.add_argument('--num-rows', type=int, default=1,
-            help="number of subtile rows")
-    parser.add_argument('--num-cols', type=int, default=1,
-            help="number of subtile columns")
-    parser.add_argument('--buffer', type=int, default=default_buffer,
-            help="tile overlap buffer distance in meters (default={})".format(default_buffer))
+    parser.add_argument('--quads', action='store_true', default=False,
+            help="build into quad subtiles")
     parser.add_argument("--pbs", action='store_true', default=False,
             help="submit tasks to PBS")
     parser.add_argument("--qsubscript",
@@ -56,46 +45,27 @@ def main():
 
     matlab_script = 'mosaicSubTiles'
 
-    ## Get origin for region
-    scheme = mosaic_schemes[args.region]
-
     tasks = []
 
     i=0
     if len(tiles) > 0:
 
         for tile in tiles:
-
-            trow,tcol = tile.split('_')
-            txorigin = scheme.xorigin + scheme.xsize * (int(tcol) - 1)
-            tyorigin = scheme.yorigin + scheme.ysize * (int(trow) - 1)
-            dx = scheme.xsize / args.num_cols
-            dy = scheme.ysize / args.num_rows
-
-            ## If single row/col, proceed with no subtile ID in name
-            if args.num_rows == 1 and args.num_cols == 1:
-                subtile_name = ''
-                x0 = txorigin - args.buffer
-                y0 = tyorigin - args.buffer
-                x1 = txorigin + dx + args.buffer
-                y1 = tyorigin + dy + args.buffer
-                tasks.append(Task(tile, subtile_name, x0, x1, y0, y1))
-
+            if args.quads:
+                for quad in quads:
+                    tasks.append(Task(tile, quad))
             else:
-                for i in range(args.num_rows):
-                    for j in range(args.num_cols):
-                        subtile_name = '_{}_{}'.format(i+1,j+1)
-                        y0 = tyorigin + i * dy - args.buffer
-                        x0 = txorigin + j * dx - args.buffer
-                        y1 = tyorigin + i * dy + dy + args.buffer
-                        x1 = txorigin + j * dx + dx + args.buffer
-                        tasks.append(Task(tile, subtile_name, x0, x1, y0, y1))
+                tasks.append(Task(tile, ''))
+
 
     print("{} tasks found".format(len(tasks)))
 
     if len(tasks) > 0:
         for task in tasks:
-            dstfn = "{}{}_{}m.mat".format(task.t,task.st,args.res)
+            if task.st == '':
+                dstfn = "{}_{}m.mat".format(task.t,args.res)
+            else:
+                dstfn = "{}_{}_{}m.mat".format(task.t,task.st,args.res)
             dstfp = os.path.join(srcdir, task.t, dstfn)
             sem = os.path.join(srcdir, task.t, dstfn.replace('.mat','_empty.txt'))
             subtile_dir = os.path.join(srcdir,task.t,'subtiles')
@@ -110,17 +80,16 @@ def main():
                 i+=1
                 if args.pbs:
                     job_name = 'mst_{}'.format(task.t)
-                    cmd = r'qsub -N {} -v p1={},p2={},p3={},p4={},p5={},p6={},p7={},p8={},p9={},p10={} {}'.format(
+                    cmd = r'qsub -N {1} -v p1={2},p2={3},p3={4},p4={5},p5={6},p6={7},p7={8} {0}'.format(
+                        qsubpath,
                         job_name,
                         scriptdir,
                         args.lib_path,
                         matlab_script,
                         subtile_dir,
                         args.res,
-                        task.x0,task.x1,
-                        task.y0,task.y1,
                         dstfp,
-                        qsubpath
+                        task.st
                     )
                     print cmd
                     if not args.dryrun:
@@ -128,16 +97,25 @@ def main():
 
                 ## else run matlab
                 else:
-                    cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); {2}('{3}',{4},{5},{6},{7},{8},'{9}'); exit" """.format(
-                        scriptdir,
-                        args.lib_path,
-                        matlab_script,
-                        subtile_dir,
-                        args.res,
-                        task.x0,task.x1,
-                        task.y0,task.y1,
-                        dstfp,
-                    )
+                    if task.st == '':
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); {2}('{3}',{4},'{5}'); exit" """.format(
+                            scriptdir,
+                            args.lib_path,
+                            matlab_script,
+                            subtile_dir,
+                            args.res,
+                            dstfp,
+                        )
+                    else:
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); {2}('{3}',{4},'{5}','{6}'); exit" """.format(
+                            scriptdir,
+                            args.lib_path,
+                            matlab_script,
+                            subtile_dir,
+                            args.res,
+                            dstfp,
+                            task.st,
+                        )
                     print "{}, {}".format(i, cmd)
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#PBS -l walltime=100:00:00,nodes=1:ppn=2
+#PBS -l walltime=100:00:00,nodes=nunatak-22:ppn=2
 #PBS -m n
 #PBS -k oe
 #PBS -j oe

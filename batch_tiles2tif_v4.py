@@ -1,5 +1,9 @@
 import os, string, sys, argparse, glob, subprocess
-matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing3'
+matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing4'
+quadnames = ('1_1','1_2','2_1','2_2')
+RESOLUTIONS = ['2','10']
+REGIONS = ['arctic','antarctic']
+default_qsub = 'qsub_tiles2tif_v4.sh'
 
 #### TODO add projstring to passed args
 def main():
@@ -8,17 +12,17 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("dstdir", help="target directory (tile subfolders will be created)")
     parser.add_argument("tiles", help="list of mosaic tiles, comma delimited")
-    parser.add_argument("res", choices=['2','8','40'], help="resolution (2, 8, or 40)")
-    parser.add_argument("region", choices=['arctic','antarctic','above'], help="region (arctic, antarctic, or above)")
+    parser.add_argument("res", choices=RESOLUTIONS, help="resolution ({})".format(','.join(RESOLUTIONS)))
+    parser.add_argument("region", choices=REGIONS, help="region ({})".format(','.join(REGIONS)))
 
-    parser.add_argument("--rerun", action='store_true', default=False,
-            help="run script even if target dem already exists")
+    # parser.add_argument("--rerun", action='store_true', default=False,
+    #         help="run script even if target dem already exists")
     parser.add_argument("--lib-path", default=matlab_scripts,
             help="path to referenced Matlab functions (default={}".format(matlab_scripts))
     parser.add_argument("--pbs", action='store_true', default=False,
             help="submit tasks to PBS")
     parser.add_argument("--qsubscript",
-            help="qsub script to use in PBS submission (default is qsub_tiles2tif_rookery.sh in script root folder)")
+            help="qsub script to use in PBS submission (default is {} in script root folder)".format(default_qsub))
     parser.add_argument("--dryrun", action='store_true', default=False,
             help='print actions without executing')
 
@@ -30,7 +34,7 @@ def main():
 
     ## Verify qsubscript
     if args.qsubscript is None:
-        qsubpath = os.path.join(scriptdir,'qsub_tiles2tif.sh')
+        qsubpath = os.path.join(scriptdir,default_qsub)
     else:
         qsubpath = os.path.abspath(args.qsubscript)
     if not os.path.isfile(qsubpath):
@@ -43,37 +47,33 @@ def main():
         projstr = 'polar stereo north'
     elif args.region == 'antarctic':
         projstr = 'polar stereo south'
-    elif args.region == 'above':
-        projstr = 'canada albers equal area conic'
 
     i=0
     if len(tiles) > 0:
 
         for tile in tiles:
 
-            ## if output does not exist, add to task list
-            dstfp = os.path.join(dstdir,tile,'{}_{}m_reg_dem.tif'.format(tile, args.res))
-            dstfp2 = os.path.join(dstdir,tile,'{}_{}m_dem.tif'.format(tile, args.res))
-            matfile = os.path.join(dstdir,tile,'{}_{}m_dem.mat'.format(tile, args.res))
-            if not os.path.isfile(matfile):
-                print 'source matfile does not exist: {}'.format(matfile)
+            for q in quadnames:
+                tq = "{}_{}".format(tile,q)
+                dstfp = os.path.join(dstdir,tile,'{}_{}m_dem.tif'.format(tq, args.res))
+                matfile = os.path.join(dstdir,tile,'{}_{}m.mat'.format(tq, args.res))
+                if not os.path.isfile(matfile):
+                    print "Tile {} {}m mat file does not exist: {}".format(tq,args.res,matfile)
 
-            else:
-                if (os.path.isfile(dstfp) or os.path.isfile(dstfp2)) and not args.rerun:
-                    print '{} or {} exists, skipping'.format(dstfp, dstfp2)
+                elif os.path.isfile(dstfp):
+                    print '{} exists, skipping'.format(dstfp)
 
                 else:
                     ## if pbs, submit to scheduler
                     i+=1
                     if args.pbs:
-                        job_name = 't2t_{}'.format(tile)
-                        cmd = r'qsub -N {} -v p1={},p2={},p3="{}",p4={},p5={} {}'.format(
+                        job_name = 't2t_{}'.format(tq)
+                        cmd = r'qsub -N {} -v p1={},p2={},p3="{}",p4={} {}'.format(
                             job_name,
                             scriptdir,
                             matfile,
                             projstr,
                             args.lib_path,
-                            args.res,
                             qsubpath
                         )
                         print cmd
@@ -82,11 +82,10 @@ def main():
 
                     ## else run matlab
                     else:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); addpath('{}'); writeTileToTif('{}',{},'{}'); exit" """.format(
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); writeTileToTifv4('{2}','{3}'); tileMetav4('{2}'); exit" """.format(
                             scriptdir,
                             args.lib_path,
                             matfile,
-                            args.res,
                             projstr
                         )
                         print "{}, {}".format(i, cmd)

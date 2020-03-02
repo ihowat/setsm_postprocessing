@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#PBS -l walltime=200:00:00,nodes=1:ppn=4
+#PBS -l walltime=40:00:00,nodes=1:ppn=8
 #PBS -m n
 #PBS -k oe
 #PBS -j oe
@@ -19,7 +19,8 @@ echo $p1
 echo $p2
 echo $p3
 echo $p4
+echo $p5
 
-cmd="addpath('${p1}'); addpath('${p4}'); ${p2}('${p3}'); exit"
+cmd="addpath('${p1}'); addpath('${p4}'); writeTileToTif('${p2}',${p5},'${p3}'); exit"
 echo $cmd
 time matlab -nojvm -nodisplay -nosplash -r "${cmd}"

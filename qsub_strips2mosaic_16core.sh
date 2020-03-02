@@ -12,8 +12,8 @@ echo $PBS_O_HOST
 echo $PBS_NODEFILE
 echo $a1
 
-module load gdal/2.1.1
-module load matlab/2016b
+module load gdal/2.1.3
+module load matlab/2019a
 
 echo $p1
 echo $p2
