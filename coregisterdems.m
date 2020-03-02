@@ -55,18 +55,18 @@ while it
         % interpolate the floating data to the reference grid
         z2n = interp2(x2 - pn(2),y2 - pn(3),z2 - pn(1),...
             x1,y1,'*linear');
-         if exist('m2','var')
+        if exist('m2','var')
             m2n = interp2(x2 - pn(2),y2 - pn(3),single(m2),...
             x1,y1,'*nearest');
             m2n(isnan(m2n)) = 0; % convert back to uint8
             m2n = logical(m2n);
-         end
+        end
     else
         z2n=z2-pn(1);
         if exist('m2','var'); m2n=m2; end
     end
 
-   interpflag=true;
+    interpflag=true;
 
     % slopes
     [sx,sy] = gradient(z2n,rx);
