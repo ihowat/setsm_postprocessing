@@ -28,10 +28,20 @@ tileDefs=load(tileDefFile);
 fprintf('Loading strip database and getting tile overlaps\n')
 meta=load(databaseFile);
 
+% fix old meta format
+if isfield(meta,'f')
+    meta.fileName = meta.f;
+    meta=rmfield(meta,'f');
+end
+
 % get strip areas and alignment stats for quality selection
 meta.A = cellfun(@(x,y) polyarea(x,y), meta.x,meta.y);
-meta.scene_alignment_meanrmse= cellfun( @(x) mean(x.rmse),...
-    meta.scene_alignment);
+if isfield(meta,'avg_rmse')
+    meta.scene_alignment_meanrmse= meta.avg_rmse;
+else
+    meta.scene_alignment_meanrmse= cellfun( @(x) mean(x.rmse),...
+        meta.scene_alignment);
+end
 
 % find index of tile in tile def database
 tileInd = find(strcmp(tileDefs.I,tileName));
@@ -61,6 +71,21 @@ for n=1:subN
     clear x y z offsets za fileNames fa dX dY dZ land
     
     fprintf('subtile %d of %d\n',n,subN)
+    
+    x=subx0(n):res:subx1(n);
+    y=suby1(n):-res:suby0(n);
+    y=y(:);
+    
+    % subset tile land/water mask
+    land = interp2(landTile.x,landTile.y(:),single(landTile.z),x,y(:),...
+        '*nearest');
+    land(isnan(land)) = 0;
+    land = logical(land);
+
+    if ~any(land(:))
+        fprintf('No land in subtile %d, skipping\n',n)
+        continue
+    end
     
     outName = [outDir,'/',tileName,'_',num2str(n),'_10m.mat'];
     
@@ -96,8 +121,13 @@ for n=1:subN
                         % dummy vars to skip check points
                         z = [];
                         offsets=[];
+                    case 5 % write 2m
+                        fprintf('%s exists, re-writing 2m output\n',outName)
+                        load(outName)
+                        if ~exist('fileNames0','var')
+                            fileNames0 = fileNames;
+                        end
                 end
-                
             else
                 load(outName)
                 clear za za_med dZ dX dY
@@ -167,6 +197,22 @@ for n=1:subN
         if ismac
             fileNames  = strrep(fileNames,'/fs/project/howat.4',...
                 '/Users/ihowat/project');
+            fileNames  = strrep(fileNames,'/data',...
+                '/Users/ihowat/data');
+        else
+            fileNames  = strrep(fileNames,'/data',...
+                '/home/howat.4/data');
+        end
+        
+        fileNames = strrep(fileNames,'meta.txt','dem_10m.tif');
+        
+        if  ~exist(fileNames{1},'file')
+            
+              fileNames = strrep(fileNames,'2m_dem_10m.tif','10m_dem.tif');
+                 
+                  if  ~exist(fileNames{1},'file')
+                      error('1 or more files dont exist');
+                  end
         end
         
         % make date vector
@@ -202,11 +248,13 @@ for n=1:subN
             
             segs = find(strcmp(stripid,unique_stripid(it)));
             
+            segs=segs(:); 
+            
             if length(segs) > 1
                 
                 z(:,:,segs(1)) = nanmedian(z(:,:,segs),3);
-                
-                r = [r,segs(2:end)];
+
+                r = [r(:);segs(2:end)];
             end
         end
         
@@ -224,11 +272,13 @@ for n=1:subN
     % calculate DEM pairwise offsets
     if ~exist('offsets','var')
         
-        % subset tile land/water mask
-        land = interp2(landTile.x,landTile.y(:),single(landTile.z),x,y(:),...
-            '*nearest');
-        land(isnan(land)) = 0;
-        land = logical(land);
+        if ~exist('land','var')
+            % subset tile land/water mask
+            land = interp2(landTile.x,landTile.y(:),single(landTile.z),x,y(:),...
+                '*nearest');
+            land(isnan(land)) = 0;
+            land = logical(land);
+        end
         
         if ~any(land(:))
             fprintf('No land in subtile %d, skipping\n',n)
