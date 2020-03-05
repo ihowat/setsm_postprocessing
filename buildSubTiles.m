@@ -355,7 +355,7 @@ for n=1:subN
                 end
                 
                 % only retain the top ith dems
-                nsort = nsort(1:i);
+                nsort = sort(nsort(1:i));
                 
                 % set adjustment thresholds to inf to shut them off or
                 % indicate no adjustment
