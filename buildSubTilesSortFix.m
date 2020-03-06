@@ -203,167 +203,167 @@ for n=1:length(outNames)
     fprintf('saving za_med and N to %s\n',outName)
     save(outName,'za_med','N','-append');
     
-    %     fprintf('making 2m version\n')
-    %     outName2m = strrep(outName,'_10m.mat','_2m.mat');
-    %
-    %     % if strip segments were combined, need to expand offset vectors and fa
-    %     % array to match orginal file list
-    %     if length(fileNames0) ~= length(fileNames)
-    %
-    %         [~,stripid] =  cellfun(@fileparts,fileNames0,'uniformoutput',0);
-    %         stripid =  cellfun(@(x) x(1:47),stripid,'uniformoutput',0);
-    %         [~,~,strip_ind] = unique(stripid);
-    %
-    %          dZ = dZ(strip_ind);
-    %          dX = dX(strip_ind);
-    %          dY = dY(strip_ind);
-    %
-    %          fa = fa(:,:,strip_ind);
-    %
-    %     end
-    %
-    %   make2m(fileNames0,x,y,dZ,dX,dY,land,fa,outName2m);
+        fprintf('making 2m version\n')
+        outName2m = strrep(outName,'_10m.mat','_2m.mat');
+    
+        % if strip segments were combined, need to expand offset vectors and fa
+        % array to match orginal file list
+        if length(fileNames0) ~= length(fileNames)
+    
+            [~,stripid] =  cellfun(@fileparts,fileNames0,'uniformoutput',0);
+            stripid =  cellfun(@(x) x(1:47),stripid,'uniformoutput',0);
+            [~,~,strip_ind] = unique(stripid);
+    
+             dZ = dZ(strip_ind);
+             dX = dX(strip_ind);
+             dY = dY(strip_ind);
+    
+             fa = fa(:,:,strip_ind);
+    
+        end
+    
+      make2m(fileNames0,x,y,dZ,dX,dY,land,fa,outName2m);
     
 end
 
-% function make2m(fileNames,x,y,dZ,dX,dY,land,fa,outName)
-% 
-% % make date vector
-% [~,name] =  cellfun(@fileparts,fileNames,'uniformoutput',0);
-% t=cellfun(@(x) datenum(x(6:13),'yyyymmdd'),name)';
-% 
-% % layers with missing adjustments
-% n_missing = isnan(dZ);
-% 
-% dZ(n_missing) = [];
-% dX(n_missing) = [];
-% dY(n_missing) = [];
-% fileNames(n_missing) = [];
-% fa(:,:,n_missing) = [];
-% t(n_missing) = [];
-% 
-% fileNames = strrep(fileNames,'_10m.tif','.tif');
-% 
-% [x,y,z,~,mt] =extractSubGrid(fileNames,min(x),max(x),...
-%     min(y),max(y),2);
-% 
-% % merge segmentsfrom same strips
-% % dont get offsets between segs in same strip:make a vector of z's
-% % that ar belonging to the same strip
-% [~,stripid] =  cellfun(@fileparts,fileNames,'uniformoutput',0);
-% stripid =  cellfun(@(x) x(1:47),stripid,'uniformoutput',0);
-% unique_stripid = unique(stripid);
-% 
-% r=[];
-% it=1;
-% for it=1:length(unique_stripid)
-%     
-%     segs = find(strcmp(stripid,unique_stripid(it)));
-%     
-%     if length(segs) > 1
-%         
-%         z(:,:,segs(1)) = nanmedian(z(:,:,segs),3);
-%         
-%         mt(:,:,segs(1)) = any(mt(:,:,segs),3);
-%         
-%         segs=segs(:);
-%         r = [r(:);segs(2:end)];
-%     end
-% end
-% 
-% z(:,:,r) = [];
-% mt(:,:,r) = [];
-% fileNames(r) = [];
-% t(r) = [];
-% dZ(r) = [];
-% dX(r) = [];
-% dY(r) = [];
-% 
-% clear it segs r
-% 
-% % make adjusted z and mt arrays
-% za=nan(size(z),'single');
-% mta = false(size(mt));
-% for k=1:size(z,3)
-%     zak = interp2(x + dX(k),y + dY(k), z(:,:,k) + dZ(k),...
-%         x,y,'*linear');
-%     
-%     mtak = interp2(x + dX(k),y + dY(k), single(mt(:,:,k)),...
-%         x,y,'*nearest');
-%     
-%     mtak(isnan(mtak)) = 0;
-%     mtak = logical(mtak);
-%     
-%     if any(any(~fa(:,:,k)))
-%         fak = imresize(fa(:,:,k),size(za(:,:,k)),'nearest');
-%         zak(~fak)=NaN;
-%         mtak(~fak) = false;
-%     end
-%     
-%     za(:,:,k) = zak;
-%     mta(:,:,k) = mtak;
-% end
-% 
-% za_med = nanmedian(za,3);
-% %za_std =  nanstd(za,[],3);
-% za_mad = mad(za,1,3);
-% N = uint8(sum(~isnan(za),3));
-% Nmt = uint8(sum(mta,3));
-% 
-% % resize land mask
-% land = imresize(land,size(za_med),'nearest');
-% 
-% t=t-datenum('1/1/2000 00:00:00');
-% t=reshape(t,1,1,[]);
-% t=repmat(t,size(za_med));
-% t(isnan(za))=NaN;
-% tmax = max(t,[],3);
-% tmin = min(t,[],3);
-% %tmean = nanmean(t,3);
-% 
-% tmax = uint16(tmax);
-% tmin = uint16(tmin);
-% %tmean = uint16(tmean);
-% 
-% 
-% % Incomplete attempt at code for retrieving dates of median values
-% % [za_sort,n]  = sort(za,3);
-% % isodd=logical(mod(single(N),2));
-% % n1=zeros(size(N),'uint8');
-% % n2=zeros(size(N),'uint8');
-% %
-% % n1(isodd & N > 0) = uint8(ceil(single(N(isodd & N > 0))./2));
-% % n2(isodd & N > 0) = n1(isodd & N > 0);
-% %
-% % n1(~isodd & N > 0) = uint8(single(N(~isodd & N > 0))./2);
-% % n2(~isodd & N > 0) = n1(~isodd & N > 0)+1;
-% %
-% % [col,row] = meshgrid((1:size(za,2))',1:size(za,1));
-% %
-% % n1(N == 0) = [];
-% % n2(N == 0) = [];
-% % row(N == 0) = [];
-% % col(N == 0) = [];
-% %
-% % ind1 = sub2ind(size(za),row(:),col(:),n1(:));
-% % ind2 = sub2ind(size(za),row(:),col(:),n2(:));
-% %
-% % za1 = za_sort(ind1);
-% % za2 = za_sort(ind2);
-% %
-% %
-% % za_med = nan(size(za,1),size(za,2),'single');
-% % ind = sub2ind(size(za_med),row(:),col(:));
-% % za_med(ind) = (za1+za2)./2;
-% %
-% % tmed= zeros(size(za,1),size(za,2),'uint16');
-% % t_med(ind) = (ta1+ta2)./2;
-% %
-% % t =
-% %
-% % za1 = za_sort(ind1);
-% % za2 = za_sort(ind2);
-% 
-% fprintf('saving x, y za_med land za_mad N tmax tmin to %s\n',outName)
-% save(outName,'x','y','za_med','land','za_mad','N','Nmt','tmax','tmin','-v7.3');
+function make2m(fileNames,x,y,dZ,dX,dY,land,fa,outName)
+
+% make date vector
+[~,name] =  cellfun(@fileparts,fileNames,'uniformoutput',0);
+t=cellfun(@(x) datenum(x(6:13),'yyyymmdd'),name)';
+
+% layers with missing adjustments
+n_missing = isnan(dZ);
+
+dZ(n_missing) = [];
+dX(n_missing) = [];
+dY(n_missing) = [];
+fileNames(n_missing) = [];
+fa(:,:,n_missing) = [];
+t(n_missing) = [];
+
+fileNames = strrep(fileNames,'_10m.tif','.tif');
+
+[x,y,z,~,mt] =extractSubGrid(fileNames,min(x),max(x),...
+    min(y),max(y),2);
+
+% merge segmentsfrom same strips
+% dont get offsets between segs in same strip:make a vector of z's
+% that ar belonging to the same strip
+[~,stripid] =  cellfun(@fileparts,fileNames,'uniformoutput',0);
+stripid =  cellfun(@(x) x(1:47),stripid,'uniformoutput',0);
+unique_stripid = unique(stripid);
+
+r=[];
+it=1;
+for it=1:length(unique_stripid)
+
+    segs = find(strcmp(stripid,unique_stripid(it)));
+
+    if length(segs) > 1
+
+        z(:,:,segs(1)) = nanmedian(z(:,:,segs),3);
+
+        mt(:,:,segs(1)) = any(mt(:,:,segs),3);
+
+        segs=segs(:);
+        r = [r(:);segs(2:end)];
+    end
+end
+
+z(:,:,r) = [];
+mt(:,:,r) = [];
+fileNames(r) = [];
+t(r) = [];
+dZ(r) = [];
+dX(r) = [];
+dY(r) = [];
+
+clear it segs r
+
+% make adjusted z and mt arrays
+za=nan(size(z),'single');
+mta = false(size(mt));
+for k=1:size(z,3)
+    zak = interp2(x + dX(k),y + dY(k), z(:,:,k) + dZ(k),...
+        x,y,'*linear');
+
+    mtak = interp2(x + dX(k),y + dY(k), single(mt(:,:,k)),...
+        x,y,'*nearest');
+
+    mtak(isnan(mtak)) = 0;
+    mtak = logical(mtak);
+
+    if any(any(~fa(:,:,k)))
+        fak = imresize(fa(:,:,k),size(za(:,:,k)),'nearest');
+        zak(~fak)=NaN;
+        mtak(~fak) = false;
+    end
+
+    za(:,:,k) = zak;
+    mta(:,:,k) = mtak;
+end
+
+za_med = nanmedian(za,3);
+%za_std =  nanstd(za,[],3);
+za_mad = mad(za,1,3);
+N = uint8(sum(~isnan(za),3));
+Nmt = uint8(sum(mta,3));
+
+% resize land mask
+land = imresize(land,size(za_med),'nearest');
+
+t=t-datenum('1/1/2000 00:00:00');
+t=reshape(t,1,1,[]);
+t=repmat(t,size(za_med));
+t(isnan(za))=NaN;
+tmax = max(t,[],3);
+tmin = min(t,[],3);
+%tmean = nanmean(t,3);
+
+tmax = uint16(tmax);
+tmin = uint16(tmin);
+%tmean = uint16(tmean);
+
+
+% Incomplete attempt at code for retrieving dates of median values
+% [za_sort,n]  = sort(za,3);
+% isodd=logical(mod(single(N),2));
+% n1=zeros(size(N),'uint8');
+% n2=zeros(size(N),'uint8');
+%
+% n1(isodd & N > 0) = uint8(ceil(single(N(isodd & N > 0))./2));
+% n2(isodd & N > 0) = n1(isodd & N > 0);
+%
+% n1(~isodd & N > 0) = uint8(single(N(~isodd & N > 0))./2);
+% n2(~isodd & N > 0) = n1(~isodd & N > 0)+1;
+%
+% [col,row] = meshgrid((1:size(za,2))',1:size(za,1));
+%
+% n1(N == 0) = [];
+% n2(N == 0) = [];
+% row(N == 0) = [];
+% col(N == 0) = [];
+%
+% ind1 = sub2ind(size(za),row(:),col(:),n1(:));
+% ind2 = sub2ind(size(za),row(:),col(:),n2(:));
+%
+% za1 = za_sort(ind1);
+% za2 = za_sort(ind2);
+%
+%
+% za_med = nan(size(za,1),size(za,2),'single');
+% ind = sub2ind(size(za_med),row(:),col(:));
+% za_med(ind) = (za1+za2)./2;
+%
+% tmed= zeros(size(za,1),size(za,2),'uint16');
+% t_med(ind) = (ta1+ta2)./2;
+%
+% t =
+%
+% za1 = za_sort(ind1);
+% za2 = za_sort(ind2);
+
+fprintf('saving x, y za_med land za_mad N tmax tmin to %s\n',outName)
+save(outName,'x','y','za_med','land','za_mad','N','Nmt','tmax','tmin','-v7.3');
 
