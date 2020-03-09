@@ -80,6 +80,10 @@ for n=1:length(outNames)
     
     load(outName,'offsetErrMax','dZ')
     
+    if ~exist('offsetErrMax','var') || ~exist('dZ','var')
+        continue
+    end
+        
     if ~isinf(offsetErrMax) || ~any(~isnan(dZ) & dZ ~= 0)
         continue
     end
