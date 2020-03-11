@@ -202,6 +202,8 @@ for n=1:subN
         else
             fileNames  = strrep(fileNames,'/data',...
                 '/home/howat.4/data');
+            fileNames = strrep(fileNames,'/mnt/pgc/home/howat.4/data',...
+                '/mnt/pgc/data');
         end
         
         fileNames = strrep(fileNames,'meta.txt','dem_10m.tif');
@@ -211,7 +213,7 @@ for n=1:subN
               fileNames = strrep(fileNames,'2m_dem_10m.tif','10m_dem.tif');
                  
                   if  ~exist(fileNames{1},'file')
-                      error('1 or more files dont exist');
+                      error('1 or more files dont exist: %s\n', fileNames{1});
                   end
         end
         
