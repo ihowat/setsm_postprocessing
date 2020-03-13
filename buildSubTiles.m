@@ -373,6 +373,13 @@ for n=1:subN
                 zr=readGeotiff(refDemFile,...
                     'map_subset',[x(1)-90 x(end)+90 y(end)-90 y(1)+90]);
                 
+                zr.z(zr.z == -32767) = NaN;
+                
+                if ~any(~isnan(zr.z(:)))
+                    fprintf('Reference dem has no data, skipping\n');
+                    continue
+                end
+                
                 % interpolate reference dem to subtile
                 try
                     zri = interp2(zr.x,zr.y(:),zr.z,x,y(:),'*linear');
@@ -390,6 +397,11 @@ for n=1:subN
                 for i=1:size(z,3)
                     dz =  zri - z(:,:,i);
                     dz_std(i) = nanstd(dz(land));
+                end
+                
+               if ~any(~isnan(dz_std))
+                    fprintf('All reference dem differences stddev values are nans, skipping\n');
+                    continue
                 end
                 
                 % sort the dems by lowest std dev from reference and select
