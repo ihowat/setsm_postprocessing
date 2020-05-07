@@ -137,6 +137,10 @@ subtile_n=1;
 
 % initialize count of pixels with data in mosaic for error checking
 Nn=0;
+
+% initialize stipList variable
+stripList=[];
+
 for filen=1:NsubTileFiles
     
     % first only add subtiles with adjustements
@@ -309,6 +313,20 @@ for filen=1:NsubTileFiles
     % update count of subtiles added to mosaic
     subtile_n= subtile_n+1;
     
+    % add to stripList
+    % load subtile into structure - if 2m, need to switch to 10m filename
+    % since no filename list in 2m version.
+    zsub=load(strrep(subTileFiles{filen},'_2m.mat','_10m.mat'),'fileNames','dZ');
+
+    zsub.fileNames = zsub.fileNames(~isnan(zsub.dZ));
+    
+    [~,stripid] =  cellfun(@fileparts,zsub.fileNames,'uniformoutput',0);
+    
+    if dx == 2
+       stripid= strrep(stripid,'_10m','');
+    end
+ 
+    stripList=unique([stripList,stripid]);   
 end
 
 %% Add dems with nan dZ's
@@ -526,15 +544,30 @@ while ~isempty(nf)
     
     % remove this subtile from index
     nf(count) = [];
+    
+    % add to stripList
+    % load subtile into structure - if 2m, need to switch to 10m filename
+    % since no filename list in 2m version.
+    zsub=load(strrep(subTileFiles{filen},'_2m.mat','_10m.mat'),'fileNames','dZ');
+
+    zsub.fileNames = zsub.fileNames(~isnan(zsub.dZ));
+    
+    [~,stripid] =  cellfun(@fileparts,zsub.fileNames,'uniformoutput',0);
+    
+    if dx == 2
+       stripid= strrep(stripid,'_10m','');
+    end
+ 
+    stripList=unique([stripList,stripid]);  
 
 end
 
 %% Write Output
 % save matfile outputs
 if dx == 2
-    save(outName,'x','y','z','N','Nmt','z_mad','tmax','tmin','-v7.3')
+    save(outName,'x','y','z','N','Nmt','z_mad','tmax','tmin','stripList','-v7.3')
 elseif dx == 10
-    save(outName,'x','y','z','N','-v7.3')
+    save(outName,'x','y','z','N','stripList','-v7.3')
 end
 
 % write tiff files
