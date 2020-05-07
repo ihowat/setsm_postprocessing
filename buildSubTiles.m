@@ -23,9 +23,8 @@ if ~exist(outDir,'dir')
     mkdir(outDir)
 end
 
-fprintf('Loading tile definition file\n')
+fprintf('Building subsets for tile %s\n',[outDir,'/',tileName]);
 tileDefs=load(tileDefFile);
-fprintf('Loading strip database and getting tile overlaps\n')
 meta=load(databaseFile);
 
 % fix old meta format
@@ -52,7 +51,6 @@ y0=tileDefs.y0(tileInd)-buffer;
 x1=tileDefs.x1(tileInd)+buffer;
 y1=tileDefs.y1(tileInd)+buffer;
 
-fprintf('Building water mask tile from %s\n',waterTileDir)
 landTile = getTileWaterMask(waterTileDir,tileName,x0,x1,y0,y1,res);
 
 % make array of subtile boundary coordinates
@@ -572,7 +570,8 @@ for it=1:length(unique_stripid)
         
         mt(:,:,segs(1)) = any(mt(:,:,segs),3);
         
-        r = [r,segs(2:end)];
+        segs=segs(:);
+        r = [r(:);segs(2:end)];
     end
 end
 
