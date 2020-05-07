@@ -46,7 +46,11 @@ n1 = [nright(~isnan(nright(:,1)),2);ntop(~isnan(ntop(:,1)),2)];
 
 % run mergeTileBuffer on each pair in list
 for i=1:length(n0)
-    mergeTileBuffer(f{n0(i)},f{n1(i)}); 
+    try
+        mergeTileBuffer(f{n0(i)},f{n1(i)}); 
+    catch
+        warning('cant determine side being merged')
+    end
 end
     
     
