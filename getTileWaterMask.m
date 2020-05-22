@@ -1,4 +1,4 @@
-function land = getTileWaterMask(waterTileDir,tileName,x0,x1,y0,y1,dx)
+function land = getTileWaterMask(waterTileDir,tileName,x0,x1,y0,y1,dx,varargin)
 % getTileWaterMask retrieves raster water mask for given tile and range
 %
 % land = getTileWaterMask(waterTileDir,tileName,x0,x1,y0,y1,dx) returns land.x
@@ -15,20 +15,45 @@ tileRow = [tileRow;tileRow+1;tileRow-1;tileRow  ; tileRow  ; tileRow+1; tileRow-
 
 land.x = x0:dx:x1;
 land.y = y1:-dx:y0;
-land.z = true(length(land.y),length(land.x));
+land.z = false(length(land.y),length(land.x));
 
+includeIceFlag = false;
+if any(strcmpi(varargin,'includeIce'))
+    includeIceFlag = true;
+end
+%%
 i=1;
 for i=1:length(tileRow)
     
+    waterFlag=false;
+    
     % get this tile
     waterTileName=[waterTileDir,'/',sprintf('%02d',tileCol(i)),'_',...
-        sprintf('%02d',tileRow(i)),'_water.tif'];
+        sprintf('%02d',tileRow(i)),'_land.tif'];
+    
+ 
+        iceTileName=[waterTileDir,'/',sprintf('%02d',tileCol(i)),'_',...
+            sprintf('%02d',tileRow(i)),'_ice.tif'];
     
     if ~exist(waterTileName,'file')
-        continue
+        
+        waterTileName=[waterTileDir,'/',sprintf('%02d',tileCol(i)),'_',...
+            sprintf('%02d',tileRow(i)),'_water.tif'];
+       
+        if ~exist(waterTileName,'file')
+            continue
+        end
+        
+         waterFlag=true;
     end
 
     land0 = readGeotiff(waterTileName,'map_subset',[x0 x1 y0 y1]);
+    
+    if includeIceFlag && exist(iceTileName,'file')
+           ice0 = readGeotiff(iceTileName,'map_subset',[x0 x1 y0 y1]);
+           land0.z = land0.z == 1 | ice0.z == 1;
+    end
+           
     
     % get corner indexes for this grid in the master
     col0  = find(land0.x(1) == land.x);
@@ -40,8 +65,12 @@ for i=1:length(tileRow)
         continue
     end
 
-    land.z(row0:row1,col0:col1) = land0.z;
-    
+    if ~waterFlag
+        land.z(row0:row1,col0:col1) = land0.z; 
+    else
+        land.z(row0:row1,col0:col1) = ~land0.z;
+    end
+        
 end
 
-land.z = land.z==0;
+%land.z = land.z==0;
