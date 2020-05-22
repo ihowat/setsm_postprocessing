@@ -1,12 +1,12 @@
 function mosaicSubTiles(varargin)
 % mosaicSubTiles mosaic subtiles and write mat and geotiff output
 %
-%%%%% ONLY COMPATIBLE WITH 10K, 1km x 1km subtiles!!!!! 
+%%%%% ONLY COMPATIBLE WITH 10K, 1km x 1km subtiles!!!!!
 %
 %
 % mosaicSubTiles(subTileDir,dx,outName) mosaics all of the
 % subtile .mat files in the directory subTileDir into a mosaic with grid
-% resolution dx (2 or 10) and writes matfile output to outName, with tiff 
+% resolution dx (2 or 10) and writes matfile output to outName, with tiff
 % output as strrep(outName,'.mat','.tif'). Mosaic extend deteremined
 % from subtile extents.
 %
@@ -32,8 +32,9 @@ fprintf('Indexing subtiles\n')
 % make a cellstr of resolved subtile filenames
 subTileFiles=dir([subTileDir,'/*_',num2str(dx),'m.mat']);
 if isempty(subTileFiles)
-    error('No files found matching %s',...
+    fprintf('No files found matching %s, skipping\n',...
         [subTileDir,'/*_',num2str(dx),'m.mat']);
+    return
 end
 subTileFiles=cellfun( @(x) [subTileDir,'/',x],{subTileFiles.name},'uniformoutput',0);
 
@@ -72,11 +73,11 @@ if exist('quadrant','var')
     end
     
     subTileNum = subTileNum(n);
-    subTileFiles = subTileFiles(n); 
+    subTileFiles = subTileFiles(n);
 end
 
 NsubTileFiles = length(subTileFiles);
-  
+
 % find buffer size from neighboring tiles
 n = diff(subTileNum);
 n(mod(subTileNum(1:end-1),100) == 0) = 0;
@@ -87,7 +88,8 @@ if ~isempty(n)
     buff = (length(buffcheck2.y)-find(buffcheck1.y(1) == buffcheck2.y))/2;
     buff = round(buff);
 else
-    error('no neighboring tiles to determine buffer size')
+    fprintf('no neighboring tiles, returning\n')
+    return
 end
 
 fprintf('performing coregistration & adjustment between adjoining subtiles\n')
@@ -124,23 +126,18 @@ y = y1:-dx:y0;
 % build tile output arrays
 z = nan(length(y),length(x));
 N = zeros(length(y),length(x),'uint8');
+Nmt = zeros(length(y),length(x),'uint8');
+z_mad = z;
+tmax = zeros(length(y),length(x),'uint16');
+tmin = zeros(length(y),length(x),'uint16');
 
-if dx == 2
-    Nmt = zeros(length(y),length(x),'uint8');
-    z_mad = z;
-    tmax = zeros(length(y),length(x),'uint16');
-    tmin = zeros(length(y),length(x),'uint16');
-end
 
 % initialize subtile count for use in n-weighted alignment
 subtile_n=1;
 
+
 % initialize count of pixels with data in mosaic for error checking
 Nn=0;
-
-% initialize stipList variable
-stripList=[];
-
 for filen=1:NsubTileFiles
     
     % first only add subtiles with adjustements
@@ -173,25 +170,7 @@ for filen=1:NsubTileFiles
     end
     
     % load subtile into structure
-    if dx == 2
-        if ismember(mvars,'land')
-            zsub=load(subTileFiles{filen},'x','y','za_med','land','N','Nmt','za_mad','tmax','tmin');
-        else
-            % if 2m subtile .mat doesnt include a land array, load it from
-            % the 10m subtile and resize it
-            zsub=load(subTileFiles{filen},'x','y','za_med','N','Nmt','za_mad','tmax','tmin');
-            subTileFile10m = strrep(subTileFiles{filen},'_2m','_10m');
-            land = load(subTileFile10m,'land');
-            if any(~land.land(:))
-                zsub.land = imresize(land.land,size(zsub.za_med),'nearest');
-                clear land subTileFile10m
-            else
-                zsub.land = true(size(zsub.za_med));
-            end
-        end
-    elseif dx == 10
-        zsub=load(subTileFiles{filen},'x','y','za_med','N','land');
-    end
+    zsub=load(subTileFiles{filen},'x','y','za_med','land','N','Nmt','za_mad','tmax','tmin');
     
     if ~any(~isnan(zsub.za_med(:)))
         fprintf('all nans, skipping\n')
@@ -215,26 +194,23 @@ for filen=1:NsubTileFiles
     % subset the current mosaic by range of subtile
     z1 = z(row0:row1,col0:col1);
     
-    if dx == 2
-        z_mad1 = z_mad(row0:row1,col0:col1);
-    end
+    z_mad1 = z_mad(row0:row1,col0:col1);
     
     % find overlapping non-nan and non-water pixels
     n_overlap = ~isnan(z1(:)) & ~isnan(zsub.za_med(:)) & zsub.land(:);
     
     % check if overlapping pixels exist to determine if blending is needed
     if any(n_overlap)
-
+        
         % fill missing data in this subtile with current data in mosaic
         % subset
         zsub.za_med(isnan(zsub.za_med) & ~isnan(z1)) =...
             z1(isnan(zsub.za_med) & ~isnan(z1));
         
-        if dx == 2
-            % also blend za_mad
-            zsub.za_mad(isnan(zsub.za_mad) & ~isnan(z_mad1)) =...
-                z1(isnan(zsub.za_mad) & ~isnan(z_mad1));
-        end
+        
+        % also blend za_mad
+        zsub.za_mad(isnan(zsub.za_mad) & ~isnan(z_mad1)) =...
+            z1(isnan(zsub.za_mad) & ~isnan(z_mad1));
         
         % Create the blending array by setting zeros at the far edge of
         % subtile/tile overlap and ones at the other edge, linearly
@@ -264,10 +240,9 @@ for filen=1:NsubTileFiles
         zsub.za_med(notMissing) = zsub.za_med(notMissing).*buffA(notMissing) +...
             z1(notMissing).*(1- buffA(notMissing));
         
-        if dx == 2
-            zsub.za_mad(notMissing) = zsub.za_mad(notMissing).*buffA(notMissing) +...
-                z_mad1(notMissing).*(1- buffA(notMissing));
-        end
+        
+        zsub.za_mad(notMissing) = zsub.za_mad(notMissing).*buffA(notMissing) +...
+            z_mad1(notMissing).*(1- buffA(notMissing));
         
     else
         
@@ -275,9 +250,7 @@ for filen=1:NsubTileFiles
         % replacing the NaNs
         zsub.za_med(~isnan(z1(:))) = z1(~isnan(z1(:)));
         
-        if dx == 2
-            zsub.za_mad(~isnan(z1(:))) = z_mad1(~isnan(z1(:)));
-        end
+        zsub.za_mad(~isnan(z1(:))) = z_mad1(~isnan(z1(:)));
         
     end
     
@@ -288,15 +261,13 @@ for filen=1:NsubTileFiles
     N(row0+buff:row1-buff,col0+buff:col1-buff) =...
         zsub.N(buff+1:end-buff,buff+1:end-buff);
     
-    if dx == 2
-        Nmt(row0+buff:row1-buff,col0+buff:col1-buff) =...
-            zsub.Nmt(buff+1:end-buff,buff+1:end-buff);
-        z_mad(row0:row1,col0:col1) = zsub.za_mad;
-        tmax(row0+buff:row1-buff,col0+buff:col1-buff) =...
-            zsub.tmax(buff+1:end-buff,buff+1:end-buff);
-        tmin(row0+buff:row1-buff,col0+buff:col1-buff) =...
-            zsub.tmin(buff+1:end-buff,buff+1:end-buff);
-    end
+    Nmt(row0+buff:row1-buff,col0+buff:col1-buff) =...
+        zsub.Nmt(buff+1:end-buff,buff+1:end-buff);
+    z_mad(row0:row1,col0:col1) = zsub.za_mad;
+    tmax(row0+buff:row1-buff,col0+buff:col1-buff) =...
+        zsub.tmax(buff+1:end-buff,buff+1:end-buff);
+    tmin(row0+buff:row1-buff,col0+buff:col1-buff) =...
+        zsub.tmin(buff+1:end-buff,buff+1:end-buff);
     
     % count the number of pixels with data after this merge
     Nn1 = sum(~isnan(z(:)));
@@ -313,20 +284,6 @@ for filen=1:NsubTileFiles
     % update count of subtiles added to mosaic
     subtile_n= subtile_n+1;
     
-    % add to stripList
-    % load subtile into structure - if 2m, need to switch to 10m filename
-    % since no filename list in 2m version.
-    zsub=load(strrep(subTileFiles{filen},'_2m.mat','_10m.mat'),'fileNames','dZ');
-
-    zsub.fileNames = zsub.fileNames(~isnan(zsub.dZ));
-    
-    [~,stripid] =  cellfun(@fileparts,zsub.fileNames,'uniformoutput',0);
-    
-    if dx == 2
-       stripid= strrep(stripid,'_10m','');
-    end
- 
-    stripList=unique([stripList,stripid]);   
 end
 
 %% Add dems with nan dZ's
@@ -348,17 +305,17 @@ count=1;
 noRegFlag = false;
 
 while ~isempty(nf)
- 
+    
     if count > length(nf) % cycle complete, reset counter
-        count = 1; 
+        count = 1;
         
         % check if no more subtiles added this cycle
         if length(nf) == length_nf
             noRegFlag = true; % turn off registration if no overlap
         end
         
-       % reset length nf of this cycle to compare with next
-       length_nf = length(nf);
+        % reset length nf of this cycle to compare with next
+        length_nf = length(nf);
         
     end
     
@@ -391,25 +348,7 @@ while ~isempty(nf)
     end
     
     % load subtile into structure
-    if dx == 2
-        if ismember(mvars,'land')
-            zsub=load(subTileFiles{filen},'x','y','za_med','land','N','Nmt','za_mad','tmax','tmin');
-        else
-            % if 2m subtile .mat doesnt include a land array, load it from
-            % the 10m subtile and resize it
-            zsub=load(subTileFiles{filen},'x','y','za_med','N','Nmt','za_mad','tmax','tmin');
-            subTileFile10m = strrep(subTileFiles{filen},'_2m','_10m');
-            land = load(subTileFile10m,'land');
-            if any(~land.land(:))
-                zsub.land = imresize(land.land,size(zsub.za_med),'nearest');
-                clear land subTileFile10m
-            else
-                zsub.land = true(size(zsub.za_med));
-            end
-        end
-    elseif dx == 10
-        zsub=load(subTileFiles{filen},'x','y','za_med','N','land');
-    end
+    zsub=load(subTileFiles{filen},'x','y','za_med','land','N','Nmt','za_mad','tmax','tmin');
     
     if ~any(~isnan(zsub.za_med(:)))
         nf(count) = [];
@@ -431,10 +370,7 @@ while ~isempty(nf)
     
     % subset the current mosaic by range of subtile
     z1 = z(row0:row1,col0:col1);
-    
-    if dx == 2
-        z_mad1 = z_mad(row0:row1,col0:col1);
-    end
+    z_mad1 = z_mad(row0:row1,col0:col1);
     
     % find overlapping non-nan and non-water pixels
     n_overlap = ~isnan(z1(:)) & ~isnan(zsub.za_med(:)) & zsub.land(:);
@@ -446,17 +382,15 @@ while ~isempty(nf)
         dz_med = median(zsub.za_med(n_overlap) - z1(n_overlap));
         
         zsub.za_med = zsub.za_med - dz_med; % shift the subtile
-
+        
         % fill missing data in this subtile with current data in mosaic
         % subset
         zsub.za_med(isnan(zsub.za_med) & ~isnan(z1)) =...
             z1(isnan(zsub.za_med) & ~isnan(z1));
         
-        if dx == 2
-            % also blend za_mad
-            zsub.za_mad(isnan(zsub.za_mad) & ~isnan(z_mad1)) =...
-                z1(isnan(zsub.za_mad) & ~isnan(z_mad1));
-        end
+        % also blend za_mad
+        zsub.za_mad(isnan(zsub.za_mad) & ~isnan(z_mad1)) =...
+            z1(isnan(zsub.za_mad) & ~isnan(z_mad1));
         
         % Create the blending array by setting zeros at the far edge of
         % subtile/tile overlap and ones at the other edge, linearly
@@ -486,24 +420,20 @@ while ~isempty(nf)
         zsub.za_med(notMissing) = zsub.za_med(notMissing).*buffA(notMissing) +...
             z1(notMissing).*(1- buffA(notMissing));
         
-        if dx == 2
-            zsub.za_mad(notMissing) = zsub.za_mad(notMissing).*buffA(notMissing) +...
-                z_mad1(notMissing).*(1- buffA(notMissing));
-        end
+        zsub.za_mad(notMissing) = zsub.za_mad(notMissing).*buffA(notMissing) +...
+            z_mad1(notMissing).*(1- buffA(notMissing));
         
     else
         
         % no overlap with mosaic, add subtile without registration if
         % already cycled through without additions, as indicated by the
         % noRegFlag
-        if noRegFlag 
+        if noRegFlag
             % if no pixels overlap, just add the subset data into the subtile,
             % replacing the NaNs
             zsub.za_med(~isnan(z1(:))) = z1(~isnan(z1(:)));
             
-            if dx == 2
-                zsub.za_mad(~isnan(z1(:))) = z_mad1(~isnan(z1(:)));
-            end
+            zsub.za_mad(~isnan(z1(:))) = z_mad1(~isnan(z1(:)));
             
         else
             % skip this subtile for this cycle
@@ -520,15 +450,14 @@ while ~isempty(nf)
     N(row0+buff:row1-buff,col0+buff:col1-buff) =...
         zsub.N(buff+1:end-buff,buff+1:end-buff);
     
-    if dx == 2
-        Nmt(row0+buff:row1-buff,col0+buff:col1-buff) =...
-            zsub.Nmt(buff+1:end-buff,buff+1:end-buff);
-        z_mad(row0:row1,col0:col1) = zsub.za_mad;
-        tmax(row0+buff:row1-buff,col0+buff:col1-buff) =...
-            zsub.tmax(buff+1:end-buff,buff+1:end-buff);
-        tmin(row0+buff:row1-buff,col0+buff:col1-buff) =...
-            zsub.tmin(buff+1:end-buff,buff+1:end-buff);
-    end
+    Nmt(row0+buff:row1-buff,col0+buff:col1-buff) =...
+        zsub.Nmt(buff+1:end-buff,buff+1:end-buff);
+    z_mad(row0:row1,col0:col1) = zsub.za_mad;
+    tmax(row0+buff:row1-buff,col0+buff:col1-buff) =...
+        zsub.tmax(buff+1:end-buff,buff+1:end-buff);
+    tmin(row0+buff:row1-buff,col0+buff:col1-buff) =...
+        zsub.tmin(buff+1:end-buff,buff+1:end-buff);
+    
     
     % count the number of pixels with data after this merge
     Nn1 = sum(~isnan(z(:)));
@@ -545,30 +474,11 @@ while ~isempty(nf)
     % remove this subtile from index
     nf(count) = [];
     
-    % add to stripList
-    % load subtile into structure - if 2m, need to switch to 10m filename
-    % since no filename list in 2m version.
-    zsub=load(strrep(subTileFiles{filen},'_2m.mat','_10m.mat'),'fileNames','dZ');
-
-    zsub.fileNames = zsub.fileNames(~isnan(zsub.dZ));
-    
-    [~,stripid] =  cellfun(@fileparts,zsub.fileNames,'uniformoutput',0);
-    
-    if dx == 2
-       stripid= strrep(stripid,'_10m','');
-    end
- 
-    stripList=unique([stripList,stripid]);  
-
 end
 
 %% Write Output
 % save matfile outputs
-if dx == 2
-    save(outName,'x','y','z','N','Nmt','z_mad','tmax','tmin','stripList','-v7.3')
-elseif dx == 10
-    save(outName,'x','y','z','N','stripList','-v7.3')
-end
+save(outName,'x','y','z','N','Nmt','z_mad','tmax','tmin','-v7.3')
 
 % write tiff files
 z(isnan(z)) = -9999;
@@ -578,28 +488,25 @@ writeGeotiff(outNameTif,x,y,z,4,-9999,'polar stereo north')
 outNameTif = strrep(outName,'.mat','_N.tif');
 writeGeotiff(outNameTif,x,y,N,1,0,'polar stereo north')
 
-if dx == 2
-    
-    outNameTif = strrep(outName,'.mat','_Nmt.tif');
-    writeGeotiff(outNameTif,x,y,Nmt,1,0,'polar stereo north')
-    
-    z_mad(isnan(z_mad)) = -9999;
-    outNameTif = strrep(outName,'.mat','_mad.tif');
-    writeGeotiff(outNameTif,x,y,z_mad,4,-9999,'polar stereo north')
-    
-    outNameTif = strrep(outName,'.mat','_tmax.tif');
-    writeGeotiff(outNameTif,x,y,tmax,2,0,'polar stereo north')
-    
-    outNameTif = strrep(outName,'.mat','_tmin.tif');
-    writeGeotiff(outNameTif,x,y,tmin,2,0,'polar stereo north')
-end
+outNameTif = strrep(outName,'.mat','_Nmt.tif');
+writeGeotiff(outNameTif,x,y,Nmt,1,0,'polar stereo north')
+
+z_mad(isnan(z_mad)) = -9999;
+outNameTif = strrep(outName,'.mat','_mad.tif');
+writeGeotiff(outNameTif,x,y,z_mad,4,-9999,'polar stereo north')
+
+outNameTif = strrep(outName,'.mat','_tmax.tif');
+writeGeotiff(outNameTif,x,y,tmax,2,0,'polar stereo north')
+
+outNameTif = strrep(outName,'.mat','_tmin.tif');
+writeGeotiff(outNameTif,x,y,tmin,2,0,'polar stereo north')
 
 
 function dZ = getOffsets(subTileFiles,subTileNum,buff,outName)
 
 NsubTileFiles = length(subTileFiles);
 
-% output file for coregistration offsets so that we don't need to 
+% output file for coregistration offsets so that we don't need to
 % recalculate them all if we want to change something
 regFile=strrep(outName,'.mat','tileReg.mat');
 
@@ -608,7 +515,7 @@ if exist(regFile,'file')
     load(regFile)
 else
     % no coregistration file, so calculate all suntile offsets
-
+    
     % iteration output variables
     nrt = nan(NsubTileFiles-1,1);
     dzup = nan(NsubTileFiles-1,1);
@@ -616,27 +523,27 @@ else
     dzup_mad = nan(NsubTileFiles-1,1);
     dzrt_mad = nan(NsubTileFiles-1,1);
     N=nan(NsubTileFiles,1);
-
+    
     for n = 1:NsubTileFiles-1
-    
+        
         fprintf('subtile %d of %d ',n,NsubTileFiles-1)
-    
+        
         % make sure this subtile has a za_med var
         if  ~ismember('za_med',who('-file',subTileFiles{n}))
             fprintf('variable za_med doesn''t exist, skipping\n')
             continue
         end
-    
+        
         m0 = matfile(subTileFiles{n});
         N(n) = max(max(m0.N));
-    
+        
         % check if not top row and the up neighbor subtile exists
         if mod(subTileNum(n),100) ~= 0 && ...
-            subTileNum(n)+1 == subTileNum(n+1)
-        
+                subTileNum(n)+1 == subTileNum(n+1)
+            
             % check up neighbor has za_med var
             if ismember('za_med',who('-file',subTileFiles{n+1}))
-            
+                
                 % load top buffer of the bottom (nth) subtile of pair
                 % check to make sure buffer is > 10% land
                 l0 = m0.land(2:2*buff,2:end-1);
@@ -645,13 +552,13 @@ else
                     z0(~l0) = NaN;
                     y0 = m0.y(2:2*buff,:);
                     x0 = m0.x(:,2:end-1);
-                
+                    
                     % load bottom buffer of the top (nth+1) subtile of pair
                     m1 = matfile(subTileFiles{n+1});
                     z1 = m1.za_med(end-(2*buff-1):end-1,2:end-1);
                     y1 = m1.y(end-(2*buff-1):end-1,:);
                     x1 = m1.x(:,2:end-1);
-                
+                    
                     % check dimensions of z0 and z0 buffers consistent
                     if ~any(y0 ~= y1) && ~any(x0 ~= x1)
                         dzn = z0(:)-z1(:);
@@ -665,36 +572,36 @@ else
                 end
             end
         end
-    
+        
         % check right neighbor exists
         nrtn = find(subTileNum(n)+100 ==  subTileNum);
-    
+        
         if isempty(nrtn)
             fprintf('\n')
             continue
         end
-    
+        
         nrt(n) = nrtn;
-    
+        
         % check right neighbor has za_med var
         if ismember('za_med',who('-file',subTileFiles{nrt(n)}))
-        
+            
             % check to make sure buffer is > 10% land
             l0 = m0.land(2:end-1,end-(2*buff-1):end-1);
             if sum(l0(:))/numel(l0) > 0.1
-            
+                
                 % load right buffer of the left (nth) subtile of pair
                 z0 = m0.za_med(2:end-1,end-(2*buff-1):end-1);
                 z0(~l0) = NaN;
                 y0 = m0.y(2:end-1,:);
                 x0 = m0.x(:,end-(2*buff-1):end-1);
-            
+                
                 % load left buffer of the right subtile of pair
                 m1 = matfile(subTileFiles{nrt(n)});
                 z1 = m1.za_med(2:end-1,2:(2*buff));
                 y1 = m1.y(2:end-1,:);
                 x1 = m1.x(:,2:(2*buff));
-            
+                
                 % check dimensions of z0 and z0 buffers consistent
                 if ~any(y0 ~= y1) && ~any(x0 ~= x1)
                     dzn = z0(:)-z1(:);
@@ -707,19 +614,19 @@ else
                 end
             end
         end
-    
+        
         fprintf('\n')
     end
-
+    
     % get N for the last file
     n = NsubTileFiles;
     if ismember('N',who('-file',subTileFiles{n}))
         m0 = matfile(subTileFiles{n});
         N(n) = max(max(m0.N));
     end
-
+    
     save(regFile,'nrt','dzup','dzrt','dzup_mad','dzrt_mad','N')
-
+    
 end
 
 % adjustment
@@ -752,7 +659,7 @@ A(linearInd) = -1;
 
 % locate missing tiles
 n_missing  = ~any(A) | isnan(N)';
-% 
+%
 % remove missing tiles
 A(:,n_missing) = [];
 
@@ -780,22 +687,13 @@ save(strrep(outName,'.mat','tileReg.mat'),'dZ','-append');
 
 % test correction
 % dz = z0-z1;
-% 
+%
 % dzn = (z0-dZ0)-(z1-dZ1);
-% 
+%
 % dzn = z0-dZ0-z1+dZ1;
-% 
+%
 % dzn = (z0-z1)-dZ0+dZ1;
-% 
+%
 % dzn = dz-dZ0+dZ1;
-% 
+%
 % dzn = dz - dZ(n1) + dZ(n2);
-
-
-
-
-
-
-
-
-
