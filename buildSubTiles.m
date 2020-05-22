@@ -23,7 +23,7 @@ if ~exist(outDir,'dir')
     mkdir(outDir)
 end
 
-fprintf('Building subsets for tile %s\n',[outDir,'/',tileName]);
+fprintf('Building subsets for tile %s in %s\n',tileName,outDir);
 tileDefs=load(tileDefFile);
 meta=load(databaseFile);
 
@@ -51,7 +51,26 @@ y0=tileDefs.y0(tileInd)-buffer;
 x1=tileDefs.x1(tileInd)+buffer;
 y1=tileDefs.y1(tileInd)+buffer;
 
+% land classification tile (1=ice-free land, 0=water)
 landTile = getTileWaterMask(waterTileDir,tileName,x0,x1,y0,y1,res);
+
+% ice classification tile (1=ice, 0=ice-free)
+iceTile = getTileIceMask(waterTileDir,tileName,x0,x1,y0,y1,res);
+
+% surface change rate tile (distance per time)
+dzdtTile = getTileDzdt(waterTileDir,tileName,x0,x1,y0,y1,res);
+
+%convert from m/yr to m/day to be consistent with datenum t
+dzdtTile.z = dzdtTile.z./365;
+
+% make ice count as land
+landTile.z = landTile.z == 1 | iceTile.z == 1;
+
+% check if any land exists in this tile, stop if not
+if ~any(landTile.z(:))
+    fprintf('no land in tile, returning\n')
+    return
+end
 
 % make array of subtile boundary coordinates
 subx0=x0:subtileSize:tileDefs.x1(tileInd)-subtileSize-buffer;
@@ -66,7 +85,7 @@ subN=numel(subx0);
 
 for n=1:subN
     
-    clear x y z offsets za fileNames fa dX dY dZ land
+    clear x y z offsets za fileNames fileNames0 fa dX dY dZ land ice dzdt
     
     fprintf('subtile %d of %d\n',n,subN)
     
@@ -225,11 +244,12 @@ for n=1:subN
     if ~exist('z','var')
         
         fprintf('extracting %d strip subsets ',length(fileNames))
-        [x,y,z,missingFlag] =extractSubGrid(fileNames,subx0(n),subx1(n),...
+        [x,y,z,missingFlag,mt] =extractSubGrid(fileNames,subx0(n),subx1(n),...
             suby0(n),suby1(n),res);
         
         % remove layers missing data
         z = z(:,:,~missingFlag);
+        mt = mt(:,:,~missingFlag);
         fileNames=fileNames(~missingFlag);
 
         % save full filename list with repeat segments for 2m
@@ -253,19 +273,22 @@ for n=1:subN
             if length(segs) > 1
                 
                 z(:,:,segs(1)) = nanmedian(z(:,:,segs),3);
+                
+                mt(:,:,segs(1)) = any(mt(:,:,segs),3);
 
                 r = [r(:);segs(2:end)];
             end
         end
         
         z(:,:,r) = [];
+        mt(:,:,r) = [];
         fileNames(r) = [];
         t(r) = [];
         
         clear it segs r
         
-        fprintf('saving x,y,z,t,fileNames to %s\n',outName)
-        save(outName,'x','y','z','t','fileNames','fileNames0','-v7.3');
+        fprintf('saving x,y,z,mt,t,fileNames to %s\n',outName)
+        save(outName,'x','y','z','mt','t','fileNames','fileNames0','-v7.3');
         
     end
     
@@ -285,8 +308,23 @@ for n=1:subN
             continue
         end
         
-        fprintf('saving land to %s\n',outName)
-        save(outName,'land','-append');
+        if ~exist('ice','var')
+            % subset tile land/water mask
+            ice = interp2(iceTile.x,iceTile.y(:),single(iceTile.z),x,y(:),...
+                '*nearest');
+            ice(isnan(ice)) = 0;
+            ice = logical(ice);
+        end
+        
+        if ~exist('dzdt','var')
+            % subset tile land/water mask
+            dzdt = interp2(dzdtTile.x,dzdtTile.y(:),dzdtTile.z,x,y(:),...
+                '*bilinear');
+            dzdt(isnan(dzdt)) = 0;
+        end
+        
+        fprintf('saving land, ice, dzdt to %s\n',outName)
+        save(outName,'land','ice','dzdt','-append');
         
         % dont get offsets between segs in same strip:make a vector of z's
         % that ar belonging to the same strip
@@ -311,7 +349,6 @@ for n=1:subN
         
         offsets.dxe(isnan(offsets.dx)) = NaN;
         offsets.dye(isnan(offsets.dy)) = NaN;
-        
         
         if ~any(~isnan(offsets.dz))
             
@@ -371,7 +408,7 @@ for n=1:subN
                 zr=readGeotiff(refDemFile,...
                     'map_subset',[x(1)-90 x(end)+90 y(end)-90 y(1)+90]);
                 
-                zr.z(zr.z == -32767) = NaN;
+                zr.z(zr.z < -200) = NaN;
                 
                 if ~any(~isnan(zr.z(:)))
                     fprintf('Reference dem has no data, skipping\n');
@@ -472,8 +509,15 @@ for n=1:subN
         % layers with missing adjustments
         n_missing = isnan(dZ);
         
+        % set nan dX and dY to zeros for vertical shift only
+        dX(isnan(dX)) = 0;
+        dY(isnan(dY)) = 0;
+        
         % make adjusted z array
         za=nan(size(z),'single');
+        
+        % make adjusted mt arrays
+        mta = false(size(mt));
         
         % index of layers with adjustments
         iterVec = 1:size(z,3);
@@ -484,10 +528,19 @@ for n=1:subN
         for k=iterVec
             za(:,:,k) = interp2(x + dX(k),y + dY(k), z(:,:,k) + dZ(k),...
                 x,y,'*linear');
+                
+            mtak = interp2(x + dX(k),y + dY(k), single(mt(:,:,k)),...
+                x,y,'*nearest');
+            
+            mtak(isnan(mtak)) = 0;
+            mtak = logical(mtak);
+            
+            mta(:,:,k) = mtak;
+            
         end
         
-        fprintf('saving za to %s\n',outName)
-        save(outName,'za','-append');
+        fprintf('saving za and mta to %s\n',outName)
+        save(outName,'za','mta','-append');
         
     end
     
@@ -499,14 +552,36 @@ for n=1:subN
     end
     
     % apply filter and get median
-    za(~fa) = NaN;
+    za(~fa) = NaN;    
+    mta(~fa) = false;
     
     za_med = single(nanmedian(za,3));
+    za_mad = single(mad(za,1,3));
     N = uint8(sum(~isnan(za),3));
+    Nmt = uint8(sum(mta,3));
     
     fprintf('saving za_med and N to %s\n',outName)
     save(outName,'za_med','N','-append');
     
+     % make date vector
+    [~,name] =  cellfun(@fileparts,fileNames,'uniformoutput',0);
+    t=cellfun(@(x) datenum(x(6:13),'yyyymmdd'),name)';
+    
+    t=t-datenum('1/1/2000 00:00:00');
+    t=reshape(t,1,1,[]);
+    t=repmat(t,size(za_mad));
+    t(isnan(za))=NaN;
+    tmax = max(t,[],3);
+    tmin = min(t,[],3);
+    %tmean = nanmean(t,3);
+    
+    tmax = uint16(tmax);
+    tmin = uint16(tmin);
+    %tmean = uint16(tmean);
+    
+    fprintf('saving tmax and tmin to %s\n',outName)
+    save(outName,'tmax','tmin','-append');
+
     fprintf('making 2m version\n')
     outName2m = strrep(outName,'_10m.mat','_2m.mat');
     
