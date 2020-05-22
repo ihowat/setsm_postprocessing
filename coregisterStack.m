@@ -1,4 +1,4 @@
-function out=coregisterStack(x,y,z,mask,strip_ind)
+function out=coregisterStack(x,y,z,mask,strip_ind,t,dzdt)
 % coregisterStack coregister DEM layers in 3D array
 %
 % offsets=coregisterStack(x,y,z,mask,strip_ind)registered each z(:,:,i) to
@@ -71,7 +71,23 @@ sigma_dz_coreg =  nan(Npairs,1);
 % Pair coregistration loop
 for pair_n=1:Npairs
     
-    fprintf('i:%d, j:%d,pair %d of %d\n',i(pair_n),j(pair_n),pair_n,Npairs)
+   % fprintf('i:%d, j:%d,pair %d of %d\n',i(pair_n),j(pair_n),pair_n,Npairs)
+    
+    % apply time seperation dependent ice mask
+    pairMask = mask;
+    
+    %time difference
+    dt =  t(i(pair_n))-t(j(pair_n));
+    
+    % predicted displacement
+    delz = dt.*dzdt;
+    
+   % if displacement > 1 m, don't use to coregister
+    pairMask(abs(delz) > 1) = false;
+    
+    if ~any(pairMask(:))
+        continue
+    end
     
     % get overlap stats before coregistration
     p = z(:,:,i(pair_n)) - z(:,:,j(pair_n));
@@ -95,7 +111,6 @@ for pair_n=1:Npairs
     dze(pair_n) = perr(1);
     dxe(pair_n) = perr(2);
     dye(pair_n) = perr(3);
-    
     
     if ~isnan(dz(pair_n))
         p = z(:,:,i(pair_n)) - zj;
