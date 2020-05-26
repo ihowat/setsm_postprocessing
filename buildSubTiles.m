@@ -57,11 +57,11 @@ landTile = getTileWaterMask(waterTileDir,tileName,x0,x1,y0,y1,res);
 % ice classification tile (1=ice, 0=ice-free)
 iceTile = getTileIceMask(waterTileDir,tileName,x0,x1,y0,y1,res);
 
-% surface change rate tile (distance per time)
-dzdtTile = getTileDzdt(waterTileDir,tileName,x0,x1,y0,y1,res);
-
-%convert from m/yr to m/day to be consistent with datenum t
-dzdtTile.z = dzdtTile.z./365;
+%% surface change rate tile (distance per time)
+%dzdtTile = getTileDzdt(waterTileDir,tileName,x0,x1,y0,y1,res);
+%
+%%convert from m/yr to m/day to be consistent with datenum t
+%dzdtTile.z = dzdtTile.z./365;
 
 % make ice count as land
 landTile.z = landTile.z == 1 | iceTile.z == 1;
@@ -317,10 +317,11 @@ for n=1:subN
         end
         
         if ~exist('dzdt','var')
-            % subset tile land/water mask
-            dzdt = interp2(dzdtTile.x,dzdtTile.y(:),dzdtTile.z,x,y(:),...
-                '*bilinear');
-            dzdt(isnan(dzdt)) = 0;
+         %   % subset tile land/water mask
+         %   dzdt = interp2(dzdtTile.x,dzdtTile.y(:),dzdtTile.z,x,y(:),...
+         %       '*bilinear');
+         %  dzdt(isnan(dzdt)) = 0;
+         dzdt = zeros(size(land),'single');
         end
         
         fprintf('saving land, ice, dzdt to %s\n',outName)
