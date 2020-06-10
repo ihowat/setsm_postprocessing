@@ -23,8 +23,17 @@ subTileDir = varargin{1};
 dx = varargin{2};
 outName = varargin{3};
 
-if nargin == 4
-    quadrant = varargin{4};
+n = find(strcmpi('quadrant',varargin));
+if ~isempty(n)
+    quadrant = varargin{n+1};
+end
+
+n = find(strcmpi('extent',varargin));
+if ~isempty(n)
+    x0 = varargin{n+1}(1);
+    x1 = varargin{n+1}(2);
+    y0 = varargin{n+1}(3);
+    y1 = varargin{n+1}(4);
 end
 
 fprintf('Indexing subtiles\n')
@@ -95,6 +104,7 @@ end
 fprintf('performing coregistration & adjustment between adjoining subtiles\n')
 dZ = getOffsets(subTileFiles,subTileNum,buff,outName);
 
+if ~exist(x0,'var')
 % get extent of mosaic from tiles at edges
 % lower-left subtile
 m = matfile(subTileFiles{1});
@@ -115,6 +125,7 @@ y0 = m.y(end,1);
 [~,nMaxRow] =  max(mod100subTileNum);
 m = matfile(subTileFiles{nMaxRow});
 y1 = m.y(1,1);
+end
 
 % make a polyshape out of boundary for checking subtile overlap
 tilePoly = polyshape([x0 x0 x1 x1]',[y0 y1 y1 y0]');
