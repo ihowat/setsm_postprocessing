@@ -36,6 +36,8 @@ if ~isempty(n)
     y1 = varargin{n+1}(4);
 end
 
+fprintf('Extent: %f %f %f %f\n',x0,x1,y0,y1)
+
 fprintf('Indexing subtiles\n')
 
 % make a cellstr of resolved subtile filenames
@@ -104,7 +106,7 @@ end
 fprintf('performing coregistration & adjustment between adjoining subtiles\n')
 dZ = getOffsets(subTileFiles,subTileNum,buff,outName);
 
-if ~exist(x0,'var')
+if ~exist('x0','var')
 % get extent of mosaic from tiles at edges
 % lower-left subtile
 m = matfile(subTileFiles{1});

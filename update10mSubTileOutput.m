@@ -37,7 +37,7 @@ for n=1:length(subTileFiles)
     
     % extract the matchtag stack
     [~,~,mt] =extractMatchtagSubGrid(fileNames0,min(x),max(x),...
-        min(y),max(y),10);
+        min(y),max(y));
 
     % merge segments from same strips
     % dont get offsets between segs in same strip:make a vector of z's
