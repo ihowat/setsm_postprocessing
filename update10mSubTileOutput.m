@@ -66,13 +66,17 @@ for n=1:length(subTileFiles)
     
     mt(:,:,r) = [];
     clear it segs r
+
+     % set nan dX and dY to zeros for vertical shift only
+     dX(isnan(dX)) = 0;
+     dY(isnan(dY)) = 0;
     
     % make adjusted mt arrays
     mta = false(size(mt));
     
     for k=1:size(mt,3)
         
-        if ~isnan(dZ(k))
+        if ~isnan(dZ(k)) &  ~isnan(dX(k)) &  ~isnan(dY(k))
             mtak = interp2(x + dX(k),y + dY(k), single(mt(:,:,k)),...
                 x,y,'*nearest');
         

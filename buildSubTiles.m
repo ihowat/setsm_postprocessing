@@ -560,9 +560,9 @@ for n=1:subN
     za_mad = single(mad(za,1,3));
     N = uint8(sum(~isnan(za),3));
     Nmt = uint8(sum(mta,3));
-    
-    fprintf('saving za_med and N to %s\n',outName)
-    save(outName,'za_med','N','-append');
+       
+    fprintf('saving za_med,za_mad, N and Nmt to %s\n',outName)
+    save(outName,'za_med','za_mad','N','Nmt','-append');
     
      % make date vector
     [~,name] =  cellfun(@fileparts,fileNames,'uniformoutput',0);
