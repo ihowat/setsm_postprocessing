@@ -68,8 +68,8 @@ for n=1:length(subTileFiles)
     clear it segs r
 
      % set nan dX and dY to zeros for vertical shift only
-     %dX(isnan(dX)) = 0;
-     %dY(isnan(dY)) = 0;
+     dX(isnan(dX)) = 0;
+     dY(isnan(dY)) = 0;
     
     % make adjusted mt arrays
     mta = false(size(mt));
