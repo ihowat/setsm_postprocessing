@@ -25,6 +25,11 @@ for n=1:length(subTileFiles)
        return
      end
      
+     if any(~ismember({'za','za','dZ','dX','dY','fa'},mvars))  
+       fprintf('%s missing variables,skipping\n',outName)
+       continue
+     end
+     
     % load needed fields
     load(outName,'fileNames','fileNames0','x','y','za','dZ','dX','dY','fa')
     
