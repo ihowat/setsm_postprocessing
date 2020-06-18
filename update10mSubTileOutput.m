@@ -14,7 +14,7 @@ for n=1:length(subTileFiles)
     
     clear fileNames fileNames0 x y za dZ dX dY fa mt mta Nmt za_mad tmin tmax 
     
-    fprintf('subtile %d of %d\n',n,length(subTileFiles))
+    fprintf('subtile %d of %d: %s\n',n,length(subTileFiles),subTileFiles{n})
         
     outName = subTileFiles{n};
     
@@ -22,7 +22,7 @@ for n=1:length(subTileFiles)
     mvars  = who('-file',outName);
     if any(ismember(mvars,'za_mad'))
       fprintf('za_mad found, already updated, returning\n')
-       return
+       continue
      end
      
      if any(~ismember({'za','za','dZ','dX','dY','fa'},mvars))  
