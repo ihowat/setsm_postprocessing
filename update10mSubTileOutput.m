@@ -19,14 +19,12 @@ for n=1:length(subTileFiles)
     outName = subTileFiles{n};
     
     % check to see if already updated & skip if yes
-    if n == 1
-        mvars  = who('-file',outName);
-        if any(ismember(mvars,'za_mad'))
-            fprintf('za_mad found, already updated, returning\n')
-            return
-        end
-    end
-    
+    mvars  = who('-file',outName);
+    if any(ismember(mvars,'za_mad'))
+      fprintf('za_mad found, already updated, returning\n')
+       return
+     end
+     
     % load needed fields
     load(outName,'fileNames','fileNames0','x','y','za','dZ','dX','dY','fa')
     
