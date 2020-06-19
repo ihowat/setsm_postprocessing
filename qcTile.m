@@ -29,7 +29,7 @@ tiles=load(tileschema);
 
 % get tile with matching name
 [~,tn,~] = fileparts(tileFile);
-tn=strrep(tn,'_8m_dem','');
+tn=strrep(tn,'_10m_dem','');
 i=strcmp(tn,tiles.I);
 tile = structfun(@(x) ( x(i) ), tiles, 'UniformOutput', false);
 
