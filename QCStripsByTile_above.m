@@ -4,6 +4,8 @@ global fig_qc
 global fig_panel
 global filter_item_plot_groups
 global filtermode_avail
+global beep_on
+global beep_sound
 fig_qc = figure('Name','QCSBT');
 fig_panel = [];
 filter_item_plot_groups = {};
@@ -37,6 +39,8 @@ startfrom = '1';
 minN = 500;
 minArea = 35;
 qcAll = false;
+beep_sound=load('train.mat');
+beep_on = true;
 
 for i=1:2:length(varargin)
     if strcmp(varargin{i}, 'all')
@@ -53,9 +57,9 @@ startfrom=str2num(startfrom);
 tiles=load(tilefile);
 a=load(arcdemfile);
 
-%remove duplicated tile entries keeping just first occurence
-[~,n]  = unique(a.tileName,'stable');
-a = structfun(@(x) ( x(n) ), a, 'UniformOutput', false);
+% %remove duplicated tile entries keeping just first occurence
+% [~,n]  = unique(a.tileName,'stable');
+% a = structfun(@(x) ( x(n) ), a, 'UniformOutput', false);
 
 % get index of this region number
 n=a.regionNum==str2num(regionNum);
@@ -73,7 +77,7 @@ tiles = structfun(@(x) ( x(n) ), tiles, 'UniformOutput', false);
 fprintf('Loading db\n');
 meta=load(dbasefile);
 
-% check for region field
+% % check for region field
 if ~isfield(meta,'region')
     meta.region=cell(size(meta.f));
     for i=1:length(meta.f)
@@ -84,7 +88,7 @@ end
 % alter paths in database if set
 if ~isempty(changePath)
     meta.f = strrep(meta.f,'/mnt/pgc',changePath);
-    meta.f = strrep(meta.f,'/','\');    
+    meta.f = strrep(meta.f,'/','\');
     meta.region = strrep(meta.region,'/mnt/pgc',changePath);
     meta.region = strrep(meta.region,'/','\');
 end
@@ -102,7 +106,7 @@ if ~any(strcmp(flds,'y')); error('meta stucture missing y field \n'); end
 if ~any(strcmp(flds,'f')); error('meta stucture missing f field \n'); end
 
 % select the whichever registration has the better sigma_bias (all or 1 yr)
-if isfield(meta,'sigma_all') &&  isfield(meta,'sigma_1yr') &&  ~isfield(meta,'sigma') 
+if isfield(meta,'sigma_all') &&  isfield(meta,'sigma_1yr') &&  ~isfield(meta,'sigma')
     meta.sigma = nanmin([meta.sigma_all(:)';meta.sigma_1yr(:)'])';
 end
 
@@ -119,24 +123,24 @@ for i=startfrom:length(tiles.I)
     fprintf('\n')
     fprintf('Working tile %d of %d: %s \n',i,length(tiles.I),tiles.I{i});
     tile = structfun(@(x) ( x(i) ), tiles, 'UniformOutput', false);
-    
+
     if exist([tileDir,tile.I{1},'_40m_dem.mat'],'file')
         load([tileDir,tile.I{1},'_40m_dem.mat'],'N');
-        
+
         if sum(N(:))./numel(N) > 0.999
-            
+
             fprintf('tile coverage complete, skipping\n')
-            
+
             clear N
-            
+
             continue
-            
+
         end
-        
+
     end
-    
+
     qctile(tile,meta,minN,minArea,changePath,qcAll);
-    
+
 end
 end
 
@@ -147,11 +151,19 @@ global fig_qc
 global fig_panel
 global filter_item_plot_groups
 global filtermode_avail
+global beep_sound
+global beep_on
 
 coverageFile_missing_total = 0;
 coverageFile_warned = false;
 orthoFile_warned = false;
 demFile_warned = false;
+first_input = true;
+
+strip_sort_type_7 = 'total strip area';
+strip_sort_type_8 = 'remaining area contrip';
+strip_sort_type_88 = 'remaining area non-void %';
+sort_by = strip_sort_type_8;
 
 
 %% Spatial coverage search
@@ -214,25 +226,25 @@ N= zeros(length(y),length(x),'uint8');
 
 if isfield(tiles,'coastline')
     fprintf('applying coastline, ');
-    
-    
+
+
     A = false(size(N));
     for i=1:length(tiles.coastline{1})
         if  isempty(tiles.coastline{1}{i}); continue; end
         A(roipoly(x,y,N,tiles.coastline{1}{i}(1,:),...
             tiles.coastline{1}{i}(2,:))) = true;
     end
-    
-    
+
+
     percent_filled = 100*sum(~A(:))./numel(A);
-    
-    if percent_filled >  0.2  
-        N(~A) = 1; 
+
+    if percent_filled >  0.2
+        N(~A) = 1;
     else
         percent_filled =0;
     end
     clear A
-    
+
      fprintf('%.2f%% filled as water\n',percent_filled);
 
     if percent_filled == 100; fprintf('returning \n'); return; end
@@ -247,6 +259,8 @@ fprintf('calculating tile pixel coverage for each strip, ');
 
 % initialize output field
 meta.gridPointInd=cell(size(meta.f));
+meta.gridPointInd_roi=cell(size(meta.f));
+meta.Npx_nonvoid=nan(size(meta.f));
 
 % can be slow, so we'll use a counter
 count = 0;
@@ -262,27 +276,25 @@ coveragealign_warned = false;
 coverageFile_missing = [];
 % file loop
 for i=1:length(meta.f)
-    
+
     % counter
     if i>1; for p=1:count; fprintf('\b'); end; end %delete line before
     count = fprintf('strip %d of %d',i,size(meta.f,1));
-    
+
     % load strip data coverage
-    coverageFile = strrep(meta.f{i}, 'meta.txt', 'dem_coverage.tif');
+    coverageFile = strrep(meta.f{i}, 'meta.txt', 'dem_40m_coverage.tif');
     if exist(coverageFile, 'file')
-        
-        BW = get_tile_size_coverage(coverageFile, x, y);
-        if ~coveragealign_warned && isempty(BW)
-            
-            BW = roipoly(x, y, N, meta.x{i}, meta.y{i});
-            if any(BW)
-                fprintf(2, ['\nno overlap between strip *dem_coverage.tif and tile; ' ...
-                            'make sure coverage grid is properly aligned to tile grid\n']);
-                fprintf('strip %d of %d',i,size(meta.f,1));
-                coveragealign_warned = true;
-            end
-            
-            continue;
+
+        [BW, Npx_total, Npx_subset] = get_tile_size_coverage(coverageFile, x, y);
+        BW_roi = roipoly(x, y, N, meta.x{i}, meta.y{i});
+%         BW_roi = imdilate(BW_roi, ones(15));
+        meta.Npx_nonvoid(i) = Npx_total;
+
+        if ~coveragealign_warned && isempty(BW) && any(BW_roi)
+            fprintf(2, ['\nno overlap between strip *dem_40m_coverage.tif and tile; ' ...
+                        'make sure coverage grid is properly aligned to tile grid\n']);
+            fprintf('strip %d of %d',i,size(meta.f,1));
+            coveragealign_warned = true;
         end
     else
         coverageFile_missing_total = coverageFile_missing_total + 1;
@@ -290,21 +302,27 @@ for i=1:length(meta.f)
         % locate grid pixels within footprint polygon
         BW = roipoly(x, y, N, meta.x{i}, meta.y{i});
     end
-    
+
     % if mask data exists, apply it
     if meta.qc(i) == 3
         for j=1:length(meta.maskPolyx{i})
-            BW(roipoly(x,y,BW,...
-                meta.maskPolyx{i}{j},meta.maskPolyy{i}{j}))=0;
+            mask_poly=roipoly(x,y,BW,...
+                meta.maskPolyx{i}{j},meta.maskPolyy{i}{j});
+            BW(mask_poly)=0;
         end
     end
-    
+
     % add if already qc'd
     if add2N(i); N(BW) = 1; continue; end
-    
+
     % convert BW mask to col-wise indices and save to cell
     meta.gridPointInd{i}=find(BW);
-    
+    if exist('BW_roi', 'var')
+        meta.gridPointInd_roi{i}=find(BW_roi);
+    else
+        meta.gridPointInd_roi{i}=meta.gridPointInd{i};
+    end
+
     % get rid of mask
     clear BW
 end
@@ -332,6 +350,7 @@ meta = structfun(@(x) ( x(~add2N ,:) ), meta, 'UniformOutput', false);
 
 % make another field with the number of data points
 meta.gridPointN=cellfun(@length,meta.gridPointInd);
+meta.gridPointN_roi=cellfun(@length,meta.gridPointInd_roi);
 
 
 %remove strips below a minimum size
@@ -350,39 +369,49 @@ if ~isfield(meta,'rmse'); meta.rmse=nan(size(meta.f));end
 if ~isfield(meta,'dtrans'); meta.dtrans=zeros(length(meta.f),3); end
 if ~isfield(meta,'overlap'); meta.overlap=zeros(size(meta.f)); end % number existing data points overlapping file
 %%
+skipFlag=false;
+resortFlag=false;
 recountFlag=true;
 skipn = 0;
 F = [];
 while length(meta.f) >= 1
-    
+    skipFlag=false;
+    resortFlag=false;
+
     percent_filled = 100*sum(N(:))./numel(N);
-    
+
     if ~qcAll
         if percent_filled == 100; fprintf('100%% filled returning \n',percent_filled); return; end
     end
-    
+
     fprintf('%.2f%% filled\n', percent_filled);
-    
+
     % loop through files in boundary and find # of new/existing points
     if recountFlag
         for i=1:length(meta.f)
-            
+
             % subset of N at data points in this file
             Nsub=N(meta.gridPointInd{i});
-            
+
             % count existing data points
             meta.overlap(i)=sum(Nsub);
-            
+
             % count new data points
             meta.gridPointN(i) = sum(~Nsub);
-            
+
+            % subset of N at data points in this file
+            Nsub_roi=N(meta.gridPointInd_roi{i});
+
+            % count new data points
+            meta.gridPointN_roi(i) = sum(~Nsub_roi);
+
         end
     end
-    
+
     recountFlag=false;
-    
+
     if ~qcAll
-        
+
         % remove rendundant files (with already 100% coverage)
         redundantFlag = meta.gridPointN < minN;
 
@@ -395,16 +424,24 @@ while length(meta.f) >= 1
 
             if isempty(meta.f); fprintf('all strips removed, returning \n'); return; end
         end
-        
+
     end
 
-    A = nansum([100.*meta.gridPointN./numel(N),1./(meta.avg_rmse.^2)],2);
- 
+
+%     A = nansum([100.*meta.gridPointN./numel(N),1./(meta.avg_rmse.^2)],2);
+    if strcmp(sort_by, strip_sort_type_7)
+        A = meta.Npx_nonvoid;
+    elseif strcmp(sort_by, strip_sort_type_8)
+        A = meta.gridPointN;
+    elseif strcmp(sort_by, strip_sort_type_88)
+        A = (meta.gridPointN./meta.gridPointN_roi);
+    end
+    fprintf('sorting strips by %s\n', sort_by);
     [~,n]=sort(A,'descend');
-    
-    
+
+
     if skipn < 0; skipn = length(n)-1; end
-    
+
     % skip if skipped on last iteration
     if length(n) >= 1+skipn
         n = n(1+skipn);
@@ -412,20 +449,20 @@ while length(meta.f) >= 1
         n=n(1);
         skipn = 0;
     end
-    
+
     fprintf('%d of %d strips remaining\n',skipn+1,length(meta.f));
 
     hillFile=strrep(meta.f{n},'meta.txt','dem_10m_shade_masked.tif');
     demFile=strrep(meta.f{n},'meta.txt','dem_10m.tif');
     orthoFile=strrep(meta.f{n},'meta.txt','ortho_10m.tif');
-    
+
     fprintf('%s\n',hillFile);
     fprintf('%d new pointsm, gcp sigma=%.2f, mean coreg RMSE=%.2f, max coreg RMSE=%.2f \n',...
         meta.gridPointN(n),meta.sigma(n),meta.avg_rmse(n), meta.max_rmse(n));
-    
+
     I=readGeotiff(hillFile);
-    
-    
+
+
     if isempty(F)
         F = struct();
     else
@@ -440,11 +477,11 @@ while length(meta.f) >= 1
     F.fileName_ortho = orthoFile;
     F.ortho_browse_ready = false;
     guidata(fig_qc, F);
-    
+
     % make square image to show in the figure window
     [Z_fig, Ni_fig] = get_square_browse_images(fig_qc, I, N, x, y);
     F = guidata(fig_qc);
-    
+
     % plot strip hillshade and tile coverage in figure
     imagesc(F.X_fig,F.Y_fig,Z_fig,'alphadata',single(Z_fig ~= 0), 'Parent',F.plot_group_hill);
     set(gca,'color','r');
@@ -453,7 +490,7 @@ while length(meta.f) >= 1
     colormap gray;
     hold on;
     imagesc(F.X_fig,F.Y_fig,Ni_fig,'alphadata',single(Ni_fig).*.25, 'Parent',F.plot_group_hill);
-    
+
     % make radio buttons for switching between hillshade, ortho.
     F.ui_image_select = uibuttongroup('Visible','off',...
         'Units','pixels',...
@@ -465,7 +502,7 @@ while length(meta.f) >= 1
         'String','Ortho Image', 'HandleVisibility','off');
     F.ui_image_select.Visible = 'on';
     guidata(fig_qc, F);
-    
+
     % plot coastline
     if isfield(tiles,'coastline')
         for i=1:length(tiles.coastline{1})
@@ -474,38 +511,38 @@ while length(meta.f) >= 1
                 tiles.coastline{1}{i}(2,:),'b','linewidth',1)
         end
     end
-    
+
     % plot tile boundary
     plot([tiles.x0,tiles.x0,tiles.x1,tiles.x1,tiles.x0], [tiles.y0,tiles.y1,tiles.y1,tiles.y0,tiles.y0],'w','linewidth',2)
-    
+
     % give figure axis a border beyond DEM extent
     set(gca,'xlim',[min(F.X_fig)-500 max(F.X_fig)+500],'ylim',[min(F.Y_fig)-500 max(F.Y_fig)+500]);
 
 %     set(gcf,'units','normalized');
 %     set(gcf,'position',[0.01,0.01,.35,.9])
-    
+
     qc=load([fileparts(hillFile),'/../qc.mat']);
-    
+
     fileNames = qc.fileNames;
-    
+
    % alter paths in database if set
     if ~isempty(changePath)
         fileNames = strrep(fileNames,'/mnt/pgc',changePath);
-        fileNames = strrep(fileNames,'/','\');        
+        fileNames = strrep(fileNames,'/','\');
     end
-    
+
     [~,IA]=intersect(fileNames, hillFile);
-    
-    if isempty(IA) 
-        error('this file name not matched in the qc.mat, probably need to upadate it.'); 
+
+    if isempty(IA)
+        error('this file name not matched in the qc.mat, probably need to update it.');
     end
-    
+
     if qc.flag(IA) ~= 4 && qc.flag(IA) ~= 0
-        
+
         fprintf('flag previoulsy changed to %d, applying\n',qc.flag(IA))
-        
+
     else
-        
+
         while true
 
             if ~coverageFile_warned && coverageFile_missing_total ~= 0
@@ -530,24 +567,47 @@ while length(meta.f) >= 1
                     fprintf(2, 'qc flag previously set to 4\n');
                 end
 
-                s=input('Enter quality flag: 0=skip,9=back, 1=good, 2=partial, 3=manual edit, 4=poor, 5=unuseable, 6=next tile\n','s');
+                if first_input && beep_on
+                    sound(beep_sound.y);
+                    first_input = false;
+                end
 
+                s=input(sprintf('Enter quality flag: 0=skip,9=back, 1=good, 2=partial, 3=manual edit, 4=poor, 5=unuseable, 6=next tile, 7=sort by %s, 8=sort by %s, 88=sort by %s, 99=toggle beep\n', strip_sort_type_7, strip_sort_type_8, strip_sort_type_88), 's');
+
+                flag = [];
                 if ~isempty(s) && all(ismember(s, '0123456789'))
                     flag = str2num(s);
-                    if flag == 0 || flag == 9 || flag == 1 || flag == 2 || flag == 3 || flag == 4 || flag == 5 || flag == 6
+                    if flag == 0 || flag == 9 || flag == 1 || flag == 2 || flag == 3 || flag == 4 || flag == 5 || flag == 6 || flag == 7 || flag == 8 || flag == 88
                         break;
                     end
                 end
 
-                fprintf('%s not recogized, try again\n',s);
+                if ~isempty(flag) && flag == 99
+                    beep_on = ~beep_on;
+                    if beep_on;
+                        sound_status = 'ON';
+                    else
+                        sound_status = 'OFF';
+                    end
+                    fprintf('sound is now %s\n', sound_status);
+                else
+
+                    fprintf('%s not recogized, try again\n',s);
+                end
 
             end
 
-            if flag == 0;  skipn = skipn+1;  clf(fig_qc); break; end
+            if flag == 0; skipn = skipn+1; skipFlag=true; break; end
 
-            if flag == 9;  skipn = skipn-1;  clf(fig_qc); break; end
+            if flag == 9; skipn = skipn-1; skipFlag=true; break; end
 
             if flag == 6; clf(fig_qc); return; end
+
+            if flag == 7; sort_by=strip_sort_type_7; resortFlag=true; break; end
+
+            if flag == 8; sort_by=strip_sort_type_8; resortFlag=true; break; end
+
+            if flag == 88; sort_by=strip_sort_type_88; resortFlag=true; break; end
 
             qc.flag(IA)=flag;
 
@@ -590,7 +650,7 @@ while length(meta.f) >= 1
 
                                     % read raw DEM
                                     if ~exist('I_dem', 'var')
-                                        I_dem = readGeotiff(demFile); 
+                                        I_dem = readGeotiff(demFile);
                                     end
                                     if ~exist('I_ortho', 'var')
                                         if isfield(F, 'I_ortho')
@@ -718,54 +778,69 @@ while length(meta.f) >= 1
             save([fileparts(hillFile),'/../qc.mat'],'-struct','qc');
 
             break;
-            
+
         end
-        
+
     end
-    
+
     clf(fig_qc);
-    
+
     if exist('I_dem', 'var')
         clear I_dem;
     end
     if exist('I_ortho', 'var')
         clear I_ortho;
     end
-    
-    if qc.flag(IA) > 0 && qc.flag(IA) < 4
-        
+
+
+    if skipFlag
+        continue;
+
+    elseif resortFlag
+        skipn = 0;
+        continue;
+
+    elseif qc.flag(IA) > 0 && qc.flag(IA) < 4
+
         M = I.z ~=0;
-        
+
         for j=1:length(qc.x{IA})
             M(roipoly(I.x,I.y,M,qc.x{IA}{j},qc.y{IA}{j}))=0;
         end
-        
+
         M=interp2(I.x,I.y(:),single(M),x,y(:),'*nearest');
-        
+
         N(M == 1) = 1;
-        
+
         recountFlag=true;
-        
+
         % remove this file from the meta struct
         in=1:length(meta.f); in(n)=[];
         meta = structfun(@(x) ( x(in,:) ), meta, 'UniformOutput', false);
         skipn = 0;
-        
+
+    elseif qc.flag(IA) == 4
+
+%        % remove this file from the meta struct
+%        in=1:length(meta.f); in(n)=[];
+%        meta = structfun(@(x) ( x(in,:) ), meta, 'UniformOutput', false);
+        skipn = skipn+1;
+
     elseif qc.flag(IA) == 4 || qc.flag(IA) == 5
-        
+
         % remove this file from the meta struct
         in=1:length(meta.f); in(n)=[];
         meta = structfun(@(x) ( x(in,:) ), meta, 'UniformOutput', false);
-        
+
     end
-    
+
 end
 end
 
 
-function [BW] = get_tile_size_coverage(fileName_matchtag, tile_x, tile_y)
+function [BW, Npx_strip_total, Npx_strip_subset] = get_tile_size_coverage(fileName_matchtag, tile_x, tile_y)
         BW = [];
-    
+
         I = readGeotiff(fileName_matchtag);
         I.z = (I.z ~= 0);
 
@@ -825,12 +900,15 @@ function [BW] = get_tile_size_coverage(fileName_matchtag, tile_x, tile_y)
 
         BW = false(numel(tile_y), numel(tile_x));
         BW(tile_r0:tile_r1, tile_c0:tile_c1) = I.z(strip_r0:strip_r1, strip_c0:strip_c1);
+
+        Npx_strip_total = nnz(I.z);
+        Npx_strip_subset = nnz(BW);
 end
 
 
 function [Z_fig, Ni_fig] = get_square_browse_images(fig, I, N, tile_x, tile_y)
     F = guidata(fig);
-    
+
     X_fig = I.x;
     Y_fig = I.y;
     xsize = max(size(I.x));
@@ -849,17 +927,17 @@ function [Z_fig, Ni_fig] = get_square_browse_images(fig, I, N, tile_x, tile_y)
         y_rgt = [(Y_fig(end)+dy):dy:(Y_fig(end)+ceil(y_border)*dy)];
         Y_fig = [y_lft, Y_fig, y_rgt];
     end
-    
+
     Ni=interp2(tile_x,tile_y(:),N,X_fig,Y_fig(:),'*nearest');
-    
+
     Z_fig = zeros(max(size(Y_fig)), max(size(X_fig)));
     Ni_fig = zeros(max(size(Y_fig)), max(size(X_fig)));
-    
+
     Z_c0 = find(I.x(1) == X_fig);
     Z_c1 = find(I.x(end) == X_fig);
     Z_r0 = find(I.y(1) == Y_fig);
     Z_r1 = find(I.y(end) == Y_fig);
-    
+
     Ni_c0 = find(tile_x(1) == X_fig);
     if isempty(Ni_c0)
         Ni_c0 = 1;
@@ -876,24 +954,24 @@ function [Z_fig, Ni_fig] = get_square_browse_images(fig, I, N, tile_x, tile_y)
     if isempty(Ni_r1)
         Ni_r1 = length(Y_fig);
     end
-    
+
     Z_fig(Z_r0:Z_r1, Z_c0:Z_c1) = I.z;
     Ni_fig(Ni_r0:Ni_r1, Ni_c0:Ni_c1) = Ni(Ni_r0:Ni_r1, Ni_c0:Ni_c1);
-    
+
     F.X_fig = X_fig;
     F.Y_fig = Y_fig;
     F.Z_r0 = Z_r0;
     F.Z_r1 = Z_r1;
     F.Z_c0 = Z_c0;
     F.Z_c1 = Z_c1;
-    
+
     guidata(fig, F);
 end
 
 
 function change_browse_image(fig)
     F = guidata(fig);
-    
+
     if strcmp(F.ui_image_select.SelectedObject.String, 'DEM Hillshade')
         set(F.plot_group_hill, 'visible','on');
         set(F.plot_group_ortho, 'visible','off');
@@ -913,7 +991,7 @@ function change_browse_image(fig)
             set(F.plot_group_ortho, 'visible','on');
         end
     end
-    
+
     guidata(fig, F);
 end
 
@@ -982,7 +1060,7 @@ function [polys] = filter_mode(roi_BW, I_dem, I_ortho, plot_group_filt)
 
     polys = {};
     plot_group_filt_applied_bottom = hggroup;
-    
+
     % Create Filter Controls UI in a new window.
     if ~isempty(fig_panel)
         try
@@ -1011,9 +1089,9 @@ function [polys] = filter_mode(roi_BW, I_dem, I_ortho, plot_group_filt)
             filter_item_plot_groups(end+1) = {E.plot_group};
         end
     end
-    
+
     plot_group_filt_applied_top = hggroup;
-    
+
     % Crop ROI and DEM to ROI extent.
     F = guidata(fig_panel);
     [roi_BW,rcrop,ccrop] = cropzeros(roi_BW);
@@ -1022,23 +1100,21 @@ function [polys] = filter_mode(roi_BW, I_dem, I_ortho, plot_group_filt)
     F.y = I_dem.y(rcrop(1):rcrop(2));
     clear I_dem;
     F.z(F.z == -9999) = NaN;
-    if ~isempty(I_ortho) 
+    if ~isempty(I_ortho)
         F.ortho = I_ortho.z(rcrop(1):rcrop(2), ccrop(1):ccrop(2));
         clear I_ortho;
     end
     F.roi = roi_BW;
     F.basemask_array = false(size(F.z));
     guidata(fig_panel, F);
-    
+
     if initial_recompute
         recompute_basemask(fig_panel, F.kernel_smooth.item_num, true);
     end
-    
+
     set_property_recursive(fig_panel, 'enable','on');
-    figure(fig_panel);
-    
+
     prompt = 'apply filter mask?';
-    first_apply = true;
     quit = false;
     while ~quit
         while true
@@ -1050,7 +1126,7 @@ function [polys] = filter_mode(roi_BW, I_dem, I_ortho, plot_group_filt)
                 break
             end
         end
-        
+
         if strcmpi(s,'y') || strcmpi(s,'.')
             F = guidata(fig_panel);
             if F.result.ui_display.Value == 0
@@ -1058,9 +1134,6 @@ function [polys] = filter_mode(roi_BW, I_dem, I_ortho, plot_group_filt)
                 continue;
             elseif ~isfield(F.result, 'mask_polys') || isempty(F.result.mask_polys)
                 fprintf('Result Mask contains no polygons to apply\n');
-                continue;
-            elseif ~first_apply && isempty(get(plot_group_filt_applied_bottom, 'Children'))
-                fprintf('Result Mask has not been changed since last application\n');
                 continue;
             else
                 new_polys = cellfun(@(p) vertcat(F.x(p(:,2)), F.y(p(:,1))).', F.result.mask_polys, 'UniformOutput',false);
@@ -1077,23 +1150,22 @@ function [polys] = filter_mode(roi_BW, I_dem, I_ortho, plot_group_filt)
                 end
             end
             prompt = 'apply another filter mask?';
-            first_apply = false;
         else
             quit = true;
         end
     end
-    
+
     set_property_recursive(fig_panel, 'enable','off');
-    
+
     delete(plot_group_filt_applied_bottom);
     delete(plot_group_filt_applied_top);
-    
+
     for k = 1:length(polys)
         p = polys{k};
         s = fill(p(:,1), p(:,2), 'yellow','linewidth',2,'EdgeColor','green', 'Parent',plot_group_filt);
         alpha(s, 0.5);
     end
-    
+
     reset_filter_data();
 end
 
@@ -1102,7 +1174,7 @@ function set_property_recursive(obj, prop_name,prop_val)
     children = get(obj, 'Children');
     for k = 1:length(children)
         child = children(k);
-        if isprop(child, prop_name) 
+        if isprop(child, prop_name)
             set(child, prop_name,prop_val);
         end
         if isprop(child, 'Children')
@@ -1114,7 +1186,7 @@ end
 
 function reset_filter_data()
     global fig_panel
-    
+
     F = guidata(fig_panel);
     gui_fields = fieldnames(F);
     for i = 1:length(gui_fields)
@@ -1159,15 +1231,15 @@ function toggle_item_on(fig, item_num, btn, isKernel)
     if ~exist('isKernel', 'var') || isempty(isKernel)
         isKernel = false;
     end
-    
+
     F = guidata(fig);
     [E,item_name] = get_gui_element_by_item_num(F, item_num);
-    
+
     if item_num == F.cluster_concav.item_num && btn.Value == 0 && F.cluster_dist.ui_toggle.Value == 1
         btn.Value = 1;
         return;
     end
-    
+
     if btn.Value == 0
         if item_num == F.result.item_num
             btn.Text = 'NORMAL';
@@ -1181,14 +1253,14 @@ function toggle_item_on(fig, item_num, btn, isKernel)
             btn.Text = 'ON';
         end
     end
-    
+
     if item_num == F.cluster_dist.item_num && btn.Value == 1 && F.cluster_concav.ui_toggle.Value == 0
         F.cluster_concav.ui_toggle.Value = 1;
         F.cluster_concav.ui_toggle.Text = 'ON';
     end
-    
+
     guidata(fig, F);
-    
+
     if E.item_group == 1
         if isKernel
             recompute_basemask(fig, item_num);
@@ -1222,20 +1294,20 @@ function slider_step(fig, item_num, direction, roundToInt, step_by_one)
     if ~exist('isKernel', 'var') || isempty(step_by_one)
         step_by_one = false;
     end
-    
+
     F = guidata(fig);
     [E,item_name] = get_gui_element_by_item_num(F, item_num);
-    
+
     slider_limits = E.ui_slider.Limits;
     slider_min = slider_limits(1,1);
     slider_max = slider_limits(1,2);
-    
+
     if step_by_one
         step_size = 1;
     else
         step_size = (slider_max-slider_min)/20;
     end
-    
+
     old_slider_value = E.ui_slider.Value;
     new_slider_value = min(slider_max, max(slider_min, old_slider_value + direction*step_size));
     if roundToInt
@@ -1244,12 +1316,12 @@ function slider_step(fig, item_num, direction, roundToInt, step_by_one)
     if new_slider_value == old_slider_value
         return;
     end
-    
+
     E.ui_slider.Value = new_slider_value;
-    
+
     F.(item_name) = E;
     guidata(fig, F);
-    
+
     if E.item_group == 1
         recompute_basemask(fig, item_num);
     else
@@ -1257,16 +1329,16 @@ function slider_step(fig, item_num, direction, roundToInt, step_by_one)
     end
 end
 
-    
+
 function slider_drag_integer(fig, item_num)
     F = guidata(fig);
     [E,item_name] = get_gui_element_by_item_num(F, item_num);
-    
+
     E.ui_slider.Value = round(E.ui_slider.Value);
-    
+
     F.(item_name) = E;
     guidata(fig, F);
-    
+
     if E.item_group == 1
         recompute_basemask(fig, item_num);
     else
@@ -1278,25 +1350,25 @@ end
 function redraw_item(fig, item_num, modified)
     global plot_group_filt_applied_top
     global plot_group_filt_applied_bottom
-    
+
     F = guidata(fig);
     [E,item_name] = get_gui_element_by_item_num(F, item_num);
-    
+
     if ~isfield(E, 'plot_group')
         return;
     end
-    
+
     filt_applied_children = get(plot_group_filt_applied_top, 'Children');
     for k = 1:length(filt_applied_children)
         set(filt_applied_children(k), 'Parent', plot_group_filt_applied_bottom);
     end
-    
+
     % Clear drawn polygons for this item.
     prev_plot_polys = get(E.plot_group, 'children');
     if ~isempty(prev_plot_polys)
         delete(prev_plot_polys(:));
     end
-    
+
     if (E.item_num == F.result.item_num || E.ui_toggle.Value == 1) && E.ui_display.Value == 1
         % Draw polygons for this item.
         if modified || ~isfield(E, 'mask_polys')
@@ -1308,7 +1380,7 @@ function redraw_item(fig, item_num, modified)
             alpha(s, 0.5);
         end
     end
-    
+
     F.(item_name) = E;
     guidata(fig, F);
 end
@@ -1317,11 +1389,11 @@ end
 function [modified] = cluster_filter_size(fig, basemask_modified, slider_modified)
     F = guidata(fig);
     E = F.cluster_size;
-    
+
     modified = basemask_modified | slider_modified;
-    
+
     latest_postfilt_array = F.basemask_array;
-    
+
     if ~isfield(E, 'prefilt_array') || ~isfield(F.basemask_RP, 'Area')
         basemask_modified = true;
         modified = true;
@@ -1383,15 +1455,15 @@ end
 function [modified] = cluster_dilate(fig, prefilt_modified, slider_modified)
     F = guidata(fig);
     E = F.kernel_dilate;
-    
+
     modified = prefilt_modified | slider_modified;
-    
+
     if F.cluster_size.ui_toggle.Value == 1
         latest_postfilt_array = F.cluster_size.postfilt_array;
     else
         latest_postfilt_array = F.basemask_array;
     end
-    
+
     if ~isfield(E, 'prefilt_array')
         prefilt_modified = true;
         modified = true;
@@ -1430,10 +1502,10 @@ end
 function [modified] = cluster_filter_dist(fig, basemask_modified, slider_modified, dilated)
     F = guidata(fig);
     E = F.cluster_dist;
-    
+
     modified = basemask_modified | slider_modified | dilated;
     sizefilt_modified = false;
-    
+
     if F.kernel_dilate.ui_toggle.Value == 1
         latest_postfilt_array = F.kernel_dilate.postfilt_array;
     elseif F.cluster_size.ui_toggle.Value == 1
@@ -1441,7 +1513,7 @@ function [modified] = cluster_filter_dist(fig, basemask_modified, slider_modifie
     else
         latest_postfilt_array = F.basemask_array;
     end
-    
+
     if F.cluster_size.ui_toggle.Value == 1
         latest_postfilt_CC_ind = F.cluster_size.postfilt_CC_ind;
     else
@@ -1452,7 +1524,7 @@ function [modified] = cluster_filter_dist(fig, basemask_modified, slider_modifie
         sizefilt_modified = true;
         modified = true;
     end
-    
+
     if ~isfield(F.basemask_RP, 'cent_coords')
         basemask_modified = true;
         modified = true;
@@ -1478,7 +1550,7 @@ function [modified] = cluster_filter_dist(fig, basemask_modified, slider_modifie
             end
             sizefilt_modified = true;
         end
-        
+
         if sizefilt_modified
             E.dist_array = F.basemask_RP.dist_array(E.prefilt_CC_ind, E.prefilt_CC_ind);
             new_slider_min = min(E.dist_array(:));
@@ -1495,7 +1567,7 @@ function [modified] = cluster_filter_dist(fig, basemask_modified, slider_modifie
             new_slider_limits(1,2) = new_slider_max;
             E.ui_slider.Limits = new_slider_limits;
         end
-        
+
         if ~dilated || ~isfield(E, 'postfilt_CC_ind')
             num_clusters = length(E.prefilt_CC_ind);
             dist_array = E.dist_array;
@@ -1519,7 +1591,7 @@ function [modified] = cluster_filter_dist(fig, basemask_modified, slider_modifie
                 E.postfilt_CC_ind = new_postfilt_CC_ind;
             end
         end
-        
+
         if modified
             if ~isfield(E, 'prefilt_array') || ~slider_modified
                 E.prefilt_array = latest_postfilt_array;
@@ -1538,25 +1610,25 @@ function [modified] = cluster_filter_dist(fig, basemask_modified, slider_modifie
                 rIndices = round(linspace(y(1), y(2), nPoints));
                 cIndices = round(linspace(x(1), x(2), nPoints));
                 indices = sub2ind(array_size, rIndices, cIndices);
-                if all(F.roi(indices))
+                if ~any(~F.roi(indices))
                     new_postfilt_array(indices) = true;
                 end
             end
             E.postfilt_array = new_postfilt_array;
         end
-        
+
         F.cluster_dist = E;
         guidata(fig, F);
     end
-end 
+end
 
 
 function [modified] = cluster_adjust_concavity(fig, prefilt_modified, slider_modified)
     F = guidata(fig);
     E = F.cluster_concav;
-    
+
     modified = prefilt_modified | slider_modified;
-    
+
     if F.cluster_dist.ui_toggle.Value == 1
         latest_item_name = 'cluster_dist';
         latest_postfilt_array = F.cluster_dist.postfilt_array;
@@ -1570,7 +1642,7 @@ function [modified] = cluster_adjust_concavity(fig, prefilt_modified, slider_mod
         latest_item_name = 'basemask_RP';
         latest_postfilt_array = F.basemask_array;
     end
-    
+
     if ~isfield(E, 'prefilt_array')
         prefilt_modified = true;
         modified = true;
@@ -1645,17 +1717,17 @@ end
 
 function [polys] = get_resultmask_polys(fig)
     F = guidata(fig);
-    
+
     polys = {};
     invert_result = (F.result.ui_toggle.Value == 1);
-    
+
     if ~any(F.basemask_array(:))
         if invert_result
             polys = bwboundaries(F.roi, 'noholes');
         end
         return;
     end
-    
+
     if F.cluster_concav.ui_toggle.Value == 1
         polys = F.cluster_concav.postfilt_polys;
         if invert_result
@@ -1678,7 +1750,7 @@ function [polys] = get_resultmask_polys(fig)
             latest_item_name = 'basemask_RP';
             latest_postfilt_array = F.basemask_array;
         end
-        
+
         latest_item = F.(latest_item_name);
         latest_item.postfilt_bwboundaries = bwboundaries(latest_postfilt_array & F.roi, 'noholes');
         F.(latest_item_name) = latest_item;
@@ -1687,7 +1759,7 @@ function [polys] = get_resultmask_polys(fig)
         else
             polys = latest_item.postfilt_bwboundaries;
         end
-        
+
         guidata(fig, F);
     end
 end
@@ -1703,9 +1775,9 @@ function recompute_resultmask(fig, item_num, modified, redraw, cluster_slider)
     if ~exist('cluster_slider', 'var') || isempty(cluster_slider)
         cluster_slider = false;
     end
-    
+
     F = guidata(fig);
-    
+
     if (   (   F.cluster_size.ui_toggle.Value == 1 ...
             || F.cluster_dist.ui_toggle.Value == 1 ...
             || F.cluster_concav.ui_toggle.Value == 1) ...
@@ -1720,7 +1792,7 @@ function recompute_resultmask(fig, item_num, modified, redraw, cluster_slider)
         F.basemask_RP = struct();
         guidata(fig, F);
     end
-    
+
     if item_num == F.kernel_dilate.item_num
         prev_cluster_dilate_size = F.kernel_dilate.cluster_dilate_size;
         if F.kernel_dilate.ui_toggle.Value == 1
@@ -1733,7 +1805,7 @@ function recompute_resultmask(fig, item_num, modified, redraw, cluster_slider)
             return;
         end
     end
-    
+
     clear_result = false;
     if any(F.basemask_array(:))
         if F.cluster_size.ui_toggle.Value == 1 && (item_num == F.cluster_size.item_num || (item_num < F.cluster_size.item_num && modified))
@@ -1763,7 +1835,7 @@ function recompute_resultmask(fig, item_num, modified, redraw, cluster_slider)
     else
         clear_result = true;
     end
-    
+
     if (~isfield(F.result, 'mask_polys') || modified || redraw) && F.result.ui_display.Value == 1
         if ~clear_result
             mask_polys = get_resultmask_polys(fig);
@@ -1771,9 +1843,9 @@ function recompute_resultmask(fig, item_num, modified, redraw, cluster_slider)
             mask_polys = {};
         end
         F = guidata(fig);
-        
+
         F.result.mask_polys = mask_polys;
-        
+
         guidata(fig, F);
         redraw_item(fig, F.result.item_num, false);
     end
@@ -1787,9 +1859,9 @@ function recompute_basemask(fig, item_num, modified, redraw)
     if ~exist('redraw', 'var') || isempty(redraw)
         redraw = false;
     end
-    
+
     F = guidata(fig);
-    
+
     if item_num == F.kernel_smooth.item_num
         modified = modified | recompute_basemask_component(fig, F.nans.item_num);
         modified = modified | recompute_basemask_component(fig, F.slope.item_num);
@@ -1798,13 +1870,13 @@ function recompute_basemask(fig, item_num, modified, redraw)
     else
         modified = modified | recompute_basemask_component(fig, item_num, redraw);
     end
-    
+
     if ~modified
         return;
     end
-    
+
     F = guidata(fig);
-    
+
     struct_fields = fieldnames(F);
     for i = 1:length(struct_fields)
         if (   strcmp(struct_fields{i}, 'slope') ...
@@ -1828,7 +1900,7 @@ function recompute_basemask(fig, item_num, modified, redraw)
             end
         end
     end
-    
+
     new_basemask_array = false(size(F.roi));
     if exist('new_basemask_array_or', 'var')
         new_basemask_array = new_basemask_array_or;
@@ -1844,13 +1916,13 @@ function recompute_basemask(fig, item_num, modified, redraw)
         new_basemask_array = new_basemask_array | F.nans.mask_array;
     end
     new_basemask_array = new_basemask_array & F.roi;
-    
+
     if isequal(new_basemask_array, F.basemask_array)
         modified = false;
     else
         F.basemask_array = new_basemask_array;
     end
-    
+
     if modified
         guidata(fig, F);
 %         fprintf('Call to `recompute_resultmask`\n');
@@ -1866,11 +1938,11 @@ function [modified] = recompute_basemask_component(fig, item_num, redraw)
 
     F = guidata(fig);
     [E, item_name] = get_gui_element_by_item_num(F, item_num);
-    
+
     modified = false;
     return_modified = false;
     minmax_modified = false;
-    
+
     if E.ui_toggle.Value == 1
         smooth_entropy = false;
         if (   ~isfield(E, 'pixvals_raw') ...
@@ -1960,18 +2032,18 @@ function [modified] = recompute_basemask_component(fig, item_num, redraw)
             guidata(fig, F);
         end
     end
-    
+
     if (modified || redraw) && E.ui_display.Value == 1
         redraw_item(fig, item_num, modified);
     end
-    
+
     modified = modified | return_modified;
 end
 
 
 function create_filter_panel()
     global fig_panel
-    
+
     fig = uifigure('Name','Filter Controls', 'Position',[0 0 960 470]);
     uilabel(fig, 'Position',[153 422 273 20],...
         'VerticalAlignment','Center', 'HorizontalAlignment','Center',...
@@ -1980,10 +2052,10 @@ function create_filter_panel()
     uilabel(fig, 'Position',[613 422 273 20],...
         'VerticalAlignment','Center', 'HorizontalAlignment','Center',...
         'Text','Filters on Basemask to Modify Result Mask', 'FontSize',14);
-    
+
     F = guihandles(fig);
-    
-   
+
+
     % SMOOTH KERNEL SIZE %
     E = struct();
     E.item_num = 2;
@@ -2007,7 +2079,7 @@ function create_filter_panel()
     E.initial_fieldnames = [];
     E.initial_fieldnames = fieldnames(E);
     F.kernel_smooth = E;
-    
+
     % NANS %
     E = struct();
     E.item_num = 1;
@@ -2030,7 +2102,7 @@ function create_filter_panel()
     E.initial_fieldnames = [];
     E.initial_fieldnames = fieldnames(E);
     F.nans = E;
-    
+
     % ENTROPY FILTER %
     E = struct();
     E.item_num = 4;
@@ -2073,7 +2145,7 @@ function create_filter_panel()
     E.initial_fieldnames = [];
     E.initial_fieldnames = fieldnames(E);
     F.entropy = E;
-    
+
     % ELEVATION FILTER %
     E = struct();
     E.item_num = 5;
@@ -2116,7 +2188,7 @@ function create_filter_panel()
     E.initial_fieldnames = [];
     E.initial_fieldnames = fieldnames(E);
     F.elev = E;
-    
+
     % SLOPE FILTER %
     E = struct();
     E.item_num = 3;
@@ -2159,8 +2231,8 @@ function create_filter_panel()
     E.initial_fieldnames = [];
     E.initial_fieldnames = fieldnames(E);
     F.slope = E;
-    
-    
+
+
     % RESULT MASK %
     E = struct();
     E.item_num = 10;
@@ -2182,7 +2254,7 @@ function create_filter_panel()
     E.initial_fieldnames = [];
     E.initial_fieldnames = fieldnames(E);
     F.result = E;
-    
+
     % CLUSTER SIZE FILTER %
     E = struct();
     E.item_num = 6;
@@ -2210,7 +2282,7 @@ function create_filter_panel()
     E.initial_fieldnames = [];
     E.initial_fieldnames = fieldnames(E);
     F.cluster_size = E;
-    
+
     % CLUSTER MERGE DISTANCE %
     E = struct();
     E.item_num = 8;
@@ -2232,7 +2304,7 @@ function create_filter_panel()
     E.initial_fieldnames = [];
     E.initial_fieldnames = fieldnames(E);
     F.cluster_dist = E;
-    
+
     % CLUSTER CONCAVITY %
     E = struct();
     E.item_num = 9;
@@ -2254,7 +2326,7 @@ function create_filter_panel()
     E.initial_fieldnames = [];
     E.initial_fieldnames = fieldnames(E);
     F.cluster_concav = E;
-    
+
     % DILATION SIZE %
     E = struct();
     E.item_num = 7;
@@ -2284,7 +2356,7 @@ function create_filter_panel()
     E.initial_fieldnames = [];
     E.initial_fieldnames = fieldnames(E);
     F.kernel_dilate = E;
-    
+
     guidata(fig, F);
     fig_panel = fig;
 end

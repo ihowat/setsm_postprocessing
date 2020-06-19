@@ -4,6 +4,8 @@ global fig_qc
 global fig_panel
 global filter_item_plot_groups
 global filtermode_avail
+global beep_on
+global beep_sound
 fig_qc = figure('Name','QCSBT');
 fig_panel = [];
 filter_item_plot_groups = {};
@@ -37,6 +39,8 @@ startfrom = '1';
 minN = 500;
 minArea = 35;
 qcAll = false;
+beep_sound=load('train.mat');
+beep_on = true;
 
 for i=1:2:length(varargin)
     if strcmp(varargin{i}, 'all')
@@ -53,9 +57,9 @@ startfrom=str2num(startfrom);
 tiles=load(tilefile);
 a=load(arcdemfile);
 
-%remove duplicated tile entries keeping just first occurence
-[~,n]  = unique(a.tileName,'stable');
-a = structfun(@(x) ( x(n) ), a, 'UniformOutput', false);
+% %remove duplicated tile entries keeping just first occurence
+% [~,n]  = unique(a.tileName,'stable');
+% a = structfun(@(x) ( x(n) ), a, 'UniformOutput', false);
 
 % get index of this region number
 n=a.regionNum==str2num(regionNum);
@@ -73,7 +77,7 @@ tiles = structfun(@(x) ( x(n) ), tiles, 'UniformOutput', false);
 fprintf('Loading db\n');
 meta=load(dbasefile);
 
-% check for region field
+% % check for region field
 if ~isfield(meta,'region')
     meta.region=cell(size(meta.f));
     for i=1:length(meta.f)
@@ -84,7 +88,7 @@ end
 % alter paths in database if set
 if ~isempty(changePath)
     meta.f = strrep(meta.f,'/mnt/pgc',changePath);
-    meta.f = strrep(meta.f,'/','\');    
+    meta.f = strrep(meta.f,'/','\');
     meta.region = strrep(meta.region,'/mnt/pgc',changePath);
     meta.region = strrep(meta.region,'/','\');
 end
@@ -102,7 +106,7 @@ if ~any(strcmp(flds,'y')); error('meta stucture missing y field \n'); end
 if ~any(strcmp(flds,'f')); error('meta stucture missing f field \n'); end
 
 % select the whichever registration has the better sigma_bias (all or 1 yr)
-if isfield(meta,'sigma_all') &&  isfield(meta,'sigma_1yr') &&  ~isfield(meta,'sigma') 
+if isfield(meta,'sigma_all') &&  isfield(meta,'sigma_1yr') &&  ~isfield(meta,'sigma')
     meta.sigma = nanmin([meta.sigma_all(:)';meta.sigma_1yr(:)'])';
 end
 
@@ -119,24 +123,24 @@ for i=startfrom:length(tiles.I)
     fprintf('\n')
     fprintf('Working tile %d of %d: %s \n',i,length(tiles.I),tiles.I{i});
     tile = structfun(@(x) ( x(i) ), tiles, 'UniformOutput', false);
-    
+
     if exist([tileDir,tile.I{1},'_40m_dem.mat'],'file')
         load([tileDir,tile.I{1},'_40m_dem.mat'],'N');
-        
+
         if sum(N(:))./numel(N) > 0.999
-            
+
             fprintf('tile coverage complete, skipping\n')
-            
+
             clear N
-            
+
             continue
-            
+
         end
-        
+
     end
-    
+
     qctile(tile,meta,minN,minArea,changePath,qcAll);
-    
+
 end
 end
 
@@ -147,11 +151,19 @@ global fig_qc
 global fig_panel
 global filter_item_plot_groups
 global filtermode_avail
+global beep_sound
+global beep_on
 
 coverageFile_missing_total = 0;
 coverageFile_warned = false;
 orthoFile_warned = false;
 demFile_warned = false;
+first_input = true;
+
+strip_sort_type_7 = 'total strip area';
+strip_sort_type_8 = 'remaining area contrip';
+strip_sort_type_88 = 'remaining area non-void %';
+sort_by = strip_sort_type_8;
 
 
 %% Spatial coverage search
@@ -214,25 +226,25 @@ N= zeros(length(y),length(x),'uint8');
 
 if isfield(tiles,'coastline')
     fprintf('applying coastline, ');
-    
-    
+
+
     A = false(size(N));
     for i=1:length(tiles.coastline{1})
         if  isempty(tiles.coastline{1}{i}); continue; end
         A(roipoly(x,y,N,tiles.coastline{1}{i}(1,:),...
             tiles.coastline{1}{i}(2,:))) = true;
     end
-    
-    
+
+
     percent_filled = 100*sum(~A(:))./numel(A);
-    
-    if percent_filled >  0.2  
-        N(~A) = 1; 
+
+    if percent_filled >  0.2
+        N(~A) = 1;
     else
         percent_filled =0;
     end
     clear A
-    
+
      fprintf('%.2f%% filled as water\n',percent_filled);
 
     if percent_filled == 100; fprintf('returning \n'); return; end
@@ -247,6 +259,8 @@ fprintf('calculating tile pixel coverage for each strip, ');
 
 % initialize output field
 meta.gridPointInd=cell(size(meta.f));
+meta.gridPointInd_roi=cell(size(meta.f));
+meta.Npx_nonvoid=nan(size(meta.f));
 
 % can be slow, so we'll use a counter
 count = 0;
@@ -262,27 +276,25 @@ coveragealign_warned = false;
 coverageFile_missing = [];
 % file loop
 for i=1:length(meta.f)
-    
+
     % counter
     if i>1; for p=1:count; fprintf('\b'); end; end %delete line before
     count = fprintf('strip %d of %d',i,size(meta.f,1));
-    
+
     % load strip data coverage
     coverageFile = strrep(meta.f{i}, 'meta.txt', 'dem_40m_coverage.tif');
     if exist(coverageFile, 'file')
-        
-        BW = get_tile_size_coverage(coverageFile, x, y);
-        if ~coveragealign_warned && isempty(BW)
-            
-            BW = roipoly(x, y, N, meta.x{i}, meta.y{i});
-            if any(BW)
-                fprintf(2, ['\nno overlap between strip *dem_40m_coverage.tif and tile; ' ...
-                            'make sure coverage grid is properly aligned to tile grid\n']);
-                fprintf('strip %d of %d',i,size(meta.f,1));
-                coveragealign_warned = true;
-            end
-            
-            continue;
+
+        [BW, Npx_total, Npx_subset] = get_tile_size_coverage(coverageFile, x, y);
+        BW_roi = roipoly(x, y, N, meta.x{i}, meta.y{i});
+%         BW_roi = imdilate(BW_roi, ones(15));
+        meta.Npx_nonvoid(i) = Npx_total;
+
+        if ~coveragealign_warned && isempty(BW) && any(BW_roi)
+            fprintf(2, ['\nno overlap between strip *dem_40m_coverage.tif and tile; ' ...
+                        'make sure coverage grid is properly aligned to tile grid\n']);
+            fprintf('strip %d of %d',i,size(meta.f,1));
+            coveragealign_warned = true;
         end
     else
         coverageFile_missing_total = coverageFile_missing_total + 1;
@@ -290,21 +302,27 @@ for i=1:length(meta.f)
         % locate grid pixels within footprint polygon
         BW = roipoly(x, y, N, meta.x{i}, meta.y{i});
     end
-    
+
     % if mask data exists, apply it
     if meta.qc(i) == 3
         for j=1:length(meta.maskPolyx{i})
-            BW(roipoly(x,y,BW,...
-                meta.maskPolyx{i}{j},meta.maskPolyy{i}{j}))=0;
+            mask_poly=roipoly(x,y,BW,...
+                meta.maskPolyx{i}{j},meta.maskPolyy{i}{j});
+            BW(mask_poly)=0;
         end
     end
-    
+
     % add if already qc'd
     if add2N(i); N(BW) = 1; continue; end
-    
+
     % convert BW mask to col-wise indices and save to cell
     meta.gridPointInd{i}=find(BW);
-    
+    if exist('BW_roi', 'var')
+        meta.gridPointInd_roi{i}=find(BW_roi);
+    else
+        meta.gridPointInd_roi{i}=meta.gridPointInd{i};
+    end
+
     % get rid of mask
     clear BW
 end
@@ -332,6 +350,7 @@ meta = structfun(@(x) ( x(~add2N ,:) ), meta, 'UniformOutput', false);
 
 % make another field with the number of data points
 meta.gridPointN=cellfun(@length,meta.gridPointInd);
+meta.gridPointN_roi=cellfun(@length,meta.gridPointInd_roi);
 
 
 %remove strips below a minimum size
@@ -350,39 +369,49 @@ if ~isfield(meta,'rmse'); meta.rmse=nan(size(meta.f));end
 if ~isfield(meta,'dtrans'); meta.dtrans=zeros(length(meta.f),3); end
 if ~isfield(meta,'overlap'); meta.overlap=zeros(size(meta.f)); end % number existing data points overlapping file
 %%
+skipFlag=false;
+resortFlag=false;
 recountFlag=true;
 skipn = 0;
 F = [];
 while length(meta.f) >= 1
-    
+    skipFlag=false;
+    resortFlag=false;
+
     percent_filled = 100*sum(N(:))./numel(N);
-    
+
     if ~qcAll
         if percent_filled == 100; fprintf('100%% filled returning \n',percent_filled); return; end
     end
-    
+
     fprintf('%.2f%% filled\n', percent_filled);
-    
+
     % loop through files in boundary and find # of new/existing points
     if recountFlag
         for i=1:length(meta.f)
-            
+
             % subset of N at data points in this file
             Nsub=N(meta.gridPointInd{i});
-            
+
             % count existing data points
             meta.overlap(i)=sum(Nsub);
-            
+
             % count new data points
             meta.gridPointN(i) = sum(~Nsub);
-            
+
+            % subset of N at data points in this file
+            Nsub_roi=N(meta.gridPointInd_roi{i});
+
+            % count new data points
+            meta.gridPointN_roi(i) = sum(~Nsub_roi);
+
         end
     end
-    
+
     recountFlag=false;
-    
+
     if ~qcAll
-        
+
         % remove rendundant files (with already 100% coverage)
         redundantFlag = meta.gridPointN < minN;
 
@@ -395,16 +424,24 @@ while length(meta.f) >= 1
 
             if isempty(meta.f); fprintf('all strips removed, returning \n'); return; end
         end
-        
+
     end
 
-    A = nansum([100.*meta.gridPointN./numel(N),1./(meta.avg_rmse.^2)],2);
- 
+
+%     A = nansum([100.*meta.gridPointN./numel(N),1./(meta.avg_rmse.^2)],2);
+    if strcmp(sort_by, strip_sort_type_7)
+        A = meta.Npx_nonvoid;
+    elseif strcmp(sort_by, strip_sort_type_8)
+        A = meta.gridPointN;
+    elseif strcmp(sort_by, strip_sort_type_88)
+        A = (meta.gridPointN./meta.gridPointN_roi);
+    end
+    fprintf('sorting strips by %s\n', sort_by);
     [~,n]=sort(A,'descend');
-    
-    
+
+
     if skipn < 0; skipn = length(n)-1; end
-    
+
     % skip if skipped on last iteration
     if length(n) >= 1+skipn
         n = n(1+skipn);
@@ -412,20 +449,20 @@ while length(meta.f) >= 1
         n=n(1);
         skipn = 0;
     end
-    
+
     fprintf('%d of %d strips remaining\n',skipn+1,length(meta.f));
 
     hillFile=strrep(meta.f{n},'meta.txt','dem_10m_shade_masked.tif');
     demFile=strrep(meta.f{n},'meta.txt','dem_10m.tif');
     orthoFile=strrep(meta.f{n},'meta.txt','ortho_10m.tif');
-    
+
     fprintf('%s\n',hillFile);
     fprintf('%d new pointsm, gcp sigma=%.2f, mean coreg RMSE=%.2f, max coreg RMSE=%.2f \n',...
         meta.gridPointN(n),meta.sigma(n),meta.avg_rmse(n), meta.max_rmse(n));
-    
+
     I=readGeotiff(hillFile);
-    
-    
+
+
     if isempty(F)
         F = struct();
     else
@@ -440,11 +477,11 @@ while length(meta.f) >= 1
     F.fileName_ortho = orthoFile;
     F.ortho_browse_ready = false;
     guidata(fig_qc, F);
-    
+
     % make square image to show in the figure window
     [Z_fig, Ni_fig] = get_square_browse_images(fig_qc, I, N, x, y);
     F = guidata(fig_qc);
-    
+
     % plot strip hillshade and tile coverage in figure
     imagesc(F.X_fig,F.Y_fig,Z_fig,'alphadata',single(Z_fig ~= 0), 'Parent',F.plot_group_hill);
     set(gca,'color','r');
@@ -453,7 +490,7 @@ while length(meta.f) >= 1
     colormap gray;
     hold on;
     imagesc(F.X_fig,F.Y_fig,Ni_fig,'alphadata',single(Ni_fig).*.25, 'Parent',F.plot_group_hill);
-    
+
     % make radio buttons for switching between hillshade, ortho.
     F.ui_image_select = uibuttongroup('Visible','off',...
         'Units','pixels',...
@@ -465,7 +502,7 @@ while length(meta.f) >= 1
         'String','Ortho Image', 'HandleVisibility','off');
     F.ui_image_select.Visible = 'on';
     guidata(fig_qc, F);
-    
+
     % plot coastline
     if isfield(tiles,'coastline')
         for i=1:length(tiles.coastline{1})
@@ -474,42 +511,42 @@ while length(meta.f) >= 1
                 tiles.coastline{1}{i}(2,:),'b','linewidth',1)
         end
     end
-    
+
     % plot tile boundary
     plot([tiles.x0,tiles.x0,tiles.x1,tiles.x1,tiles.x0], [tiles.y0,tiles.y1,tiles.y1,tiles.y0,tiles.y0],'w','linewidth',2)
-    
+
     % give figure axis a border beyond DEM extent
     set(gca,'xlim',[min(F.X_fig)-500 max(F.X_fig)+500],'ylim',[min(F.Y_fig)-500 max(F.Y_fig)+500]);
 
 %     set(gcf,'units','normalized');
 %     set(gcf,'position',[0.01,0.01,.35,.9])
-    
+
     qc=load([fileparts(hillFile),'/../qc.mat']);
-    
+
     fileNames = qc.fileNames;
-    
+
    % alter paths in database if set
     if ~isempty(changePath)
         fileNames = strrep(fileNames,'/mnt/pgc',changePath);
-        fileNames = strrep(fileNames,'/','\');        
+        fileNames = strrep(fileNames,'/','\');
     end
-    
+
     [~,IA]=intersect(fileNames, hillFile);
-    
-    if isempty(IA) 
-        error('this file name not matched in the qc.mat, probably need to upadate it.'); 
+
+    if isempty(IA)
+        error('this file name not matched in the qc.mat, probably need to update it.');
     end
-    
+
     if qc.flag(IA) ~= 4 && qc.flag(IA) ~= 0
-        
+
         fprintf('flag previoulsy changed to %d, applying\n',qc.flag(IA))
-        
+
     else
-        
+
         while true
 
             if ~coverageFile_warned && coverageFile_missing_total ~= 0
-                fprintf(2, '** Missing %d *dem_40m_coverage.tif files up to this point; %% filled may be incorrect upon qc revisit **\n', coverageFile_missing_total);
+                fprintf(2, '** Missing %d *dem_coverage.tif files up to this point; %% filled may be incorrect upon qc revisit **\n', coverageFile_missing_total);
                 fprintf('(the preceding warning will now be suppressed)\n');
                 coverageFile_warned = true;
             end
@@ -530,24 +567,47 @@ while length(meta.f) >= 1
                     fprintf(2, 'qc flag previously set to 4\n');
                 end
 
-                s=input('Enter quality flag: 0=skip,9=back, 1=good, 2=partial, 3=manual edit, 4=poor, 5=unuseable, 6=next tile\n','s');
+                if first_input && beep_on
+                    sound(beep_sound.y);
+                    first_input = false;
+                end
 
+                s=input(sprintf('Enter quality flag: 0=skip,9=back, 1=good, 2=partial, 3=manual edit, 4=poor, 5=unuseable, 6=next tile, 7=sort by %s, 8=sort by %s, 88=sort by %s, 99=toggle beep\n', strip_sort_type_7, strip_sort_type_8, strip_sort_type_88), 's');
+
+                flag = [];
                 if ~isempty(s) && all(ismember(s, '0123456789'))
                     flag = str2num(s);
-                    if flag == 0 || flag == 9 || flag == 1 || flag == 2 || flag == 3 || flag == 4 || flag == 5 || flag == 6
+                    if flag == 0 || flag == 9 || flag == 1 || flag == 2 || flag == 3 || flag == 4 || flag == 5 || flag == 6 || flag == 7 || flag == 8 || flag == 88
                         break;
                     end
                 end
 
-                fprintf('%s not recogized, try again\n',s);
+                if ~isempty(flag) && flag == 99
+                    beep_on = ~beep_on;
+                    if beep_on;
+                        sound_status = 'ON';
+                    else
+                        sound_status = 'OFF';
+                    end
+                    fprintf('sound is now %s\n', sound_status);
+                else
+
+                    fprintf('%s not recogized, try again\n',s);
+                end
 
             end
 
-            if flag == 0;  skipn = skipn+1;  clf(fig_qc); break; end
+            if flag == 0; skipn = skipn+1; skipFlag=true; break; end
 
-            if flag == 9;  skipn = skipn-1;  clf(fig_qc); break; end
+            if flag == 9; skipn = skipn-1; skipFlag=true; break; end
 
             if flag == 6; clf(fig_qc); return; end
+
+            if flag == 7; sort_by=strip_sort_type_7; resortFlag=true; break; end
+
+            if flag == 8; sort_by=strip_sort_type_8; resortFlag=true; break; end
+
+            if flag == 88; sort_by=strip_sort_type_88; resortFlag=true; break; end
 
             qc.flag(IA)=flag;
 
@@ -590,7 +650,7 @@ while length(meta.f) >= 1
 
                                     % read raw DEM
                                     if ~exist('I_dem', 'var')
-                                        I_dem = readGeotiff(demFile); 
+                                        I_dem = readGeotiff(demFile);
                                     end
                                     if ~exist('I_ortho', 'var')
                                         if isfield(F, 'I_ortho')
@@ -718,54 +778,69 @@ while length(meta.f) >= 1
             save([fileparts(hillFile),'/../qc.mat'],'-struct','qc');
 
             break;
-            
+
         end
-        
+
     end
-    
+
     clf(fig_qc);
-    
+
     if exist('I_dem', 'var')
         clear I_dem;
     end
     if exist('I_ortho', 'var')
         clear I_ortho;
     end
-    
-    if qc.flag(IA) > 0 && qc.flag(IA) < 4
-        
+
+
+    if skipFlag
+        continue;
+
+    elseif resortFlag
+        skipn = 0;
+        continue;
+
+    elseif qc.flag(IA) > 0 && qc.flag(IA) < 4
+
         M = I.z ~=0;
-        
+
         for j=1:length(qc.x{IA})
             M(roipoly(I.x,I.y,M,qc.x{IA}{j},qc.y{IA}{j}))=0;
         end
-        
+
         M=interp2(I.x,I.y(:),single(M),x,y(:),'*nearest');
-        
+
         N(M == 1) = 1;
-        
+
         recountFlag=true;
-        
+
         % remove this file from the meta struct
         in=1:length(meta.f); in(n)=[];
         meta = structfun(@(x) ( x(in,:) ), meta, 'UniformOutput', false);
         skipn = 0;
-        
+
+    elseif qc.flag(IA) == 4
+
+%        % remove this file from the meta struct
+%        in=1:length(meta.f); in(n)=[];
+%        meta = structfun(@(x) ( x(in,:) ), meta, 'UniformOutput', false);
+        skipn = skipn+1;
+
     elseif qc.flag(IA) == 4 || qc.flag(IA) == 5
-        
+
         % remove this file from the meta struct
         in=1:length(meta.f); in(n)=[];
         meta = structfun(@(x) ( x(in,:) ), meta, 'UniformOutput', false);
-        
+
     end
-    
+
 end
 end
 
 
-function [BW] = get_tile_size_coverage(fileName_matchtag, tile_x, tile_y)
+function [BW, Npx_strip_total, Npx_strip_subset] = get_tile_size_coverage(fileName_matchtag, tile_x, tile_y)
         BW = [];
-    
+
         I = readGeotiff(fileName_matchtag);
         I.z = (I.z ~= 0);
 
@@ -825,6 +900,9 @@ function [BW] = get_tile_size_coverage(fileName_matchtag, tile_x, tile_y)
 
         BW = false(numel(tile_y), numel(tile_x));
         BW(tile_r0:tile_r1, tile_c0:tile_c1) = I.z(strip_r0:strip_r1, strip_c0:strip_c1);
+
+        Npx_strip_total = nnz(I.z);
+        Npx_strip_subset = nnz(BW);
 end
 
 

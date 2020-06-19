@@ -4,6 +4,9 @@ global fig_qc
 global fig_panel
 global filter_item_plot_groups
 global filtermode_avail
+global beep_on
+global beep_sound
+global hold_4s
 fig_qc = figure('Name','QCSBT');
 fig_panel = [];
 filter_item_plot_groups = {};
@@ -22,7 +25,7 @@ end
 %regionNum='02'; % region number
 tilefile  = 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/PGC_Imagery_Mosaic_Tiles_Arctic.mat'; %PGC/NGA Tile definition file, required
 arcdemfile= 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticdem_tiles_v3.mat'; % lists which tiles go to which regions, required
-dbasefile = 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticDEMdatabase_2m_20200228.mat'; % database file
+dbasefile = 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticDEMdatabase3_2m_unf_20200519.mat'; % database file
 changePath= 'V:/pgc'; %if set, will change the path to the REMA directory from what's in the database file. set to [] if none.
 
 dbasedir_local = [getenv('USERPROFILE'),'\setsm_postprocessing_dbase'];
@@ -31,12 +34,15 @@ dbasedir_local = [getenv('USERPROFILE'),'\setsm_postprocessing_dbase'];
 % if an older set of mosaic files already exist, we can speed things up by
 % check to see if they already have 100% coverage - will skip if do. Leave
 % empty if none.
-tileDir= '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/2m_v4_tileqc/';
+tileDir= '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/2m_v3.2_tileqc/';
 
 startfrom = '1';
 minN = 500;
 minArea = 35;
 qcAll = false;
+beep_sound=load('train.mat');
+beep_on = true;
+hold_4s = true;
 
 for i=1:2:length(varargin)
     if strcmp(varargin{i}, 'all')
@@ -53,9 +59,9 @@ startfrom=str2num(startfrom);
 tiles=load(tilefile);
 a=load(arcdemfile);
 
-%remove duplicated tile entries keeping just first occurence
-[~,n]  = unique(a.tileName,'stable');
-a = structfun(@(x) ( x(n) ), a, 'UniformOutput', false);
+% %remove duplicated tile entries keeping just first occurence
+% [~,n]  = unique(a.tileName,'stable');
+% a = structfun(@(x) ( x(n) ), a, 'UniformOutput', false);
 
 % get index of this region number
 n=a.regionNum==str2num(regionNum);
@@ -73,7 +79,7 @@ tiles = structfun(@(x) ( x(n) ), tiles, 'UniformOutput', false);
 fprintf('Loading db\n');
 meta=load(dbasefile);
 
-% check for region field
+% % check for region field
 if ~isfield(meta,'region')
     meta.region=cell(size(meta.f));
     for i=1:length(meta.f)
@@ -147,11 +153,22 @@ global fig_qc
 global fig_panel
 global filter_item_plot_groups
 global filtermode_avail
+global beep_sound
+global beep_on
+global hold_4s
 
 coverageFile_missing_total = 0;
 coverageFile_warned = false;
 orthoFile_warned = false;
 demFile_warned = false;
+first_input = true;
+
+strip_sort_type_7 = 'total strip area';
+strip_sort_type_8 = 'remaining area contrib';
+strip_sort_type_88 = 'remaining area non-void %';
+sort_by = strip_sort_type_8;
+
+held_4s_list = {};
 
 
 %% Spatial coverage search
@@ -247,6 +264,8 @@ fprintf('calculating tile pixel coverage for each strip, ');
 
 % initialize output field
 meta.gridPointInd=cell(size(meta.f));
+meta.gridPointInd_roi=cell(size(meta.f));
+meta.Npx_nonvoid=nan(size(meta.f));
 
 % can be slow, so we'll use a counter
 count = 0;
@@ -271,18 +290,16 @@ for i=1:length(meta.f)
     coverageFile = strrep(meta.f{i}, 'meta.txt', 'dem_40m_coverage.tif');
     if exist(coverageFile, 'file')
         
-        BW = get_tile_size_coverage(coverageFile, x, y);
-        if ~coveragealign_warned && isempty(BW)
-            
-            BW = roipoly(x, y, N, meta.x{i}, meta.y{i});
-            if any(BW)
-                fprintf(2, ['\nno overlap between strip *dem_40m_coverage.tif and tile; ' ...
-                            'make sure coverage grid is properly aligned to tile grid\n']);
-                fprintf('strip %d of %d',i,size(meta.f,1));
-                coveragealign_warned = true;
-            end
-            
-            continue;
+        [BW, Npx_total, Npx_subset] = get_tile_size_coverage(coverageFile, x, y);
+        BW_roi = roipoly(x, y, N, meta.x{i}, meta.y{i});
+%         BW_roi = imdilate(BW_roi, ones(15));
+        meta.Npx_nonvoid(i) = Npx_total;
+
+        if ~coveragealign_warned && isempty(BW) && any(BW_roi)
+            fprintf(2, ['\nno overlap between strip *dem_40m_coverage.tif and tile; ' ...
+                        'make sure coverage grid is properly aligned to tile grid\n']);
+            fprintf('strip %d of %d',i,size(meta.f,1));
+            coveragealign_warned = true;
         end
     else
         coverageFile_missing_total = coverageFile_missing_total + 1;
@@ -294,8 +311,9 @@ for i=1:length(meta.f)
     % if mask data exists, apply it
     if meta.qc(i) == 3
         for j=1:length(meta.maskPolyx{i})
-            BW(roipoly(x,y,BW,...
-                meta.maskPolyx{i}{j},meta.maskPolyy{i}{j}))=0;
+            mask_poly=roipoly(x,y,BW,...
+                meta.maskPolyx{i}{j},meta.maskPolyy{i}{j});
+            BW(mask_poly)=0;
         end
     end
     
@@ -304,7 +322,12 @@ for i=1:length(meta.f)
     
     % convert BW mask to col-wise indices and save to cell
     meta.gridPointInd{i}=find(BW);
-    
+    if exist('BW_roi', 'var')
+        meta.gridPointInd_roi{i}=find(BW_roi);
+    else
+        meta.gridPointInd_roi{i}=meta.gridPointInd{i};
+    end
+
     % get rid of mask
     clear BW
 end
@@ -332,6 +355,7 @@ meta = structfun(@(x) ( x(~add2N ,:) ), meta, 'UniformOutput', false);
 
 % make another field with the number of data points
 meta.gridPointN=cellfun(@length,meta.gridPointInd);
+meta.gridPointN_roi=cellfun(@length,meta.gridPointInd_roi);
 
 
 %remove strips below a minimum size
@@ -350,6 +374,8 @@ if ~isfield(meta,'rmse'); meta.rmse=nan(size(meta.f));end
 if ~isfield(meta,'dtrans'); meta.dtrans=zeros(length(meta.f),3); end
 if ~isfield(meta,'overlap'); meta.overlap=zeros(size(meta.f)); end % number existing data points overlapping file
 %%
+skipFlag=false;
+resortFlag=false;
 recountFlag=true;
 skipn = 0;
 F = [];
@@ -375,6 +401,12 @@ while length(meta.f) >= 1
             
             % count new data points
             meta.gridPointN(i) = sum(~Nsub);
+
+            % subset of N at data points in this file
+            Nsub_roi=N(meta.gridPointInd_roi{i});
+
+            % count new data points
+            meta.gridPointN_roi(i) = sum(~Nsub_roi);
             
         end
     end
@@ -398,20 +430,53 @@ while length(meta.f) >= 1
         
     end
 
-    A = nansum([100.*meta.gridPointN./numel(N),1./(meta.avg_rmse.^2)],2);
- 
+
+%     A = nansum([100.*meta.gridPointN./numel(N),1./(meta.avg_rmse.^2)],2);
+    if strcmp(sort_by, strip_sort_type_7)
+        A = meta.Npx_nonvoid;
+    elseif strcmp(sort_by, strip_sort_type_8)
+        A = meta.gridPointN;
+    elseif strcmp(sort_by, strip_sort_type_88)
+        A = (meta.gridPointN./meta.gridPointN_roi);
+    end
+    fprintf('sorting strips by %s\n', sort_by);
     [~,n]=sort(A,'descend');
     
-    
-    if skipn < 0; skipn = length(n)-1; end
-    
-    % skip if skipped on last iteration
-    if length(n) >= 1+skipn
-        n = n(1+skipn);
+%    if skipFlag || ~hold_4s
+    if skipFlag
+        if skipn < 0; skipn = length(n)-1; end
+
+        % skip if skipped on last iteration
+        if length(n) >= 1+skipn
+            n = n(1+skipn);
+        else
+            n=n(1);
+            skipn = 0;
+        end
     else
-        n=n(1);
-        skipn = 0;
+        next_strip_n = 0;
+        for i=1:length(n)
+            if ~any(strcmp(held_4s_list, meta.f{n(i)}))
+                next_strip_n = i;
+                break;
+            end
+        end
+        if next_strip_n == 0
+            fprintf(2, 'All strips in tile have been reviewed and only those rated 4 should remain!\n');
+            fprintf(2, 'Enter option 6 to move on to next tile, or use options 0/9 to go forward and back through remaining strips\n');
+            fprintf(2, 'Enter option 66 to turn off this "4-loop" feature\n');
+
+            held_4s_list = {};
+            next_strip_n = 1;
+        end
+
+        n=n(next_strip_n);
+%        skipn = 0;
+        skipn = next_strip_n - 1;
     end
+
+    skipFlag=false;
+    resortFlag=false;
     
     fprintf('%d of %d strips remaining\n',skipn+1,length(meta.f));
 
@@ -497,7 +562,7 @@ while length(meta.f) >= 1
     [~,IA]=intersect(fileNames, hillFile);
     
     if isempty(IA) 
-        error('this file name not matched in the qc.mat, probably need to upadate it.'); 
+        error('this file name not matched in the qc.mat, probably need to update it.'); 
     end
     
     if qc.flag(IA) ~= 4 && qc.flag(IA) ~= 0
@@ -530,24 +595,56 @@ while length(meta.f) >= 1
                     fprintf(2, 'qc flag previously set to 4\n');
                 end
 
-                s=input('Enter quality flag: 0=skip,9=back, 1=good, 2=partial, 3=manual edit, 4=poor, 5=unuseable, 6=next tile\n','s');
+                if first_input && beep_on
+                    sound(beep_sound.y);
+                    first_input = false;
+                end
 
+                s=input(sprintf('Enter quality flag: 0=skip,9=back, 1=good, 2=partial, 3=manual edit, 4=poor, 5=unuseable, 6=next tile, 66=toggle hold-4s, 7=sort by %s, 8=sort by %s, 88=sort by %s, 99=toggle beep\n', strip_sort_type_7, strip_sort_type_8, strip_sort_type_88), 's');
+
+                flag = [];
                 if ~isempty(s) && all(ismember(s, '0123456789'))
                     flag = str2num(s);
-                    if flag == 0 || flag == 9 || flag == 1 || flag == 2 || flag == 3 || flag == 4 || flag == 5 || flag == 6
+                    if flag == 0 || flag == 9 || flag == 1 || flag == 2 || flag == 3 || flag == 4 || flag == 5 || flag == 6 || flag == 7 || flag == 8 || flag == 88
                         break;
                     end
                 end
 
-                fprintf('%s not recogized, try again\n',s);
+                if ~isempty(flag) && flag == 99
+                    beep_on = ~beep_on;
+                    if beep_on
+                        sound_status = 'ON';
+                    else
+                        sound_status = 'OFF';
+                    end
+                    fprintf('sound is now %s\n', sound_status);
+
+                elseif ~isempty(flag) && flag == 66
+                    hold_4s = ~hold_4s;
+                    if hold_4s
+                        hold_4s_status = 'ON';
+                    else
+                        hold_4s_status = 'OFF';
+                    end
+                    fprintf('hold-4s is now %s\n', hold_4s_status);
+
+                else
+                    fprintf('%s not recogized, try again\n',s);
+                end
 
             end
 
-            if flag == 0;  skipn = skipn+1;  clf(fig_qc); break; end
+            if flag == 0; skipn = skipn+1; skipFlag=true; break; end
 
-            if flag == 9;  skipn = skipn-1;  clf(fig_qc); break; end
+            if flag == 9; skipn = skipn-1; skipFlag=true; break; end
 
             if flag == 6; clf(fig_qc); return; end
+
+            if flag == 7; sort_by=strip_sort_type_7; resortFlag=true; break; end
+
+            if flag == 8; sort_by=strip_sort_type_8; resortFlag=true; break; end
+
+            if flag == 88; sort_by=strip_sort_type_88; resortFlag=true; break; end
 
             qc.flag(IA)=flag;
 
@@ -731,8 +828,16 @@ while length(meta.f) >= 1
     if exist('I_ortho', 'var')
         clear I_ortho;
     end
+
+
+    if skipFlag
+        continue;
+
+    elseif resortFlag
+        skipn = 0;
+        continue;
     
-    if qc.flag(IA) > 0 && qc.flag(IA) < 4
+    elseif qc.flag(IA) > 0 && qc.flag(IA) < 4
         
         M = I.z ~=0;
         
@@ -750,20 +855,31 @@ while length(meta.f) >= 1
         in=1:length(meta.f); in(n)=[];
         meta = structfun(@(x) ( x(in,:) ), meta, 'UniformOutput', false);
         skipn = 0;
-        
+
+    elseif qc.flag(IA) == 4 && hold_4s
+
+        held_4s_list{end+1} = meta.f{n};
+
     elseif qc.flag(IA) == 4 || qc.flag(IA) == 5
-        
+
         % remove this file from the meta struct
         in=1:length(meta.f); in(n)=[];
         meta = structfun(@(x) ( x(in,:) ), meta, 'UniformOutput', false);
         
     end
+
+    if ~hold_4s && ~isempty(held_4s_list)
+        % remove held 4's from the meta struct
+        [~,IA] = setdiff(meta.f, held_4s_list);
+        meta = structfun(@(x) ( x(IA,:) ), meta, 'UniformOutput', false);
+        held_4s_list = {};
+     end
     
 end
 end
 
 
-function [BW] = get_tile_size_coverage(fileName_matchtag, tile_x, tile_y)
+function [BW, Npx_strip_total, Npx_strip_subset] = get_tile_size_coverage(fileName_matchtag, tile_x, tile_y)
         BW = [];
     
         I = readGeotiff(fileName_matchtag);
@@ -825,6 +941,9 @@ function [BW] = get_tile_size_coverage(fileName_matchtag, tile_x, tile_y)
 
         BW = false(numel(tile_y), numel(tile_x));
         BW(tile_r0:tile_r1, tile_c0:tile_c1) = I.z(strip_r0:strip_r1, strip_c0:strip_c1);
+
+        Npx_strip_total = nnz(I.z);
+        Npx_strip_subset = nnz(BW);
 end
 
 
