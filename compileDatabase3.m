@@ -1,18 +1,50 @@
 % built a searchable index of all data
 
+addpath ../setsm_postprocessing3/
+
 udir='/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region';
 rdir=dir([udir,'/arcticdem_*']);
-outname='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticDEMdatabase_2m_20200228.mat';
+outname='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticDEMdatabase3_2m_unf_20200519.mat';
+%outname_appended=outname;
+outname_appended='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticDEMdatabase3_2m_unf_20200519.mat';
 
+b = {};
+demDname_exist = {};
+if exist(outname, 'file') == 2
+    fprintf('Loading existing database file: %s\n', outname)
+    b = load(outname);
+    [demDir_exist,~,~] = cellfun(@fileparts, b.f, 'UniformOutput', false);
+    [~,demDname_exist,~] = cellfun(@fileparts, demDir_exist, 'UniformOutput', false);
+    demDname_exist = unique(demDname_exist);
+end
+
+demDir={};
 k=0;
 for i=1:length(rdir);
-    fprintf('Building array of DEM paths in %s\n',rdir(i).name);
-    pdir=dir([udir,'/',rdir(i).name,'/strips_unf/2m/*_2m_lsf']);
+    fprintf('Building array of DEM paths in %s ... ', rdir(i).name);
+    pdir=dir([udir,'/',rdir(i).name,'/strips_unf/2m/*_2m_lsf*']);
+    new_strip_num=0;
     for j=1:length(pdir);
+
+        strippair_dir=[pdir(j).folder,'/',pdir(j).name];
+
+        finfilecheck=dir([strippair_dir,'/*.fin']);
+        if isempty(finfilecheck); continue; end
+
+        demfilecheck=dir([strippair_dir,'/*dem.tif']);
+        if isempty(demfilecheck); continue; end
+
+        %% don't consider this strip if it's already in existing database
+        if ~isempty(demDname_exist) && any(strcmp(demDname_exist, pdir(j).name)); continue; end
+
+        new_strip_num=new_strip_num+1;
         k=k+1;
-        demDir{k}=[pdir(j).folder,'/',pdir(j).name];
+        demDir{k}=strippair_dir;
+
     end
+    fprintf('%d strips to add\n', new_strip_num)
 end
+%return
 
 f               = cell(length(rdir),1);
 region          = cell(length(rdir),1);
@@ -44,13 +76,16 @@ dzpc_rock       = cell(length(rdir),1);
 dzpc_ice        = cell(length(rdir),1);
 
 i=1;
+last_print_len=0;
 for i=1:length(demDir);
 
-    fprintf('reading %s\n',demDir{i})
+    fprintf(repmat('\b', 1, last_print_len));
+    last_print_len=fprintf('reading (%d/%d): %s',i,k,demDir{i});
 
     filecheck=dir([demDir{i},'/*meta.txt']);
+    finfilecheck=dir([demDir{i},'/*.fin']);
 
-    if isempty(filecheck); continue; end
+    if isempty(filecheck) || isempty(finfilecheck); continue; end
 
     [f{i},creationDate{i},stripDate{i},res{i},x{i},y{i},...
         avg_rmse{i},med_rmse{i},max_rmse{i},Nscenes{i},reg...
@@ -77,6 +112,7 @@ for i=1:length(demDir);
        dzpc_ice{i} = reg.dzpc_ice;
 
 end
+fprintf('\n')
 
 a.f=[]; i=1; for i=1:length(f); a.f = [a.f;f{i}]; end; clear f;
 
@@ -122,4 +158,13 @@ a.xmax=cellfun(@max, a.x);
 a.ymin = cellfun(@min, a.y);
 a.ymax=cellfun(@max, a.y);
 
-save(outname,'-struct','a','-v7.3');
+%% merge existing and new database sets
+if ~isempty(b)
+    f = fieldnames(b);
+    for i = 1:length(f)
+        b.(f{i}) = [b.(f{i}); a.(f{i})];
+    end
+    a = b;
+end
+
+save(outname_appended,'-struct','a','-v7.3');

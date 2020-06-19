@@ -32,13 +32,13 @@ ymax = xmin;
 
 i=1;
 for i=1:length(S)
-
+    
     xmin(i) = S(i).BoundingBox(1);
     xmax(i) = S(i).BoundingBox(2);
-
+    
     ymin(i) = S(i).BoundingBox(3);
     ymax(i) = S(i).BoundingBox(4);
-
+    
 end
 
 vxtile = [tiles.x0,tiles.x0,tiles.x1,tiles.x1,tiles.x0];
@@ -61,7 +61,7 @@ for i=1:length(tiles.x0)
     % find all polys whose bounding boxes intersect this tile
     n = find(tiles.x0(i) <= xmax & tiles.x1(i) >= xmin &...
         tiles.y0(i) <= ymax & tiles.y1(i) >= ymin);
-
+    
     if ~isempty(n)
 
         j=1;
@@ -102,9 +102,9 @@ for i=1:length(tiles.x0)
 
                     continue;
 
-%                else
-%
-%                    surroundFlag = true;
+                else
+
+                    surroundFlag = true;
 
                 end
 
@@ -136,11 +136,6 @@ for i=1:length(tiles.x0)
                 nn =isfinite(xv) & isfinite(yv);
                 land(roipoly(x,y,land,xv(nn),yv(nn)))=true;
 
-                if all(land(:))
-                    coastline{i}{j} = [vxtile(i,:);vytile(i,:)];
-                    clear land
-                    break;
-                end
 
 
             end
@@ -167,6 +162,7 @@ for i=1:length(tiles.x0)
         
 %        j=1;
 %        for j=1:length(coastline{i})
+%            if isempty(coastline{i}{j}); continue; end
 %
 %            plot(coastline{i}{j}(1,:),coastline{i}{j}(2,:));
 %            hold on
