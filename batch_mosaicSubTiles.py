@@ -5,6 +5,8 @@ quads = ['1_1','1_2','2_1','2_2']
 
 Task = namedtuple('Task', 't st')
 
+tileDefFile = 'PGC_Imagery_Mosaic_Tiles_Arctic.mat'
+
 def main():
 
     ## args
@@ -13,10 +15,11 @@ def main():
     parser.add_argument("tiles", help="list of tiles, comma delimited")
     parser.add_argument("res", choices=['2','10'], help="resolution (2 or 10)")
 
-
+    
     parser.add_argument("--lib-path", default=matlab_scripts,
             help="path to referenced Matlab functions (default={}".format(matlab_scripts))
-
+    parser.add_argument("--tile-def", default=tileDefFile,
+            help="mosaic tile definition mat file(default={}".format(tileDefFile))
     parser.add_argument('--quads', action='store_true', default=False,
             help="build into quad subtiles")
     parser.add_argument("--pbs", action='store_true', default=False,
@@ -80,7 +83,7 @@ def main():
                 i+=1
                 if args.pbs:
                     job_name = 'mst_{}'.format(task.t)
-                    cmd = r'qsub -N {1} -v p1={2},p2={3},p3={4},p4={5},p5={6},p6={7},p7={8} {0}'.format(
+                    cmd = r'qsub -N {1} -v p1={2},p2={3},p3={4},p4={5},p5={6},p6={7},p7={8},p8={9},p9={10} {0}'.format(
                         qsubpath,
                         job_name,
                         scriptdir,
@@ -89,7 +92,9 @@ def main():
                         subtile_dir,
                         args.res,
                         dstfp,
-                        task.st
+                        task.t,
+                        args.tile_def,
+                        task.st,
                     )
                     print cmd
                     if not args.dryrun:
@@ -98,16 +103,18 @@ def main():
                 ## else run matlab
                 else:
                     if task.st == '':
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); {2}('{3}',{4},'{5}'); exit" """.format(
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{6}','{7}'); {2}('{3}',{4},'{5}','extent',[x0,x1,y0,y1]); exit" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,
                             subtile_dir,
                             args.res,
                             dstfp,
+                            task.t,
+                            args.tile_def
                         )
                     else:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); {2}('{3}',{4},'{5}','{6}'); exit" """.format(
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{7}','{8}','quadrant','{6}'); {2}('{3}',{4},'{5}','quadrant','{6}','extent',[x0,x1,y0,y1]); exit" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,
@@ -115,6 +122,8 @@ def main():
                             args.res,
                             dstfp,
                             task.st,
+                            task.t,
+                            args.tile_def
                         )
                     print "{}, {}".format(i, cmd)
                     if not args.dryrun:

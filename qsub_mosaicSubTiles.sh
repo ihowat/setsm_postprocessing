@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#PBS -l walltime=100:00:00,nodes=1:ppn=2
+#PBS -l walltime=100:00:00,nodes=1:ppn=8,mem=48gb
 #PBS -m n
 #PBS -k oe
 #PBS -j oe
@@ -28,21 +28,23 @@ echo "var4: ${p4}"
 echo "var5: ${p5}"
 echo "var6: ${p6}"
 echo "var7: ${p7}"
+echo "var8: ${p8}"
+echo "var9: ${p9}"
 
 echo
 
 # Check if quad arg is present
-if [ -z "${p7}" ]; then
+if [ -z "${p9}" ]; then
     echo "Quad arg not present. Running full tile"
 
-    echo matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}',${p5},'${p6}'); exit"
-    time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}',${p5},'${p6}'); exit"
+    echo matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}'); disp(x0); ${p3}('${p4}',${p5},'${p6}','extent',[x0,x1,y0,y1]); exit"
+    time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}'); disp(x0); ${p3}('${p4}',${p5},'${p6}','extent',[x0,x1,y0,y1]); exit"
 
 else
-    echo "Running quadrant ${p7}"
+    echo "Running quadrant ${p9}"
 
-    echo matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}',${p5},'${p6}','${p7}'); exit"
-    time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}',${p5},'${p6}','${p7}'); exit"
+    echo matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}','quadrant','${p9}'); ${p3}('${p4}',${p5},'${p6}','quadrant','${p9}','extent',[x0,x1,y0,y1]); exit"
+    time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}','quadrant','${p9}'); ${p3}('${p4}',${p5},'${p6}','quadrant','${p9}','extent',[x0,x1,y0,y1]); exit"
 
 fi
 

@@ -8,7 +8,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("dstdir", help="target directory (tile subfolders will be created)")
     parser.add_argument("tiles", help="list of mosaic tiles, comma delimited")
-    parser.add_argument("res", choices=['2','8','20','40'], help="resolution (2, 8, or 40)")
+    parser.add_argument("res", choices=['2','8','10','40'], help="resolution (2, 8, 10, or 40)")
     parser.add_argument("region", choices=['arctic','antarctic','above'], help="region (arctic, antarctic, or above)")
 
     parser.add_argument("--rebuild", action='store_true', default=False, help="rebuild DEM from 40m template. 40m version must already exist)")

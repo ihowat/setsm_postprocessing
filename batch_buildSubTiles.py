@@ -2,9 +2,8 @@ import os, string, sys, argparse, glob, subprocess
 matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing4'
 
 tileDefFile = 'PGC_Imagery_Mosaic_Tiles_Arctic.mat'
-databaseFile = 'arcticdem_database_unf_pgcpaths.mat'
+databaseFile = 'arcticDEMdatabase4_2m_unf_20200519.mat'
 waterTileDir = '/mnt/pgc/data/scratch/claire/pgc/arcticdem/coastline/global_surface_water/tiles_v2/'
-refDemFile = '/mnt/pgc/data/scratch/claire/pgc/arcticdem/mosaic/tandemx_alaska_mosaic_3413_tap90m.tif'
 
 def main():
 
@@ -12,6 +11,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("dstdir", help="target directory (tile subfolders will be created)")
     parser.add_argument("tiles", help="list of mosaic tiles, comma delimited")
+    parser.add_argument("ref_dem", help="reference DEM")
 
 
     # parser.add_argument("region", choices=['arctic','antarctic','above'], help="region (arctic, antarctic, or above)")
@@ -22,8 +22,6 @@ def main():
                         help="strip database mat file (default={}".format(databaseFile))
     parser.add_argument("--water-tile-dir", default=waterTileDir,
                         help="directory of water tifs (default={}".format(waterTileDir))
-    parser.add_argument("--ref-dem", default=refDemFile,
-                        help="reference DEM (default={}".format(refDemFile))
     parser.add_argument("--lib-path", default=matlab_scripts,
                         help="path to referenced Matlab functions (default={}".format(matlab_scripts))
 
@@ -31,6 +29,8 @@ def main():
             help="submit tasks to PBS")
     parser.add_argument("--rerun", action='store_true', default=False,
             help="rerun tile, behavior determined by redoFlag in Matlab code")
+    parser.add_argument("--sort-fix", action="store_true", default=False,
+            help="run tile with buildSubTilesSortFix script")
     parser.add_argument("--qsubscript",
             help="qsub script to use in PBS submission (default is qsub_buildSubTiles.sh in script root folder)")
     parser.add_argument("--dryrun", action='store_true', default=False,
@@ -54,6 +54,8 @@ def main():
         parser.error("dstdir does not exist: {}".format(dstdir))
 
     matlab_script = 'buildSubTiles'
+    if args.sort_fix:
+        matlab_script = 'buildSubTilesSortFix'
 
     i=0
     if len(tiles) > 0:
@@ -67,10 +69,28 @@ def main():
                     os.makedirs(tile_dstdir)
             dstfps = glob.glob(os.path.join(tile_dstdir,'{}_*2m.mat'.format(tile)))
 
-            if len(dstfps) > 0 and not args.rerun:
-                print '{} subtiles exists, skipping'.format(tile)
-
-            else:
+            run_tile = True            
+            if args.rerun and not args.sort_fix:
+                print('Verifying tile {} before rerun'.format(tile))
+                if os.path.isfile(os.path.join(tile_dstdir,'{}_10000_2m.mat'.format(tile))):
+                    print('Tile seems complete ({}_10000_2m.mat exists)'.format(tile))
+                    run_tile = False
+                
+                ## clean up subtiles with only 10m version
+                dstfps_10m = glob.glob(os.path.join(tile_dstdir,'{}_*10m.mat'.format(tile)))
+                for dstfp_10m in dstfps_10m:
+                    dstfp_2m = dstfp_10m.replace('10m.mat','2m.mat')
+                    if not os.path.isfile(dstfp_2m):
+                        print('Removing 10m subtile missing 2m component: {}'.format(os.path.basename(dstfp_10m)))
+                        run_tile = True
+                        if not args.dryrun:
+                            os.remove(dstfp_10m)
+            
+            if len(dstfps) > 0 and not args.rerun and not args.sort_fix:
+                print('{} subtiles exists, skipping'.format(tile))
+                run_tile = False
+            
+            if run_tile:
                 ## if pbs, submit to scheduler
                 i+=1
                 if args.pbs:

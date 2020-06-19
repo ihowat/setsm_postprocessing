@@ -4,8 +4,8 @@
 coastlineShape = 'E:\scratch\data\coastlines\GSHHS_f_L1_GIMPgl_3413_clipArcDEMbuff100km.shp';
 %coastlineShape = 'E:\scratch\data\coastlines\GSHHS_f_L1_3413.shp';
 
-%tilefile = '/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing_pgc/PGC_Imagery_Mosaic_Tiles_Arctic.mat'; %PGC/NGA Tile definition file
-tilefile = 'V:/pgc/data/scratch/erik/repos/setsm_postprocessing_pgc/PGC_Imagery_Mosaic_Tiles_Arctic.mat'; %PGC/NGA Tile definition file
+%tilefile = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/PGC_Imagery_Mosaic_Tiles_Arctic.mat'; %PGC/NGA Tile definition file
+tilefile = 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/PGC_Imagery_Mosaic_Tiles_Arctic.mat'; %PGC/NGA Tile definition file
 
 if exist('land','var')
     clear land
@@ -21,7 +21,7 @@ else
 end
 
 %fix_tile_list = {};
-fix_tile_list = {'33_44'};
+fix_tile_list = {'58_23', '58_24', '59_22', '59_23', '59_24', '60_22', '60_23', '60_24'};
 
 S = shaperead(coastlineShape);
 

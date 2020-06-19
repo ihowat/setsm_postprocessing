@@ -15,8 +15,8 @@ def main():
     parser.add_argument("res", choices=RESOLUTIONS, help="resolution ({})".format(','.join(RESOLUTIONS)))
     parser.add_argument("region", choices=REGIONS, help="region ({})".format(','.join(REGIONS)))
 
-    # parser.add_argument("--rerun", action='store_true', default=False,
-    #         help="run script even if target dem already exists")
+    parser.add_argument("--rerun", action='store_true', default=False,
+            help="run script even if target dem already exists")
     parser.add_argument("--lib-path", default=matlab_scripts,
             help="path to referenced Matlab functions (default={}".format(matlab_scripts))
     parser.add_argument("--pbs", action='store_true', default=False,
@@ -60,7 +60,7 @@ def main():
                 if not os.path.isfile(matfile):
                     print "Tile {} {}m mat file does not exist: {}".format(tq,args.res,matfile)
 
-                elif os.path.isfile(dstfp):
+                elif os.path.isfile(dstfp) and not args.rerun:
                     print '{} exists, skipping'.format(dstfp)
 
                 else:

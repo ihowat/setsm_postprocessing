@@ -4,8 +4,8 @@ coastlineShape = '/mnt/pgc/data/projects/arcticdem/coastline/GSHHS_f_L1_GIMPgl_3
 %coastlineShape = 'E:\scratch\data\coastlines\GSHHS_f_L1_GIMPgl_3413_clipArcDEMbuff100km.shp';
 %coastlineShape = 'E:\scratch\data\coastlines\GSHHS_f_L1_3413.shp';
 
-tilefile = '/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing_pgc/PGC_Imagery_Mosaic_Tiles_Arctic_coast.mat'; %PGC/NGA Tile definition file
-%tilefile = 'V:/pgc/data/scratch/erik/repos/setsm_postprocessing_pgc/PGC_Imagery_Mosaic_Tiles_Arctic_coast.mat'; %PGC/NGA Tile definition file
+tilefile = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/PGC_Imagery_Mosaic_Tiles_Arctic_coast.mat'; %PGC/NGA Tile definition file
+%tilefile = 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/PGC_Imagery_Mosaic_Tiles_Arctic_coast.mat'; %PGC/NGA Tile definition file
 
 if exist('land','var')
     clear land

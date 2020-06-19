@@ -1,5 +1,6 @@
 import os, string, sys, argparse, glob, subprocess
 matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing3'
+default_qsub = 'qsub_tiles2tif.sh'
 
 #### TODO add projstring to passed args
 def main():
@@ -18,7 +19,7 @@ def main():
     parser.add_argument("--pbs", action='store_true', default=False,
             help="submit tasks to PBS")
     parser.add_argument("--qsubscript",
-            help="qsub script to use in PBS submission (default is qsub_tiles2tif_rookery.sh in script root folder)")
+            help="qsub script to use in PBS submission (default is {} in script root folder)".format(default_qsub))
     parser.add_argument("--dryrun", action='store_true', default=False,
             help='print actions without executing')
 
@@ -30,7 +31,7 @@ def main():
 
     ## Verify qsubscript
     if args.qsubscript is None:
-        qsubpath = os.path.join(scriptdir,'qsub_tiles2tif.sh')
+        qsubpath = os.path.join(scriptdir,default_qsub)
     else:
         qsubpath = os.path.abspath(args.qsubscript)
     if not os.path.isfile(qsubpath):
@@ -54,6 +55,7 @@ def main():
             ## if output does not exist, add to task list
             dstfp = os.path.join(dstdir,tile,'{}_{}m_reg_dem.tif'.format(tile, args.res))
             dstfp2 = os.path.join(dstdir,tile,'{}_{}m_dem.tif'.format(tile, args.res))
+            ## reg_dem matfile will be substituted in the matlab script if exists
             matfile = os.path.join(dstdir,tile,'{}_{}m_dem.mat'.format(tile, args.res))
             if not os.path.isfile(matfile):
                 print 'source matfile does not exist: {}'.format(matfile)
