@@ -69,9 +69,9 @@ for i=1:length(f)
         Nscenes(i)=1;
     else
         
-        avg_rmse(i)=mean(A(:,1));
-        med_rmse(i)=median(A(:,1));
-        max_rmse(i)=max(A(:,1));
+        avg_rmse(i)=nanmean(A(:,1));
+        med_rmse(i)=nanmedian(A(:,1));
+        max_rmse(i)=nanmax(A(:,1));
         Nscenes(i)=size(A,1)+1;
         
     end
