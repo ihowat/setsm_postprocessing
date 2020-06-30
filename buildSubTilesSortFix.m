@@ -39,7 +39,7 @@ function buildSubTilesSortFix(tileName,outDir,tileDefFile,databaseFile,waterTile
 % if isfield(meta,'avg_rmse')
 %     meta.scene_alignment_meanrmse= meta.avg_rmse;
 % else
-%     meta.scene_alignment_meanrmse= cellfun( @(x) mean(x.rmse),...
+%     meta.scene_alignment_meanrmse= cellfun( @(x) nanmean(x.rmse),...
 %         meta.scene_alignment);
 % end
 %

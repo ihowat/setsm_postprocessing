@@ -38,7 +38,7 @@ meta.A = cellfun(@(x,y) polyarea(x,y), meta.x,meta.y);
 if isfield(meta,'avg_rmse')
     meta.scene_alignment_meanrmse= meta.avg_rmse;
 else
-    meta.scene_alignment_meanrmse= cellfun( @(x) mean(x.rmse),...
+    meta.scene_alignment_meanrmse= cellfun( @(x) nanmean(x.rmse),...
         meta.scene_alignment);
 end
 
