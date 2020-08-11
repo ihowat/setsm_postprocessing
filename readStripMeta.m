@@ -128,13 +128,16 @@ r=r+2;
 A=[];
 while r
     if isempty(C{r}); break; end
-    A=[A;sscanf(C{r},'%*s %f %f %f %f')'];
+    A=[A;sscanf(C{r},'%*s %f %f %f %f %f %f %f')'];
     r=r+1;
 end
 meta.scene_alignment.rmse=A(:,1);
 meta.scene_alignment.dz=A(:,2);
 meta.scene_alignment.dx=A(:,3);
 meta.scene_alignment.dy=A(:,4);
+meta.scene_alignment.dze=A(:,5);
+meta.scene_alignment.dxe=A(:,6);
+meta.scene_alignment.dye=A(:,7);
 
 if ~noSceneMetaFlag
 	for n=1:Nscenes
