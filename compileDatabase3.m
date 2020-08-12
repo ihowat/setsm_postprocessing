@@ -4,15 +4,19 @@ addpath ../setsm_postprocessing3/
 
 udir='/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region';
 rdir=dir([udir,'/arcticdem_*']);
-outname='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticDEMdatabase3_2m_unf_20200519.mat';
-%outname_appended=outname;
-outname_appended='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticDEMdatabase3_2m_unf_20200519.mat';
+outname_existing='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticDEMdatabase3_2m_unf_20200812.mat';
+%outname_appended=outname_existing;
+outname_appended='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticDEMdatabase3_2m_unf_greenland.mat';
+
+%%% CHECK THIS SETTING %%%
+report_number_of_strips_to_append_but_dont_actually_append = false;
+%%% CHECK THIS SETTING %%%
 
 b = {};
 demDname_exist = {};
-if exist(outname, 'file') == 2
-    fprintf('Loading existing database file: %s\n', outname)
-    b = load(outname);
+if exist('outname_existing', 'var') && exist(outname_existing, 'file') == 2
+    fprintf('Loading existing database file: %s\n', outname_existing)
+    b = load(outname_existing);
     [demDir_exist,~,~] = cellfun(@fileparts, b.f, 'UniformOutput', false);
     [~,demDname_exist,~] = cellfun(@fileparts, demDir_exist, 'UniformOutput', false);
     demDname_exist = unique(demDname_exist);
@@ -44,7 +48,10 @@ for i=1:length(rdir);
     end
     fprintf('%d strips to add\n', new_strip_num)
 end
-%return
+
+if report_number_of_strips_to_append_but_dont_actually_append
+    return
+end
 
 f               = cell(length(rdir),1);
 region          = cell(length(rdir),1);

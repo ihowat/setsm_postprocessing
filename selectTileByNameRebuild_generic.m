@@ -8,7 +8,7 @@ projstr='polar stereo north';
 
 % file names
 tilefile  = 'PGC_Imagery_Mosaic_Tiles_Arctic.mat'; %PGC/NGA Tile definition file
-dbasefile = ['arcticDEMdatabase3_2m_unf_20200519.mat']; % strip datbase file
+dbasefile = ['arcticDEMdatabase3_2m_unf_greenland.mat']; % strip datbase file
 %dbasefile = ['GrITdatabase_2m.mat']; % strip datbase file
 %includeListFile = 'includeList_baffin.txt'; % list of strips to include
 
