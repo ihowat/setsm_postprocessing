@@ -3,6 +3,10 @@ function generate_qc_files_and_setfacl(regionRootDir)
 region_dir_prefix = 'arcticdem_';
 region_subdir = 'strips_unf/2m';
 
+%%% CHECK THIS SETTING %%%
+report_number_of_strips_to_append_but_dont_actually_append = true;
+%%% CHECK THIS SETTING %%%
+
 d = dir(regionRootDir);
 regionDirs = d(cellfun(@(x) startsWith(x, region_dir_prefix), {d.name}));
 if isempty(regionDirs)
@@ -92,8 +96,11 @@ for i = 1:numel(regionDirs)
             fileNames = [fileNames; fileNames_add];
         end
 
-        fprintf('%d new strips\n', length(fileNames))
-%        continue
+        fprintf('%d new strips\n', length(fileNames));
+
+        if report_number_of_strips_to_append_but_dont_actually_append
+            continue;
+        end
 
         if length(fileNames) ~= 0
 

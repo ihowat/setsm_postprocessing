@@ -8,38 +8,48 @@ end
 %homeDir=homeDir(1:end-1);
 
 res=2;
-%outname =[homeDir,'/data4/REMA/arcticDEMdatabase_',num2str(res),'m.mat'];
-outname='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticDEMdatabase4_2m_unf_20200519.mat';
-%outname_appended=outname;
-outname_appended='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticDEMdatabase4_2m_unf_20200519.mat';
+%dbase_in =[homeDir,'/data4/REMA/polarDEMdatabase_',num2str(res),'m.mat'];
+dbase_in='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/REMAdatabase4_2m_v4_20200723.mat';
+dbase_out='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/REMAdatabase4_2m_v4_20200806.mat';
 
-%upDir{1}=[homeDir,'/fs/project/howat.4/EarthDEM'];
-%regionDirs{1}=dir([upDir{1},'/*']);
-%regionDirs{1}=cellfun(@(x) [upDir{1},'/',x,'/strips_unf/2m'], {regionDirs{1}.name},...
-%    'UniformOutput',false);
-%upDir{2}=[homeDir,'/data5/REMA'];
-%regionDirs{2}=dir([upDir{2},'/region_*']);
-%regionDirs{2}=cellfun(@(x) [upDir{2},'/',x,'/strips_unf/2m'], {regionDirs{2}.name},...
- %   'UniformOutput',false);
+%%% CHECK THIS SETTING %%%
+report_number_of_strips_to_append_but_dont_actually_append = true;
+%%% CHECK THIS SETTING %%%
 
-%regionDirs = cat(2,regionDirs{:});
-
-upDir=['/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region'];
-regionDirs=dir([upDir,'/arcticdem_*']);
-regionDirs=cellfun(@(x) [upDir,'/',x,'/strips_unf/2m'], {regionDirs([regionDirs.isdir]).name},...
+regionDirs=[
+%    dir('/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_*'),
+    dir('/mnt/pgc/data/elev/dem/setsm/REMA/region/rema_*'),
+%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_*'),
+];
+regionDirs=regionDirs([regionDirs.isdir]);
+regionDirs=cellfun(@(regionDir, regionName) [regionDir,'/',regionName,'/strips_v4/2m'], {regionDirs.folder}, {regionDirs.name},...
     'UniformOutput',false);
 
-meta=[];
 
-if ~exist(outname,'file')
-    fprintf('Creating new database: %s\n', outname)
-else
-    fprintf('Loading existing database to be appended to: %s\n', outname)
-    out0=load(outname);
+if exist('dbase_in', 'var') && ~isempty(dbase_in)
+    if ~isfile(dbase_in)
+        error('Input database does not exist: %s\n', dbase_in);
+    end
+end
+if ~exist('dbase_out', 'var') || isempty(dbase_out)
+    error('Output database variable "dbase_out" must be set');
+elseif isfile(dbase_out)
+    error('Output database already exists: %s\n', dbase_out);
+end
+
+if exist('dbase_in', 'var') && ~isempty(dbase_in)
+    fprintf('Loading database to be appended to: %s\n', dbase_in);
+    fprintf('Output database will be: %s\n', dbase_out);
+    out0=matfile(dbase_in);
     [stripDirs0,~,~] = cellfun(@fileparts, out0.fileName, 'UniformOutput', false);
     [~,stripDnames0,~] = cellfun(@fileparts, stripDirs0, 'UniformOutput', false);
     stripDnames0 = unique(stripDnames0);
+else
+    fprintf('Creating new database: %s\n', dbase_out);
 end
+
+
+meta=[];
 
 i=1;
 for i=1:length(regionDirs)
@@ -129,8 +139,11 @@ for i=1:length(regionDirs)
         stripDirs=stripDirs_filtered;
 
         num_strips_to_add=length(stripDirs);
-        fprintf('%d to add\n', num_strips_to_add)
-%        continue
+        fprintf('%d to add\n', num_strips_to_add);
+
+        if report_number_of_strips_to_append_but_dont_actually_append
+            continue
+        end
         
         k=1;
         last_print_len=0;
@@ -200,5 +213,5 @@ if exist('out0','var')
     end
 end
 
-fprintf('Writing %d total records to %s\n',length(out.fileName),outname_appended);
-save(outname_appended,'-struct','out','-v7.3');
+fprintf('Writing %d total records to %s\n',length(out.fileName),dbase_out);
+save(dbase_out,'-struct','out','-v7.3');
