@@ -1,11 +1,11 @@
 
-pairnames_txt = '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/set2_rpc_dems_to_rerun.txt';
+pairnames_txt = '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_greenland_maxh_rerun_pairnames.txt';
 
-sdir1 = '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/region_05_greenland_northeast/strips/2m';
-sdir2 = '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/region_06_greenland_northwest/strips/2m';
+sdir1 = '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_05_greenland_northeast/strips_unf/2m';
+sdir2 = '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_06_greenland_northwest/strips_unf/2m';
 
-sdir1_win = 'V:\pgc\data\elev\dem\setsm\ArcticDEM\region\region_05_greenland_northeast\strips\2m';
-sdir2_win = 'V:\pgc\data\elev\dem\setsm\ArcticDEM\region\region_06_greenland_northwest\strips\2m';
+sdir1_win = 'V:\pgc\data\elev\dem\setsm\ArcticDEM\region\arcticdem_05_greenland_northeast\strips_unf\2m';
+sdir2_win = 'V:\pgc\data\elev\dem\setsm\ArcticDEM\region\arcticdem_06_greenland_northwest\strips_unf\2m';
 
 stripdirs = [string(sdir1) string(sdir2)];
 stripdirs_win = [string(sdir1_win) string(sdir2_win)];
@@ -33,12 +33,12 @@ for i_sdir = 1:length(stripdirs)
         reset_pname = reset_pnames{i_pname};
         fprintf('%s',reset_pname);
         
-        sdir_pname_files = dir([sdir,'/',reset_pname,'*_dem.tif']);
+        sdir_pname_files = dir([sdir,'/',reset_pname,'*/*_dem.tif']);
         if ~isempty(sdir_pname_files)
-            fprintf(', %d in /2m folder', numel(sdir_pname_files));
+            fprintf(', %d in strip folder', numel(sdir_pname_files));
         end
         sdir_pname_fnames = {sdir_pname_files.name}.';
-        sdir_pname_fnames = cellfun(@(s) strrep(s,'dem.tif','dem_browse.tif'), sdir_pname_fnames, 'UniformOutput',false);
+        sdir_pname_fnames = cellfun(@(s) strrep(s,'dem.tif','dem_10m_shade_masked.tif'), sdir_pname_fnames, 'UniformOutput',false);
         
         qc_reset_i = find(strcmp(reset_pname, qc_pnames));
         if ~isempty(qc_reset_i)
@@ -75,7 +75,7 @@ for i_sdir = 1:length(stripdirs)
     
     fprintf('qc.mat file will now contain %d fewer strip segments\n', fewer_segments);
     
-    save(qc_file,'-struct','qc');
+%    save(qc_file,'-struct','qc');
     
 end
 
