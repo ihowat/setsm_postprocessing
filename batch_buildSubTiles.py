@@ -1,8 +1,18 @@
 import os, string, sys, argparse, glob, subprocess
 matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing4'
 
-tileDefFile = 'PGC_Imagery_Mosaic_Tiles_Arctic.mat'
-databaseFile = 'arcticDEMdatabase4_2m_unf_20200519.mat'
+project_choices = [
+    'arcticdem',
+    'rema',
+]
+project_tileDefFile_dict = {
+    'arcticdem': 'PGC_Imagery_Mosaic_Tiles_Arctic.mat',
+    'rema': 'PGC_Imagery_Mosaic_Tiles_Antarctic.mat',
+}
+project_databaseFile_dict = {
+    'arcticdem': 'arcticDEMdatabase4_2m_v4_20200806.mat',
+    'rema': 'REMAdatabase4_2m_v4_20200806.mat',
+}
 waterTileDir = '/mnt/pgc/data/projects/arcticdem/watermasks/global_surface_water/tiled_watermasks/'
 
 def main():
@@ -16,14 +26,20 @@ def main():
 
     # parser.add_argument("region", choices=['arctic','antarctic','above'], help="region (arctic, antarctic, or above)")
 
-    parser.add_argument("--tile-def", default=tileDefFile,
-                        help="mosaic tile definition mat file(default={}".format(tileDefFile))
-    parser.add_argument("--strip-db", default=databaseFile,
-                        help="strip database mat file (default={}".format(databaseFile))
+    parser.add_argument("--project", default=None, choices=project_choices,
+                        help="sets the default value of project-specific arguments")
+    parser.add_argument("--tile-def", default=None,
+                        help="mosaic tile definition mat file (default is {})".format(
+                            ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_tileDefFile_dict.items()])
+                        ))
+    parser.add_argument("--strip-db", default=None,
+                        help="strip database mat file (default is {})".format(
+                            ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_databaseFile_dict.items()])
+                        ))
     parser.add_argument("--water-tile-dir", default=waterTileDir,
-                        help="directory of water tifs (default={}".format(waterTileDir))
+                        help="directory of water tifs (default={})".format(waterTileDir))
     parser.add_argument("--lib-path", default=matlab_scripts,
-                        help="path to referenced Matlab functions (default={}".format(matlab_scripts))
+                        help="path to referenced Matlab functions (default={})".format(matlab_scripts))
 
     parser.add_argument("--pbs", action='store_true', default=False,
             help="submit tasks to PBS")
@@ -41,6 +57,15 @@ def main():
     tiles = args.tiles.split(',')
     dstdir = os.path.abspath(args.dstdir)
     scriptdir = os.path.abspath(os.path.dirname(sys.argv[0]))
+
+    if args.project is None and True in [arg is None for arg in [args.tile_def, args.strips_db]]:
+        parser.error("--project arg must be provided if one of the following arguments is not provided: {}".format(
+            ' '.join(["--tile-def", "--strips-db"])
+        ))
+    if args.tile_def is None:
+        args.tile_def = project_tileDefFile_dict[args.project]
+    if args.strips_db is None:
+        args.strips_db = project_databaseFile_dict[args.project]
 
     ## Verify qsubscript
     if args.qsubscript is None:
@@ -108,7 +133,7 @@ def main():
                         args.water_tile_dir,  #p8
                         args.ref_dem,  #p9
                     )
-                    print cmd
+                    print(cmd)
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)
 
@@ -125,7 +150,7 @@ def main():
                         args.water_tile_dir,
                         args.ref_dem,
                     )
-                    print "{}, {}".format(i, cmd)
+                    print("{}, {}".format(i, cmd))
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)
 
