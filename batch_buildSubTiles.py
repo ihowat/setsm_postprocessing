@@ -3,7 +3,7 @@ matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing4'
 
 tileDefFile = 'PGC_Imagery_Mosaic_Tiles_Arctic.mat'
 databaseFile = 'arcticDEMdatabase4_2m_unf_20200519.mat'
-waterTileDir = '/mnt/pgc/data/scratch/claire/pgc/arcticdem/coastline/global_surface_water/tiles_v2/'
+waterTileDir = '/mnt/pgc/data/projects/arcticdem/watermasks/global_surface_water/tiled_watermasks/'
 
 def main():
 
