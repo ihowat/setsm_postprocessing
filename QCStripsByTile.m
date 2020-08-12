@@ -25,7 +25,7 @@ end
 %regionNum='02'; % region number
 tilefile  = 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/PGC_Imagery_Mosaic_Tiles_Arctic.mat'; %PGC/NGA Tile definition file, required
 arcdemfile= 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticdem_tiles_v3.mat'; % lists which tiles go to which regions, required
-dbasefile = 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticDEMdatabase3_2m_unf_20200519.mat'; % database file
+dbasefile = 'V:/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticDEMdatabase3_2m_unf_greenland.mat'; % database file
 changePath= 'V:/pgc'; %if set, will change the path to the REMA directory from what's in the database file. set to [] if none.
 
 dbasedir_local = [getenv('USERPROFILE'),'\setsm_postprocessing_dbase'];
@@ -34,7 +34,7 @@ dbasedir_local = [getenv('USERPROFILE'),'\setsm_postprocessing_dbase'];
 % if an older set of mosaic files already exist, we can speed things up by
 % check to see if they already have 100% coverage - will skip if do. Leave
 % empty if none.
-tileDir= '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/2m_v3.2_tileqc/';
+tileDir= '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v3.2/2m_tileqc/';
 
 startfrom = '1';
 minN = 500;
