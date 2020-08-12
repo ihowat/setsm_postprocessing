@@ -4,7 +4,7 @@ FIGURE_CLEANUP = onCleanup(@() eval('close all'));
 
 %tileFile = '/data4/REMA/region_06_luitpold_coast/mosaic_reg_qc_feather2/40m/36_18_40m_dem.mat';
 dbasefile  = 'V:\pgc\data\scratch\claire\repos\setsm_postprocessing_pgc\REMAdatabase_2m.mat'; % database file
-tileDir = 'V:\pgc\data\elev\dem\setsm\REMA\mosaic\2m_v3.2'; %directory containing tiles
+tileDir = 'V:\pgc\data\elev\dem\setsm\REMA\mosaic\v4.1\2m'; %directory containing tiles
 %tileName = '31_39';
 
 dbasedir_local = [getenv('USERPROFILE'),'\setsm_postprocessing_dbase'];

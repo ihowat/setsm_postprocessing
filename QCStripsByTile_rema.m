@@ -33,7 +33,7 @@ dbasedir_local = [getenv('USERPROFILE'),'\setsm_postprocessing_dbase'];
 % if an older set of mosaic files already exist, we can speed things up by
 % check to see if they already have 100% coverage - will skip if do. Leave
 % empty if none.
-tileDir= '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/2m_v3_noqc/';
+tileDir= '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v4.1/2m/';
 
 startfrom = '1';
 minN = 500;
