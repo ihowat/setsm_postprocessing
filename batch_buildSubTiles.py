@@ -58,14 +58,14 @@ def main():
     dstdir = os.path.abspath(args.dstdir)
     scriptdir = os.path.abspath(os.path.dirname(sys.argv[0]))
 
-    if args.project is None and True in [arg is None for arg in [args.tile_def, args.strips_db]]:
+    if args.project is None and True in [arg is None for arg in [args.tile_def, args.strip_db]]:
         parser.error("--project arg must be provided if one of the following arguments is not provided: {}".format(
-            ' '.join(["--tile-def", "--strips-db"])
+            ' '.join(["--tile-def", "--strip-db"])
         ))
     if args.tile_def is None:
         args.tile_def = project_tileDefFile_dict[args.project]
-    if args.strips_db is None:
-        args.strips_db = project_databaseFile_dict[args.project]
+    if args.strip_db is None:
+        args.strip_db = project_databaseFile_dict[args.project]
 
     ## Verify qsubscript
     if args.qsubscript is None:
