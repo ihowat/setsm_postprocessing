@@ -42,7 +42,7 @@ if isfield(meta,'avg_rmse')
 elseif isfield(meta,'scene_alignment')
     % need to rm zeros (first scene) and nans (unused redundant scenes),
     % strips w/ 1 scene will be NaN
-    meta.scene_alignment_meanrms = cellfun(@(x)...
+    meta.scene_alignment_meanrmse = cellfun(@(x)...
         mean(x.rmse(x.rmse~=0 & ~isnan(x.rmse))), meta.scene_alignment);
 elseif ~isfield(meta,'scene_alignment_meanrmse')
     error('missing scene alignment field in meta structure')
