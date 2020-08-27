@@ -35,11 +35,17 @@ end
 
 % get strip areas and alignment stats for quality selection
 meta.A = cellfun(@(x,y) polyarea(x,y), meta.x,meta.y);
-if isfield(meta,'avg_rmse')
-    meta.scene_alignment_meanrmse= meta.avg_rmse;
-else
-    meta.scene_alignment_meanrmse= cellfun( @(x) nanmean(x.rmse),...
-        meta.scene_alignment);
+
+if isfield(meta,'avg_rmse') 
+    % this is from an old version of the meta files that used 0 in mean
+    error('avg_rmse field in meta structure, needs to be updated')
+elseif isfield(meta,'scene_alignment')
+    % need to rm zeros (first scene) and nans (unused redundant scenes),
+    % strips w/ 1 scene will be NaN
+    meta.scene_alignment_meanrmse = cellfun(@(x)...
+        mean(x.rmse(x.rmse~=0 & ~isnan(x.rmse))), meta.scene_alignment);
+elseif ~isfield(meta,'scene_alignment_meanrmse')
+    error('missing scene alignment field in meta structure')
 end
 
 % find index of tile in tile def database
@@ -170,9 +176,8 @@ for n=1:subN
         % check for maximum #'s of overlaps
         if length(ind) > maxNumberOfStrips
             
-            %first remove single subscenes
-            ind(meta.scene_alignment_meanrmse(ind) == 0 |...
-                isnan(meta.scene_alignment_meanrmse(ind))) = [];
+            %first remove strips with single subscenes
+            ind(isnan(meta.scene_alignment_meanrmse(ind))) = [];
             
         end
         
