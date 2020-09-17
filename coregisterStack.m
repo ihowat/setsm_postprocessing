@@ -1,4 +1,4 @@
-function out=coregisterStack2(varargin)
+function out=coregisterStack(varargin)
 % coregisterStack coregister DEM layers in 3D array
 %
 % offsets=coregisterStack(x,y,z,mask,strip_ind)registered each z(:,:,i) to
@@ -22,18 +22,10 @@ if nargin > 5; t = varargin{6}; end
 if nargin > 6; dzdt  = varargin{7}; end
 
 % set missing opt argins
-if isempty(mask); mask = true(lenght(y),lenght(x)); end
+if isempty(mask); mask = true(length(y),length(x)); end
 if isempty(strip_ind); strip_ind = 1:size(z,3); end
 
 N = size(z,3); % # of strips
-
-%      maskFile=strrep(subsetFiles{file_n},'subset.mat','subset_mask.mat');
-%     if exist(maskFile,'file')
-%         mask=load(maskFile);
-%         mask=repmat(mask.A,1,1,N);
-%         z(~mask)=NaN;
-%     end
-%
 
 out.i=NaN;
 out.j=NaN;
@@ -141,10 +133,6 @@ for pair_n=1:Npairs
         mean_dz_coreg(pair_n) = nanmean(p(:));
         median_dz_coreg(pair_n) = nanmedian(p(:));
         sigma_dz_coreg(pair_n) = nanstd(p(:));
-    else
-        mean_dz_coreg(pair_n) =NaN;
-        median_dz_coreg(pair_n) = NaN;
-        sigma_dz_coreg(pair_n) = NaN;
     end
 end
 

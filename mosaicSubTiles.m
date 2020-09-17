@@ -28,6 +28,12 @@ if ~isempty(n)
     quadrant = varargin{n+1};
 end
 
+projection = 'polar stereo north';
+n = find(strcmpi('projection',varargin));
+if ~isempty(n)
+   projection = varargin{n+1};
+end
+
 n = find(strcmpi('extent',varargin));
 if ~isempty(n)
     x0 = varargin{n+1}(1);
@@ -35,8 +41,6 @@ if ~isempty(n)
     y0 = varargin{n+1}(3);
     y1 = varargin{n+1}(4);
 end
-
-fprintf('Extent: %f %f %f %f\n',x0,x1,y0,y1)
 
 fprintf('Indexing subtiles\n')
 
@@ -106,27 +110,29 @@ end
 fprintf('performing coregistration & adjustment between adjoining subtiles\n')
 dZ = getOffsets(subTileFiles,subTileNum,buff,outName);
 
+
 if ~exist('x0','var')
-% get extent of mosaic from tiles at edges
-% lower-left subtile
-m = matfile(subTileFiles{1});
-x0 = m.x(1,1);
-
-% upper-right subtile
-m = matfile(subTileFiles{end});
-x1 = m.x(1,end);
-
-% find upper right subtile from each 100th file
-mod100subTileNum = mod(subTileNum,100);
-mod100subTileNum(mod100subTileNum == 0) = 100;
-
-[~,nMinRow] =  min(mod100subTileNum);
-m = matfile(subTileFiles{nMinRow});
-y0 = m.y(end,1);
-
-[~,nMaxRow] =  max(mod100subTileNum);
-m = matfile(subTileFiles{nMaxRow});
-y1 = m.y(1,1);
+    % get extent of mosaic from tiles at edges
+    % lower-left subtile
+    m = matfile(subTileFiles{1});
+    x0 = m.x(1,1);
+    
+    % upper-right subtile
+    m = matfile(subTileFiles{end});
+    x1 = m.x(1,end);
+    
+    % find upper right subtile from each 100th file
+    mod100subTileNum = mod(subTileNum,100);
+    mod100subTileNum(mod100subTileNum == 0) = 100;
+    
+    [~,nMinRow] =  min(mod100subTileNum);
+    m = matfile(subTileFiles{nMinRow});
+    y0 = m.y(end,1);
+    
+    [~,nMaxRow] =  max(mod100subTileNum);
+    m = matfile(subTileFiles{nMaxRow});
+    y1 = m.y(1,1);
+    
 end
 
 % make a polyshape out of boundary for checking subtile overlap
@@ -496,23 +502,30 @@ save(outName,'x','y','z','N','Nmt','z_mad','tmax','tmin','-v7.3')
 % write tiff files
 z(isnan(z)) = -9999;
 outNameTif = strrep(outName,'.mat','_dem.tif');
-writeGeotiff(outNameTif,x,y,z,4,-9999,'polar stereo north')
+writeGeotiff(outNameTif,x,y,z,4,-9999,projection)
+
+gdalpath =[]; %set to the path of the gdal binary if not in system path.
+if ismac
+    gdalpath = '/Library/Frameworks/GDAL.framework/Versions/Current/Programs/';
+end
+system([gdalpath ,'gdaldem hillshade -z 4 -compute_edges  -co TILED=YES -co BIGTIFF=IF_SAFER -co COMPRESS=LZW ',...
+   outNameTif,' ',strrep(outNameTif,'_dem.tif','_dem_shade.tif')]);
 
 outNameTif = strrep(outName,'.mat','_N.tif');
-writeGeotiff(outNameTif,x,y,N,1,0,'polar stereo north')
+writeGeotiff(outNameTif,x,y,N,1,0,projection)
 
 outNameTif = strrep(outName,'.mat','_Nmt.tif');
-writeGeotiff(outNameTif,x,y,Nmt,1,0,'polar stereo north')
+writeGeotiff(outNameTif,x,y,Nmt,1,0,projection)
 
 z_mad(isnan(z_mad)) = -9999;
 outNameTif = strrep(outName,'.mat','_mad.tif');
-writeGeotiff(outNameTif,x,y,z_mad,4,-9999,'polar stereo north')
+writeGeotiff(outNameTif,x,y,z_mad,4,-9999,projection)
 
 outNameTif = strrep(outName,'.mat','_tmax.tif');
-writeGeotiff(outNameTif,x,y,tmax,2,0,'polar stereo north')
+writeGeotiff(outNameTif,x,y,tmax,2,0,projection)
 
 outNameTif = strrep(outName,'.mat','_tmin.tif');
-writeGeotiff(outNameTif,x,y,tmin,2,0,'polar stereo north')
+writeGeotiff(outNameTif,x,y,tmin,2,0,projection)
 
 
 function dZ = getOffsets(subTileFiles,subTileNum,buff,outName)
