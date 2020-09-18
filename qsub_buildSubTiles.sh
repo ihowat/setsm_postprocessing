@@ -33,7 +33,7 @@ echo "var7: ${p8}"
 echo "var8: ${p9}"
 echo
 
-echo matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}','${p5}','${p6}','${p7}','${p8}','${p9}'); exit"
-time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}','${p5}','${p6}','${p7}','${p8}','${p9}'); exit"
+echo matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}','${p5}','${p6}','${p7}','landTile','${p8}','refDemFile','${p9}'); exit"
+time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}','${p5}','${p6}','${p7}','landTile','${p8}','refDemFile','${p9}'); exit"
 
 echo "Done"

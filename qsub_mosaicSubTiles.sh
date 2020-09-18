@@ -37,14 +37,14 @@ echo
 if [ -z "${p9}" ]; then
     echo "Quad arg not present. Running full tile"
 
-    echo matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}'); projstr=getTileProjection('${p8}'); disp(x0); ${p3}('${p4}',${p5},'${p6}',projstr,'extent',[x0,x1,y0,y1]); exit"
-    time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}'); projstr=getTileProjection('${p8}'); disp(x0); ${p3}('${p4}',${p5},'${p6}',projstr,'extent',[x0,x1,y0,y1]); exit"
+    echo matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}'); projstr=getTileProjection('${p8}'); disp(x0); ${p3}('${p4}',${p5},'${p6}','projection',projstr,'extent',[x0,x1,y0,y1]); exit"
+    time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}'); projstr=getTileProjection('${p8}'); disp(x0); ${p3}('${p4}',${p5},'${p6}','projection',projstr,'extent',[x0,x1,y0,y1]); exit"
 
 else
     echo "Running quadrant ${p9}"
 
-    echo matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}','quadrant','${p9}'); projstr=getTileProjection('${p8}'); ${p3}('${p4}',${p5},'${p6}',projstr,'quadrant','${p9}','extent',[x0,x1,y0,y1]); exit"
-    time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}','quadrant','${p9}'); projstr=getTileProjection('${p8}'); ${p3}('${p4}',${p5},'${p6}',projstr,'quadrant','${p9}','extent',[x0,x1,y0,y1]); exit"
+    echo matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}','quadrant','${p9}'); projstr=getTileProjection('${p8}'); ${p3}('${p4}',${p5},'${p6}','projection',projstr,'quadrant','${p9}','extent',[x0,x1,y0,y1]); exit"
+    time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}','quadrant','${p9}'); projstr=getTileProjection('${p8}'); ${p3}('${p4}',${p5},'${p6}','projection',projstr,'quadrant','${p9}','extent',[x0,x1,y0,y1]); exit"
 
 fi
 
