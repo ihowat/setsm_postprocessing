@@ -74,9 +74,9 @@ for i=1:length(regionDirs)
 %            metaFile=metaFiles{j};
 %            fprintf('adding file %s\n',metaFile)
 %            if isempty(meta)
-%                meta=readStripMeta(metaFile,'noStripMeta');
+%                meta=readStripMeta(metaFile,'noSceneMeta');
 %            else
-%                meta(length(meta)+1)=readStripMeta(metaFile,'noStripMeta');
+%                meta(length(meta)+1)=readStripMeta(metaFile,'noSceneMeta');
 %            end
 %        end
 
@@ -165,9 +165,9 @@ for i=1:length(regionDirs)
                 metaFile=metaFiles{j};
 %                fprintf('adding file %s\n',metaFile)
                 if isempty(meta)
-                    meta=readStripMeta(metaFile,'noStripMeta');
+                    meta=readStripMeta(metaFile,'noSceneMeta');
                 else
-                    meta(length(meta)+1)=readStripMeta(metaFile,'noStripMeta');
+                    meta(length(meta)+1)=readStripMeta(metaFile,'noSceneMeta');
                 end
 
             end

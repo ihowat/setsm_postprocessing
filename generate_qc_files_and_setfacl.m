@@ -18,7 +18,8 @@ regionDirs = {regionDirs.name};
 for i = 1:numel(regionDirs)
 
     regionFolder = char(regionDirs(i));
-%    if ~strcmp(regionFolder, 'arcticdem_19_russia_magadanskaya'); continue; end
+%    if ~strcmp(regionFolder, 'arcticdem_05_greenland_northeast'); continue; end
+%    if ~strcmp(regionFolder, 'arcticdem_06_greenland_northwest'); continue; end
 
     stripDir = [regionRootDir,'/',regionFolder,'/',region_subdir];
     if exist(stripDir,'dir') ~= 7

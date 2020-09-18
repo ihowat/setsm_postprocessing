@@ -9,17 +9,27 @@ end
 
 res=2;
 %dbase_in =[homeDir,'/data4/REMA/polarDEMdatabase_',num2str(res),'m.mat'];
-dbase_in='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/REMAdatabase4_2m_v4_20200723.mat';
-dbase_out='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/REMAdatabase4_2m_v4_20200806.mat';
+%dbase_in='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/EarthDEMdatabase4_2m_v4_20200810.mat';
+dbase_out='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/EarthDEMdatabase4_2m_v4_20200825_projname_utmcoords_europe.mat';
+
+reproject_list = strrep(dbase_out, '.mat', '_reproject_list.txt');
+reproject_list_fp = fopen(reproject_list, 'wt');
+
+%mosaic_zones_shp = '/mnt/pgc/data/projects/earthdem/EarthDEM_mosaic_zones_v4.shp';
+mosaic_zones_shp = 'EarthDEM_mosaic_zones_v4.shp';
+mosaic_zones_mapstruct = shaperead(mosaic_zones_shp);
+
+proj4_projname_dict = containers.Map;
 
 %%% CHECK THIS SETTING %%%
-report_number_of_strips_to_append_but_dont_actually_append = true;
+report_number_of_strips_to_append_but_dont_actually_append = false;
 %%% CHECK THIS SETTING %%%
 
 regionDirs=[
 %    dir('/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/REMA/region/rema_*'),
-%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_*'),
+%    dir('/mnt/pgc/data/elev/dem/setsm/REMA/region/rema_*'),
+    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_*'),
+%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_09_europe*'),
 ];
 regionDirs=regionDirs([regionDirs.isdir]);
 regionDirs=cellfun(@(regionDir, regionName) [regionDir,'/',regionName,'/strips_v4/2m'], {regionDirs.folder}, {regionDirs.name},...
@@ -53,9 +63,9 @@ meta=[];
 
 i=1;
 for i=1:length(regionDirs)
-        
+
     regionDir=regionDirs{i};
-    
+
     if exist(regionDir,'dir')
 
 %        if exist('out0','var')
@@ -144,7 +154,7 @@ for i=1:length(regionDirs)
         if report_number_of_strips_to_append_but_dont_actually_append
             continue
         end
-        
+
         k=1;
         last_print_len=0;
         for k=1:length(stripDirs)
@@ -164,10 +174,41 @@ for i=1:length(regionDirs)
             for j=1:length(metaFiles)
                 metaFile=metaFiles{j};
 %                fprintf('adding file %s\n',metaFile)
-                if isempty(meta)
-                    meta=readStripMeta(metaFile,'noSceneMeta');
+                strip_meta = readStripMeta(metaFile,'noSceneMeta');
+                strip_proj4 = strip_meta.strip_projection_proj4;
+
+                if any(strcmp(keys(proj4_projname_dict), strip_proj4))
+                    strip_projname = proj4_projname_dict(strip_proj4);
                 else
-                    meta(length(meta)+1)=readStripMeta(metaFile,'noSceneMeta');
+                    strip_projname = '';
+
+                    for mosaic_zone_ms_i = 1:length(mosaic_zones_mapstruct)
+                        mosaic_zone_feat = mosaic_zones_mapstruct(mosaic_zone_ms_i);
+
+                        cmd = sprintf('python proj_issame.py "%s" "EPSG:%d" ', strip_proj4, mosaic_zone_feat.epsg);
+                        [status, cmdout] = system(cmd);
+                        if ~isempty(cmdout)
+                            fprintf(['\n',cmdout,'\n']);
+                        end
+                        if status == 0
+                            strip_projname = mosaic_zone_feat.name;
+                            break;
+                        end
+                    end
+
+                    if isempty(strip_projname)
+                        fprintf('\nERROR! Could not find matching mosaic zone projection for strip PROJ.4 string: %s\n', strip_proj4);
+                    end
+
+                    proj4_projname_dict(strip_proj4) = strip_projname;
+                end
+
+                strip_meta.strip_projection_name = strip_projname;
+
+                if isempty(meta)
+                    meta=strip_meta;
+                else
+                    meta(length(meta)+1)=strip_meta;
                 end
 
             end
@@ -175,6 +216,8 @@ for i=1:length(regionDirs)
         fprintf('\n')
     end
 end
+
+fclose(reproject_list_fp);
 
 if isempty(meta)
     fprintf('\nNo new records to add to database\n')
