@@ -10,13 +10,13 @@ function dzdt = getTileDzdt(dzdtTileDir,tileName,x0,x1,y0,y1,dx)
 if startsWith(tileName,'utm')
     sl = split(tileName,'_');
     tilePrefix = [sl{1},'_'];
-    tileDefName = strjoin(sl(2:3),'_');
+    tileName_in_tileDef = strjoin(sl(2:3),'_');
 else
     tilePrefix = '';
-    tileDefName = tileName;
+    tileName_in_tileDef = tileName;
 end
 
-tileNum = strsplit(tileDefName,'_');
+tileNum = strsplit(tileName_in_tileDef,'_');
 tileCol = str2num(tileNum{1});
 tileRow = str2num(tileNum{2});
 tileCol = [tileCol;tileCol  ;tileCol  ;tileCol+1; tileCol-1; tileCol+1; tileCol+1; tileCol-1; tileCol-1];

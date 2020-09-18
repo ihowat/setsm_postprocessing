@@ -64,7 +64,7 @@ else
 end
 
 % Get tile projection information, esp. from UTM tile name
-[tileProjName,projstr] = getProjName(subTileName{1}{1},projection);
+[tileProjName,projection] = getProjName(subTileName{1}{1},projection);
 
 % sort subtilefiles by ascending subtile number order
 [subTileNum,n] = sort(subTileNum);

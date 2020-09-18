@@ -40,7 +40,7 @@ maxNumberOfStrips=100; % maximum number of strips to load in subtile
 make2mFlag=false; % make 2m version or not
 refDemFile = ''; % optional refDemFile name palce holder
 minStripOverlap = 0.1; % minimum frac strip overlap of subtile
-projstr = ''; % projection string for tile scheme
+projection = ''; % projection string for tile scheme
 
 % Parse varargins
 n = find(strcmpi(varargin,'landTile'));
@@ -90,11 +90,11 @@ if ~isempty(n)
 end
 fprintf('dzFilt = %d\n',dzFilt)
 
-n = find(strcmpi(varargin,'projstr'));
+n = find(strcmpi(varargin,'projection'));
 if ~isempty(n)
-    projstr = varargin{n+1};
+    projection = varargin{n+1};
 end
-fprintf('projstr = %s\n',projstr)
+fprintf('projection = %s\n',projection)
 
 %if output directory doesnt already exist, make it
 if ~exist(outDir,'dir')
@@ -121,12 +121,12 @@ if isfield(meta,'qc')
 end
 
 % Get tile projection information, esp. from UTM tile name
-if isempty(projstr) && isfield(tileDefs,'projstr')
-    projstr = tileDefs.projstr;
+if isempty(projection) && isfield(tileDefs,'projstr')
+    projection = tileDefs.projstr;
 end
-[tileProjName,projstr] = getProjName(tileName,projstr);
-if isempty(projstr)
-    error("'projstr' must be provided by either varargin or as field in tile definition structure");
+[tileProjName,projection] = getProjName(tileName,projection);
+if isempty(projection)
+    error("'projection' must be provided by either varargin or as field in tile definition structure");
 end
 
 % trim strip database to only strips with a projection matching the tile
@@ -142,6 +142,15 @@ end
 
 %% Initialize tile definition
 
+if startsWith(tileName,'utm')
+    sl = split(tileName,'_');
+    tilePrefix = [sl{1},'_'];
+    tileName_in_tileDef = strjoin(sl(2:3),'_');
+else
+    tilePrefix = '';
+    tileName_in_tileDef = tileName;
+end
+
 %if tileDefs is filename, load it
 if ischar(tileDefs)
     tileDefs=load(tileDefFile);
@@ -149,15 +158,7 @@ end
 
 % tileDefs is a stucture, find this tile and extract range
 if isstruct(tileDefs)
-    if startsWith(tileName,'utm')
-        sl = split(tileName,'_');
-        tilePrefix = [sl{1},'_'];
-        tileDefName = strjoin(sl(2:3),'_');
-    else
-        tilePrefix = '';
-        tileDefName = tileName;
-    end
-    tileInd = find(strcmp(tileDefs.I,tileDefName));
+    tileInd = find(strcmp(tileDefs.I,tileName_in_tileDef));
 
     % get tile boundaries
     x0=tileDefs.x0(tileInd);
@@ -215,7 +216,11 @@ if ~isempty(subTileFiles)
     % names is {tilex}_{tily}_{subtilenum}_....
     [~,subTileName] = cellfun(@fileparts,subTileFiles,'uniformoutput',0);
     subTileName=cellfun(@(x) strsplit(x,'_'),subTileName,'uniformoutput',0);
-    subTileNum = cellfun(@(x) str2num(x{3}),subTileName);
+    if length(subTileName) > 0 && startsWith(subTileName{1}{1},'utm')
+        subTileNum = cellfun(@(x) str2num(x{4}),subTileName);
+    else
+        subTileNum = cellfun(@(x) str2num(x{3}),subTileName);
+    end
     
     % sort subtilefiles by ascending subtile number order
     [subTileNum,n] = sort(subTileNum); % sort the numbers

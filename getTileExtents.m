@@ -29,12 +29,12 @@ tileDefs=load(tileDefFile);
 if startsWith(tileName,'utm')
     sl = split(tileName,'_');
     tilePrefix = [sl{1},'_'];
-    tileDefName = strjoin(sl(2:3),'_');
+    tileName_in_tileDef = strjoin(sl(2:3),'_');
 else
     tilePrefix = '';
-    tileDefName = tileName;
+    tileName_in_tileDef = tileName;
 end
-tileInd = find(strcmp(tileDefs.I,tileDefName));
+tileInd = find(strcmp(tileDefs.I,tileName_in_tileDef));
 
 % get tile boundaries with buffer
 x0=tileDefs.x0(tileInd);
