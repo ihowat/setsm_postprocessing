@@ -87,7 +87,7 @@ n = find(strcmpi(varargin,'dzFilt'));
 if ~isempty(n)
     dzFilt = varargin{n+1};
 end
-fprintf('dzFilt = %d\n',buffer)
+fprintf('dzFilt = %d\n',dzFilt)
 
 %if output directory doesnt already exist, make it
 if ~exist(outDir,'dir')
