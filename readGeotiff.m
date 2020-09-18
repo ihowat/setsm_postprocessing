@@ -24,10 +24,13 @@ info.rows   = Tinfo.Height;
 info.imsize = Tinfo.Offset;
 info.bands  = Tinfo.SamplesPerPixel;
 
-info.map_info.dx    = Tinfo.ModelPixelScaleTag(1);
-info.map_info.dy    = Tinfo.ModelPixelScaleTag(2);
-info.map_info.mapx  = Tinfo.ModelTiepointTag(4);
-info.map_info.mapy  = Tinfo.ModelTiepointTag(5);
+% pull out map fields in case overviews make them structures. 
+ModelPixelScaleTag = Tinfo.ModelPixelScaleTag;
+ModelTiepointTag = Tinfo.ModelTiepointTag;
+info.map_info.dx    = ModelPixelScaleTag(1);
+info.map_info.dy    = ModelPixelScaleTag(2);
+info.map_info.mapx  = ModelTiepointTag(4);
+info.map_info.mapy  = ModelTiepointTag(5);
 
 subrows = [1 info.rows];
 subcols = [1 info.cols];

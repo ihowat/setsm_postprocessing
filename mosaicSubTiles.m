@@ -4,7 +4,7 @@ function mosaicSubTiles(varargin)
 %%%%% ONLY COMPATIBLE WITH 10K, 1km x 1km subtiles!!!!!
 %
 %
-% mosaicSubTiles(subTileDir,dx,outName,projstr) mosaics all of the
+% mosaicSubTiles(subTileDir,dx,outName) mosaics all of the
 % subtile .mat files in the directory subTileDir into a mosaic with grid
 % resolution dx (2 or 10) and writes matfile output to outName, with tiff
 % output as strrep(outName,'.mat','.tif'). Mosaic extend deteremined
@@ -22,11 +22,16 @@ function mosaicSubTiles(varargin)
 subTileDir = varargin{1};
 dx = varargin{2};
 outName = varargin{3};
-projstr = varargin{4};
 
 n = find(strcmpi('quadrant',varargin));
 if ~isempty(n)
     quadrant = varargin{n+1};
+end
+
+projection = 'polar stereo north';
+n = find(strcmpi('projection',varargin));
+if ~isempty(n)
+   projection = varargin{n+1};
 end
 
 n = find(strcmpi('extent',varargin));
@@ -36,8 +41,6 @@ if ~isempty(n)
     y0 = varargin{n+1}(3);
     y1 = varargin{n+1}(4);
 end
-
-fprintf('Extent: %f %f %f %f\n',x0,x1,y0,y1)
 
 fprintf('Indexing subtiles\n')
 
@@ -61,7 +64,7 @@ else
 end
 
 % Get tile projection information, esp. from UTM tile name
-[tileProjName,projstr] = getProjName(subTileName{1}{1},projstr);
+[tileProjName,projstr] = getProjName(subTileName{1}{1},projection);
 
 % sort subtilefiles by ascending subtile number order
 [subTileNum,n] = sort(subTileNum);
@@ -114,27 +117,29 @@ end
 fprintf('performing coregistration & adjustment between adjoining subtiles\n')
 dZ = getOffsets(subTileFiles,subTileNum,buff,outName);
 
+
 if ~exist('x0','var')
-% get extent of mosaic from tiles at edges
-% lower-left subtile
-m = matfile(subTileFiles{1});
-x0 = m.x(1,1);
+    % get extent of mosaic from tiles at edges
+    % lower-left subtile
+    m = matfile(subTileFiles{1});
+    x0 = m.x(1,1);
 
-% upper-right subtile
-m = matfile(subTileFiles{end});
-x1 = m.x(1,end);
+    % upper-right subtile
+    m = matfile(subTileFiles{end});
+    x1 = m.x(1,end);
 
-% find upper right subtile from each 100th file
-mod100subTileNum = mod(subTileNum,100);
-mod100subTileNum(mod100subTileNum == 0) = 100;
+    % find upper right subtile from each 100th file
+    mod100subTileNum = mod(subTileNum,100);
+    mod100subTileNum(mod100subTileNum == 0) = 100;
 
-[~,nMinRow] =  min(mod100subTileNum);
-m = matfile(subTileFiles{nMinRow});
-y0 = m.y(end,1);
+    [~,nMinRow] =  min(mod100subTileNum);
+    m = matfile(subTileFiles{nMinRow});
+    y0 = m.y(end,1);
 
-[~,nMaxRow] =  max(mod100subTileNum);
-m = matfile(subTileFiles{nMaxRow});
-y1 = m.y(1,1);
+    [~,nMaxRow] =  max(mod100subTileNum);
+    m = matfile(subTileFiles{nMaxRow});
+    y1 = m.y(1,1);
+
 end
 
 % make a polyshape out of boundary for checking subtile overlap
@@ -504,23 +509,30 @@ save(outName,'x','y','z','N','Nmt','z_mad','tmax','tmin','-v7.3')
 % write tiff files
 z(isnan(z)) = -9999;
 outNameTif = strrep(outName,'.mat','_dem.tif');
-writeGeotiff(outNameTif,x,y,z,4,-9999,projstr)
+writeGeotiff(outNameTif,x,y,z,4,-9999,projection)
+
+gdalpath =[]; %set to the path of the gdal binary if not in system path.
+if ismac
+    gdalpath = '/Library/Frameworks/GDAL.framework/Versions/Current/Programs/';
+end
+system([gdalpath ,'gdaldem hillshade -z 4 -compute_edges  -co TILED=YES -co BIGTIFF=IF_SAFER -co COMPRESS=LZW ',...
+   outNameTif,' ',strrep(outNameTif,'_dem.tif','_dem_shade.tif')]);
 
 outNameTif = strrep(outName,'.mat','_N.tif');
-writeGeotiff(outNameTif,x,y,N,1,0,projstr)
+writeGeotiff(outNameTif,x,y,N,1,0,projection)
 
 outNameTif = strrep(outName,'.mat','_Nmt.tif');
-writeGeotiff(outNameTif,x,y,Nmt,1,0,projstr)
+writeGeotiff(outNameTif,x,y,Nmt,1,0,projection)
 
 z_mad(isnan(z_mad)) = -9999;
 outNameTif = strrep(outName,'.mat','_mad.tif');
-writeGeotiff(outNameTif,x,y,z_mad,4,-9999,projstr)
+writeGeotiff(outNameTif,x,y,z_mad,4,-9999,projection)
 
 outNameTif = strrep(outName,'.mat','_tmax.tif');
-writeGeotiff(outNameTif,x,y,tmax,2,0,projstr)
+writeGeotiff(outNameTif,x,y,tmax,2,0,projection)
 
 outNameTif = strrep(outName,'.mat','_tmin.tif');
-writeGeotiff(outNameTif,x,y,tmin,2,0,projstr)
+writeGeotiff(outNameTif,x,y,tmin,2,0,projection)
 
 
 function dZ = getOffsets(subTileFiles,subTileNum,buff,outName)
