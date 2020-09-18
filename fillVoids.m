@@ -3,13 +3,19 @@ function fillVoids(subTileName)
 % subTileName example: 49_10_1_1
 
 sl = split(subTileName,'_');
-tileName = strjoin(sl(1:2),'_');
-demDir = 'V:\pgc\data\scratch\claire\pgc\arcticdem\mosaic\2m_v4';
+if startsWith(sl{1},'utm')
+    tileName = strjoin(sl(1:3),'_');
+else
+    tileName = strjoin(sl(1:2),'_');
+end
+projstr = 'polar stereo north';
+demDir = 'V:\pgc\data\elev\dem\setsm\ArcticDEM\mosaic\v4.1\2m';
 demFile = dir([demDir,'/',tileName,'/',subTileName,'_2m_dem.tif']);
 demFile = cellfun(@(x) [demDir,'/',tileName,'/',x], {demFile.name}, 'uniformOutput', false);
+[tileProjName,projstr] = getProjName(tileName,projstr);
 
 fprintf('Loading tile %s water mask\n',tileName)
-waterTileDir='V:\pgc\data\scratch\claire\pgc\arcticdem\coastline\global_surface_water\tiles_v2';
+waterTileDir='V:\pgc\data\projects\arcticdem\watermasks\global_surface_water\tiled_watermasks';
 waterMask = dir([waterTileDir,'/',tileName,'_water.tif']);
 waterMask = cellfun(@(x) [waterTileDir,'/',x], {waterMask.name}, 'uniformOutput',false);
 if isempty(waterMask)
@@ -19,7 +25,7 @@ end
 waterMaskFile = waterMask{1};
 
 % load strip database
-databaseFile = 'V:\pgc\data\scratch\claire\repos\setsm_postprocessing_pgc\arcticdem_database_unf_pgcpaths.mat';
+databaseFile = 'V:\pgc\data\scratch\claire\repos\setsm_postprocessing_pgc\arcticDEMdatabase4_2m_v4_20200806.mat';
 changePath= 'V:/pgc'; %if set, will change the path to the directory from what's in the database file. set to [] if none.
 
 meta=load(databaseFile,'fileName','x','y');
@@ -443,17 +449,17 @@ end
 
 dem.z(isnan(z)) = -9999;
 
-writeGeotiff(outName,x,y,dem.z,4,-9999,'polar stereo north')
+writeGeotiff(outName,x,y,dem.z,4,-9999,projstr)
 
 outNameTif = strrep(outName,'_dem.tif','_N.tif');
-writeGeotiff(outNameTif,x,y,dem.N,1,0,'polar stereo north')
+writeGeotiff(outNameTif,x,y,dem.N,1,0,projstr)
 
 z_mad(isnan(z_mad)) = -9999;
 outNameTif = strrep(outName,'_dem.tif','_mad.tif');
-writeGeotiff(outNameTif,x,y,dem.z_mad,4,-9999,'polar stereo north')
+writeGeotiff(outNameTif,x,y,dem.z_mad,4,-9999,projstr)
 
 outNameTif = strrep(outName,'_dem.tif','_tmax.tif');
-writeGeotiff(outNameTif,x,y,dem.tmax,2,0,'polar stereo north')
+writeGeotiff(outNameTif,x,y,dem.tmax,2,0,projstr)
 
 outNameTif = strrep(outName,'_dem.tif','_tmin.tif');
-writeGeotiff(outNameTif,x,y,dem.tmin,2,0,'polar stereo north')
+writeGeotiff(outNameTif,x,y,dem.tmin,2,0,projstr)

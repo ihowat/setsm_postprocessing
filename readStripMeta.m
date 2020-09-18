@@ -122,6 +122,9 @@ for it=1:length(name)
     end
 end
 
+% calculate and save strip area
+meta.A = polyarea(meta.x, meta.y);
+
 % get scene alignment stats
 r=find(contains(C,'Mosaicking Alignment Statistics'));
 r=r+2;

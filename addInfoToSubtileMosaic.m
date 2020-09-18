@@ -31,7 +31,11 @@ subTileFiles=cellfun( @(x) [subTileDir,'/',x],{subTileFiles.name},'uniformoutput
 % names is {tilex}_{tily}_{subtilenum}_....
 [~,subTileName] = cellfun(@fileparts,subTileFiles,'uniformoutput',0);
 subTileName=cellfun(@(x) strsplit(x,'_'),subTileName,'uniformoutput',0);
-subTileNum = cellfun(@(x) str2num(x{3}),subTileName);
+if length(subTileName) > 0 && startsWith(subTileName{1}{1},'utm')
+    subTileNum = cellfun(@(x) str2num(x{4}),subTileName);
+else
+    subTileNum = cellfun(@(x) str2num(x{3}),subTileName);
+end
 
 % sort subtilefiles by ascending subtile number order
 [subTileNum,n] = sort(subTileNum);

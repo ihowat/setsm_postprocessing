@@ -4,13 +4,13 @@ function mosaicSubTiles(varargin)
 %%%%% ONLY COMPATIBLE WITH 10K, 1km x 1km subtiles!!!!!
 %
 %
-% mosaicSubTiles(subTileDir,dx,outName) mosaics all of the
+% mosaicSubTiles(subTileDir,dx,outName,projstr) mosaics all of the
 % subtile .mat files in the directory subTileDir into a mosaic with grid
 % resolution dx (2 or 10) and writes matfile output to outName, with tiff
 % output as strrep(outName,'.mat','.tif'). Mosaic extend deteremined
 % from subtile extents.
 %
-% mosaicSubTiles(...,'quad') only mosaics the subtiles with the quadrant of
+% mosaicSubTiles(...,'quadrant') only mosaics the subtiles with the quadrant of
 % the full tile given by the x_y quad string '1_1','1_2','2_1','2_2'
 %
 % version 2:
@@ -22,6 +22,7 @@ function mosaicSubTiles(varargin)
 subTileDir = varargin{1};
 dx = varargin{2};
 outName = varargin{3};
+projstr = varargin{4};
 
 n = find(strcmpi('quadrant',varargin));
 if ~isempty(n)
@@ -53,7 +54,14 @@ subTileFiles=cellfun( @(x) [subTileDir,'/',x],{subTileFiles.name},'uniformoutput
 % names is {tilex}_{tily}_{subtilenum}_....
 [~,subTileName] = cellfun(@fileparts,subTileFiles,'uniformoutput',0);
 subTileName=cellfun(@(x) strsplit(x,'_'),subTileName,'uniformoutput',0);
-subTileNum = cellfun(@(x) str2num(x{3}),subTileName);
+if length(subTileName) > 0 && startsWith(subTileName{1}{1},'utm')
+    subTileNum = cellfun(@(x) str2num(x{4}),subTileName);
+else
+    subTileNum = cellfun(@(x) str2num(x{3}),subTileName);
+end
+
+% Get tile projection information, esp. from UTM tile name
+[tileProjName,projstr] = getProjName(subTileName{1}{1},projstr);
 
 % sort subtilefiles by ascending subtile number order
 [subTileNum,n] = sort(subTileNum);
@@ -496,23 +504,23 @@ save(outName,'x','y','z','N','Nmt','z_mad','tmax','tmin','-v7.3')
 % write tiff files
 z(isnan(z)) = -9999;
 outNameTif = strrep(outName,'.mat','_dem.tif');
-writeGeotiff(outNameTif,x,y,z,4,-9999,'polar stereo north')
+writeGeotiff(outNameTif,x,y,z,4,-9999,projstr)
 
 outNameTif = strrep(outName,'.mat','_N.tif');
-writeGeotiff(outNameTif,x,y,N,1,0,'polar stereo north')
+writeGeotiff(outNameTif,x,y,N,1,0,projstr)
 
 outNameTif = strrep(outName,'.mat','_Nmt.tif');
-writeGeotiff(outNameTif,x,y,Nmt,1,0,'polar stereo north')
+writeGeotiff(outNameTif,x,y,Nmt,1,0,projstr)
 
 z_mad(isnan(z_mad)) = -9999;
 outNameTif = strrep(outName,'.mat','_mad.tif');
-writeGeotiff(outNameTif,x,y,z_mad,4,-9999,'polar stereo north')
+writeGeotiff(outNameTif,x,y,z_mad,4,-9999,projstr)
 
 outNameTif = strrep(outName,'.mat','_tmax.tif');
-writeGeotiff(outNameTif,x,y,tmax,2,0,'polar stereo north')
+writeGeotiff(outNameTif,x,y,tmax,2,0,projstr)
 
 outNameTif = strrep(outName,'.mat','_tmin.tif');
-writeGeotiff(outNameTif,x,y,tmin,2,0,'polar stereo north')
+writeGeotiff(outNameTif,x,y,tmin,2,0,projstr)
 
 
 function dZ = getOffsets(subTileFiles,subTileNum,buff,outName)

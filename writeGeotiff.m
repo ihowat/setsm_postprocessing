@@ -28,17 +28,36 @@ end
 outdir=OutFileName(1:find(OutFileName=='/',1,'last'));
 tempfile =  [tempname(outdir),'.envi'];
 
-if strcmpi('polar stereo south',projstr) || strcmpi('polar stereo north',projstr)
-    enviwrite(tempfile,x,y(:),z,'format',fmt,'proj',projstr);
-else
-    if ~isempty(findstr(projstr,'North'))
-        zone = str2num(strrep(projstr,'North',''));
+if contains(projstr,'UTM','IgnoreCase',true) ...
+    || ~isempty(regexp(projstr, '^\s*(?:UTM)?\s*\d{1,2}\s*(?:North|South|N|S)\s*$', 'ignorecase')) ...
+    || ~isempty(regexp(projstr, '^\s*(?:UTM)?\s*(?:North|South|N|S)\s*\d{1,2}\s*$', 'ignorecase'))
+
+    projstr_trim = regexprep(projstr,'utm','','ignorecase');
+
+    if contains(projstr,'North','IgnoreCase',true)
         hemi = 'north';
-    else
-        zone = str2num(strrep(projstr,'South',''));
+        projstr_trim = regexprep(projstr_trim,'north','','ignorecase');
+    elseif contains(projstr,'South','IgnoreCase',true)
         hemi = 'south';
+        projstr_trim = regexprep(projstr_trim,'south','','ignorecase');
+    elseif contains(projstr,'N','IgnoreCase',true)
+        hemi = 'north';
+        projstr_trim = regexprep(projstr_trim,'n','','ignorecase');
+    elseif contains(projstr,'S','IgnoreCase',true)
+        hemi = 'south';
+        projstr_trim = regexprep(projstr_trim,'s','','ignorecase');
+    else
+        error('Cannot parse hemisphere information from UTM ''projstr'': %s', projstr);
     end
+
+    zone = str2num(projstr_trim);
+    if isempty(zone)
+        error('Cannot parse zone number from UTM ''projstr'': %s', projstr);
+    end
+
     enviwrite(tempfile,x,y(:),z,'format',fmt,'proj','UTM','hemi',hemi,'zone',zone);
+else
+    enviwrite(tempfile,x,y(:),z,'format',fmt,'proj',projstr);
 end
 %enviwrite(tempfile,x,y(:),z,'format',fmt,'proj','polar stereo south');
 %enviwrite(tempfile,x,y(:),z,'format',fmt,'proj','UTM','hemi','south','zone',23);

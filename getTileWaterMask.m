@@ -7,7 +7,16 @@ function land = getTileWaterMask(waterTileDir,tileName,x0,x1,y0,y1,dx,varargin)
 % coordinate range x0,x1,y0,y1 - reads neigboring tiles and pulls needed
 % data for buffers.
 
-tileNum = strsplit(tileName,'_');
+if startsWith(tileName,'utm')
+    sl = split(tileName,'_');
+    tilePrefix = [sl{1},'_'];
+    tileDefName = strjoin(sl(2:3),'_');
+else
+    tilePrefix = '';
+    tileDefName = tileName;
+end
+
+tileNum = strsplit(tileDefName,'_');
 tileCol = str2num(tileNum{1});
 tileRow = str2num(tileNum{2});
 tileCol = [tileCol;tileCol  ;tileCol  ;tileCol+1; tileCol-1; tileCol+1; tileCol+1; tileCol-1; tileCol-1];
@@ -16,6 +25,13 @@ tileRow = [tileRow;tileRow+1;tileRow-1;tileRow  ; tileRow  ; tileRow+1; tileRow-
 land.x = x0:dx:x1;
 land.y = y1:-dx:y0;
 land.z = false(length(land.y),length(land.x));
+
+if ~isfolder(waterTileDir)
+    fprintf('waterTileDir does not exist: %s\n', waterTileDir)
+    fprintf('Assuming all area is land, please fix!\n')
+    land.z = true(length(land.y),length(land.x));
+    return
+end
 
 includeIceFlag = false;
 if any(strcmpi(varargin,'includeIce'))
@@ -28,16 +44,16 @@ for i=1:length(tileRow)
     waterFlag=false;
     
     % get this tile
-    waterTileName=[waterTileDir,'/',sprintf('%02d',tileCol(i)),'_',...
+    waterTileName=[waterTileDir,'/',tilePrefix,sprintf('%02d',tileCol(i)),'_',...
         sprintf('%02d',tileRow(i)),'_land.tif'];
     
  
-        iceTileName=[waterTileDir,'/',sprintf('%02d',tileCol(i)),'_',...
+        iceTileName=[waterTileDir,'/',tilePrefix,sprintf('%02d',tileCol(i)),'_',...
             sprintf('%02d',tileRow(i)),'_ice.tif'];
     
     if ~exist(waterTileName,'file')
         
-        waterTileName=[waterTileDir,'/',sprintf('%02d',tileCol(i)),'_',...
+        waterTileName=[waterTileDir,'/',tilePrefix,sprintf('%02d',tileCol(i)),'_',...
             sprintf('%02d',tileRow(i)),'_water.tif'];
        
         if ~exist(waterTileName,'file')

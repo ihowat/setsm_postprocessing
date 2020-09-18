@@ -1,4 +1,4 @@
-function buildSubTiles(tileName,outDir,tileDefFile,databaseFile,waterTileDir,refDemFile)
+function buildSubTiles(tileName,outDir,tileDefFile,databaseFile,waterTileDir,refDemFile,varargin)
 % buildSubTiles build mosaics from strips in subtiles of 100x100km tiles
 %
 % buildSubTiles(tileName,outDir,tileDefFile,databaseFile,waterTileDir,refDemFile)
@@ -17,6 +17,18 @@ subtileSize=1000; % subtile dimensions in meters
 buffer=100; % size of tile/subtile boundary buffer in meters
 redoFlag = 1; % flag for treating existing subtile .mat files: 1=skip, 2=redo coregistration, 3=redo adjustment
 maxNumberOfStrips=100; % maximum number of strips to load in subtile
+projstr='';
+
+i = 1;
+while i <= length(varargin)
+    if strcmpi(varargin{i},'projstr')
+        i = i + 1;
+        projstr = varargin{i};
+    else
+        error("Unexpected argument: '%s'", varargin{i});
+    end
+    i = i + 1;
+end
 
 % if output directory doesnt already exist, make it
 if ~exist(outDir,'dir')
@@ -33,8 +45,25 @@ if isfield(meta,'f')
     meta=rmfield(meta,'f');
 end
 
-% get strip areas and alignment stats for quality selection
-meta.A = cellfun(@(x,y) polyarea(x,y), meta.x,meta.y);
+% Get tile projection information, esp. from UTM tile name
+if isempty(projstr) && isfield(tileDefs,'projstr')
+    projstr = tileDefs.projstr;
+end
+[tileProjName,projstr] = getProjName(tileName,projstr);
+if isempty(projstr)
+    error("'projstr' must be provided by either varargin or as field in tile definition structure");
+end
+
+% trim strip database to only strips with a projection matching the tile
+if isfield(meta,'strip_projection_name')
+    in = strcmp(meta.strip_projection_name, tileProjName);
+    meta = structfun(@(x) x(in), meta,'uniformoutput',0);
+end
+
+if ~isfield(meta,'A')
+    % get strip areas and alignment stats for quality selection
+    meta.A = cellfun(@(x,y) polyarea(x,y), meta.x,meta.y);
+end
 
 if isfield(meta,'avg_rmse')
     % this is from an old version of the meta files that used 0 in mean
@@ -42,14 +71,22 @@ if isfield(meta,'avg_rmse')
 elseif isfield(meta,'scene_alignment')
     % need to rm zeros (first scene) and nans (unused redundant scenes),
     % strips w/ 1 scene will be NaN
-    meta.scene_alignment_meanrms = cellfun(@(x)...
+    meta.scene_alignment_meanrmse = cellfun(@(x)...
         mean(x.rmse(x.rmse~=0 & ~isnan(x.rmse))), meta.scene_alignment);
 elseif ~isfield(meta,'scene_alignment_meanrmse')
     error('missing scene alignment field in meta structure')
 end
 
 % find index of tile in tile def database
-tileInd = find(strcmp(tileDefs.I,tileName));
+if startsWith(tileName,'utm')
+    sl = split(tileName,'_');
+    tilePrefix = [sl{1},'_'];
+    tileDefName = strjoin(sl(2:3),'_');
+else
+    tilePrefix = '';
+    tileDefName = tileName;
+end
+tileInd = find(strcmp(tileDefs.I,tileDefName));
 
 % get tile boundaries with buffer
 x0=tileDefs.x0(tileInd)-buffer;

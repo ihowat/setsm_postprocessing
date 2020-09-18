@@ -26,7 +26,15 @@ end
 tileDefs=load(tileDefFile);
 
 % find index of tile in tile def database
-tileInd = find(strcmp(tileDefs.I,tileName));
+if startsWith(tileName,'utm')
+    sl = split(tileName,'_');
+    tilePrefix = [sl{1},'_'];
+    tileDefName = strjoin(sl(2:3),'_');
+else
+    tilePrefix = '';
+    tileDefName = tileName;
+end
+tileInd = find(strcmp(tileDefs.I,tileDefName));
 
 % get tile boundaries with buffer
 x0=tileDefs.x0(tileInd);

@@ -6,8 +6,8 @@ if ismac
     gcpFile='~/GLA14_rel634.csv';
 else
     %addpath('/home/howat.4/demtools');
-    tileDir=['/mnt/pgc/data/scratch/claire/pgc/arcticdem/mosaic/2m_v4.2/test'];
-    waterTileDir='/mnt/pgc/data/scratch/claire/pgc/arcticdem/coastline/global_surface_water/tiles_v2';
+    tileDir=['/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/2m/test'];
+    waterTileDir='/mnt/pgc/data/projects/arcticdem/watermasks/global_surface_water/tiled_watermasks';
     gcpFile='/mnt/pgc/data/scratch/claire/pgc/arcticdem/gcp/icesat/mat/GLA14_rel634.mat';
 end
 
