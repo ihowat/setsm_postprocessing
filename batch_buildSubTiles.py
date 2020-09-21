@@ -8,8 +8,7 @@ project_choices = [
 ]
 
 earthdem_tileprefix_key = '<tileprefix>'
-# earthdem_ref_dem_template = '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_UTM_90m/TDX_UTM_Mosaic_{}_90m.tif'.format(earthdem_tileprefix_key)
-earthdem_ref_dem_template = '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_UTM_90m/test_ukraine_mosaic_{}.tif'.format(earthdem_tileprefix_key)
+earthdem_ref_dem_template = '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_UTM_90m/TDX_UTM_Mosaic_{}_90m.tif'.format(earthdem_tileprefix_key)
 
 tileDefFile_utm_north = 'PGC_UTM_Mosaic_Tiles_North.mat'
 tileDefFile_utm_south = 'PGC_UTM_Mosaic_Tiles_South.mat'
