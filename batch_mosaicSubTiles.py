@@ -1,6 +1,6 @@
 import os, string, sys, argparse, glob, subprocess
 from collections import namedtuple
-matlab_scripts = '/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4'
+matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing4'
 quads = ['1_1','1_2','2_1','2_2']
 
 Task = namedtuple('Task', 't st')
