@@ -4,16 +4,31 @@ matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing4'
 project_choices = [
     'arcticdem',
     'rema',
+    'earthdem',
 ]
+
+earthdem_tileprefix_key = '<tileprefix>'
+earthdem_ref_dem_template = '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_UTM_90m/TDX_UTM_Mosaic_{}_90m.tif'.format(earthdem_tileprefix_key)
+
+tileDefFile_utm_north = 'PGC_UTM_Mosaic_Tiles_North.mat'
+tileDefFile_utm_south = 'PGC_UTM_Mosaic_Tiles_South.mat'
+tileDefFile_utm_options = "{} or {}".format(tileDefFile_utm_north, tileDefFile_utm_south)
 project_tileDefFile_dict = {
     'arcticdem': 'PGC_Imagery_Mosaic_Tiles_Arctic.mat',
     'rema': 'PGC_Imagery_Mosaic_Tiles_Antarctic.mat',
+    'earthdem': tileDefFile_utm_options,
 }
+
 project_databaseFile_dict = {
     'arcticdem': 'arcticDEMdatabase4_2m_v4_20200806.mat',
     'rema': 'REMAdatabase4_2m_v4_20200806.mat',
+    'earthdem': 'EarthDEMdatabase4_2m_v4_20200825_projname_utmcoords_europe.mat',
 }
-waterTileDir = '/mnt/pgc/data/projects/arcticdem/watermasks/global_surface_water/tiled_watermasks/'
+waterTileDir_dict = {
+    'arcticdem': '/mnt/pgc/data/projects/arcticdem/watermasks/global_surface_water/tiled_watermasks/',
+    'rema':      '/mnt/pgc/data/projects/rema/watermasks/global_surface_water/tiled_watermasks/',
+    'earthdem':  '/mnt/pgc/data/projects/earthdem/watermasks/global_surface_water/tiled_watermasks/',
+}
 
 def main():
 
@@ -21,11 +36,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("dstdir", help="target directory (tile subfolders will be created)")
     parser.add_argument("tiles", help="list of mosaic tiles, comma delimited")
-    parser.add_argument("ref_dem", help="reference DEM")
 
-
-    # parser.add_argument("region", choices=['arctic','antarctic','above'], help="region (arctic, antarctic, or above)")
-
+    parser.add_argument("--ref-dem", help="reference DEM (required for ArcticDEM & REMA, automatically selected "
+                        "for EarthDEM by file path template {})".format(earthdem_ref_dem_template))
     parser.add_argument("--project", default=None, choices=project_choices,
                         help="sets the default value of project-specific arguments")
     parser.add_argument("--tile-def", default=None,
@@ -36,8 +49,10 @@ def main():
                         help="strip database mat file (default is {})".format(
                             ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_databaseFile_dict.items()])
                         ))
-    parser.add_argument("--water-tile-dir", default=waterTileDir,
-                        help="directory of water tifs (default={})".format(waterTileDir))
+    parser.add_argument("--water-tile-dir", default=None,
+                        help="directory of water tifs (default is {})".format(
+                            ', '.join(["{} if --project={}".format(val, dom) for dom, val in waterTileDir_dict.items()])
+                        ))
     parser.add_argument("--lib-path", default=matlab_scripts,
                         help="path to referenced Matlab functions (default={})".format(matlab_scripts))
 
@@ -58,14 +73,18 @@ def main():
     dstdir = os.path.abspath(args.dstdir)
     scriptdir = os.path.abspath(os.path.dirname(sys.argv[0]))
 
-    if args.project is None and True in [arg is None for arg in [args.tile_def, args.strip_db]]:
+    if args.project is None and True in [arg is None for arg in [args.tile_def, args.strip_db, args.water_tile_dir]]:
         parser.error("--project arg must be provided if one of the following arguments is not provided: {}".format(
-            ' '.join(["--tile-def", "--strip-db"])
+            ' '.join(["--tile-def", "--strip-db", "--water-tile-dir"])
         ))
+    if args.ref_dem is None and args.project != 'earthdem':
+        parser.error("--ref-dem argument must be provided if not --project=earthdem")
     if args.tile_def is None:
         args.tile_def = project_tileDefFile_dict[args.project]
     if args.strip_db is None:
         args.strip_db = project_databaseFile_dict[args.project]
+    if args.water_tile_dir is None:
+        args.water_tile_dir = waterTileDir_dict[args.project]
 
     ## Verify qsubscript
     if args.qsubscript is None:
@@ -86,6 +105,28 @@ def main():
     if len(tiles) > 0:
 
         for tile in tiles:
+
+            ref_dem = args.ref_dem
+            tile_def = args.tile_def
+
+            if ref_dem is None or tile_def == tileDefFile_utm_options:
+                assert args.project == 'earthdem'
+
+                utm_tilename_parts = tile.split('_')
+                utm_tilename_prefix = utm_tilename_parts[0]
+                if not utm_tilename_prefix.startswith('utm'):
+                    parser.error("Expected only UTM tile names (e.g. 'utm10n_01_01'), but got '{}'".format(tile))
+
+                if ref_dem is None:
+                    ref_dem = earthdem_ref_dem_template.replace(earthdem_tileprefix_key, utm_tilename_prefix)
+
+                if tile_def == tileDefFile_utm_options:
+                    if utm_tilename_prefix.endswith('n'):
+                        tile_def = tileDefFile_utm_north
+                    elif utm_tilename_prefix.endswith('s'):
+                        tile_def = tileDefFile_utm_south
+                    else:
+                        parser.error("UTM tile name prefix does not end with 'n' or 's' (e.g. 'utm10n'): {}".format(tile))
 
             ## if output does not exist, add to task list
             tile_dstdir = os.path.join(dstdir,tile,'subtiles')
@@ -128,10 +169,10 @@ def main():
                         matlab_script, #p3
                         tile, #p4
                         tile_dstdir, #p5
-                        args.tile_def,  #p6
+                        tile_def,  #p6
                         args.strip_db,  #p7
                         args.water_tile_dir,  #p8
-                        args.ref_dem,  #p9
+                        ref_dem,  #p9
                     )
                     print(cmd)
                     if not args.dryrun:
@@ -139,16 +180,16 @@ def main():
 
                 ## else run matlab
                 else:
-                    cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); {2}('{3}','{4}','{5}','{6}','{7}','{8}'); exit" """.format(
+                    cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); {2}('{3}','{4}','{5}','{6}','landTile','{7}','refDemFile','{8}'); exit" """.format(
                         scriptdir,
                         args.lib_path,
                         matlab_script,
                         tile,
                         tile_dstdir,
-                        args.tile_def,
+                        tile_def,
                         args.strip_db,
                         args.water_tile_dir,
-                        args.ref_dem,
+                        ref_dem,
                     )
                     print("{}, {}".format(i, cmd))
                     if not args.dryrun:

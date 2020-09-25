@@ -10,10 +10,21 @@ end
 res=2;
 %dbase_in =[homeDir,'/data4/REMA/polarDEMdatabase_',num2str(res),'m.mat'];
 %dbase_in='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/EarthDEMdatabase4_2m_v4_20200810.mat';
-dbase_out='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/EarthDEMdatabase4_2m_v4_20200810.mat';
+dbase_out='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/EarthDEMdatabase4_2m_v4_20200824.mat';
+
+reproject_list = strrep(dbase_out, '.mat', '_reproject_list.txt');
+reproject_list_fp = fopen(reproject_list, 'wt');
+
+mosaic_zones_shp = '/mnt/pgc/data/projects/earthdem/EarthDEM_mosaic_zones_v4.shp';
+mosaic_zones_mapstruct = shaperead(mosaic_zones_shp);
+%mosaic_zones_mapstruct = shaperead(mosaic_zones_shp, 'UseGeoCoords',true);
+mosaic_zones_polyshape_arr = arrayfun(@(feat) polyshape(feat.X, feat.Y), mosaic_zones_mapstruct);
+
+proj4_geotiffinfo_dict = containers.Map;
+proj4_epsg_dict = containers.Map;
 
 %%% CHECK THIS SETTING %%%
-report_number_of_strips_to_append_but_dont_actually_append = true;
+report_number_of_strips_to_append_but_dont_actually_append = false;
 %%% CHECK THIS SETTING %%%
 
 regionDirs=[
@@ -74,9 +85,9 @@ for i=1:length(regionDirs)
 %            metaFile=metaFiles{j};
 %            fprintf('adding file %s\n',metaFile)
 %            if isempty(meta)
-%                meta=readStripMeta(metaFile,'noStripMeta');
+%                meta=readStripMeta(metaFile,'noSceneMeta');
 %            else
-%                meta(length(meta)+1)=readStripMeta(metaFile,'noStripMeta');
+%                meta(length(meta)+1)=readStripMeta(metaFile,'noSceneMeta');
 %            end
 %        end
 
@@ -164,10 +175,66 @@ for i=1:length(regionDirs)
             for j=1:length(metaFiles)
                 metaFile=metaFiles{j};
 %                fprintf('adding file %s\n',metaFile)
-                if isempty(meta)
-                    meta=readStripMeta(metaFile,'noStripMeta');
+                strip_meta = readStripMeta(metaFile,'noSceneMeta');
+                strip_proj4 = strip_meta.strip_projection_proj4;
+
+                if any(strcmp(keys(proj4_geotiffinfo_dict), strip_proj4))
+                    strip_gtinfo = proj4_geotiffinfo_dict(strip_proj4);
                 else
-                    meta(length(meta)+1)=readStripMeta(metaFile,'noStripMeta');
+                    demFile = strrep(metaFile, 'meta.txt', 'dem.tif');
+                    cmd = sprintf('python proj_issame.py "%s" "%s" ', demFile, strip_proj4);
+                    [status, cmdout] = system(cmd);
+                    if ~isempty(cmdout)
+                        fprintf(['\n',cmdout,'\n']);
+                    end
+                    if status ~= 0
+                        fprintf('\nProjection of strip DEM raster and PROJ.4 string in strip meta.txt file are not equal: %s, %s\n', demFile, strip_proj4);
+                    end
+                    strip_gtinfo = geotiffinfo(demFile);
+                    proj4_geotiffinfo_dict(strip_proj4) = strip_gtinfo;
+                end
+
+                [strip_lat, strip_lon] = projinv(strip_gtinfo, strip_meta.x, strip_meta.y);
+                strip_meta.x = strip_lon;
+                strip_meta.y = strip_lat;
+
+                strip_poly = polyshape(strip_lon, strip_lat);
+                mosaic_zones_overlapped = overlaps(strip_poly, mosaic_zones_polyshape_arr);
+                mosaic_zones_overlapped_ms = mosaic_zones_mapstruct(mosaic_zones_overlapped);
+
+                for mosaic_zone_ms_i = 1:length(mosaic_zones_overlapped_ms)
+                    mosaic_zone_ms = mosaic_zones_overlapped_ms(mosaic_zone_ms_i);
+
+                    reproject_strip = true;
+
+                    if any(strcmp(keys(proj4_epsg_dict), strip_proj4))
+                        if proj4_epsg_dict(strip_proj4) == mosaic_zone_ms.epsg
+                            reproject_strip = false;
+                        end
+                    else
+                        cmd = sprintf('python proj_issame.py "%s" "EPSG:%d" ', strip_proj4, mosaic_zone_ms.epsg);
+                        [status, cmdout] = system(cmd);
+                        if ~isempty(cmdout)
+                            fprintf(['\n',cmdout,'\n']);
+                        end
+                        if status == 0
+                            proj4_epsg_dict(strip_proj4) = mosaic_zone_ms.epsg;
+                            reproject_strip = false;
+                        end
+                    end
+
+                    if reproject_strip
+                        metaFile_reproj = strrep(metaFile, 'strips_v4/2m', ['strips_v4/2m_',mosaic_zone_ms.name]);
+                        if ~isfile(metaFile_reproj)
+                            fprintf(reproject_list_fp, "%s %s %d\n", metaFile, mosaic_zone_ms.name, mosaic_zone_ms.epsg);
+                        end
+                    end
+                end
+
+                if isempty(meta)
+                    meta=strip_meta;
+                else
+                    meta(length(meta)+1)=strip_meta;
                 end
 
             end
@@ -175,6 +242,8 @@ for i=1:length(regionDirs)
         fprintf('\n')
     end
 end
+
+fclose(reproject_list_fp);
 
 if isempty(meta)
     fprintf('\nNo new records to add to database\n')

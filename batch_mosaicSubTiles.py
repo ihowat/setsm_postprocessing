@@ -5,7 +5,20 @@ quads = ['1_1','1_2','2_1','2_2']
 
 Task = namedtuple('Task', 't st')
 
-tileDefFile = 'PGC_Imagery_Mosaic_Tiles_Arctic.mat'
+project_choices = [
+    'arcticdem',
+    'rema',
+    'earthdem',
+]
+
+tileDefFile_utm_north = 'PGC_UTM_Mosaic_Tiles_North.mat'
+tileDefFile_utm_south = 'PGC_UTM_Mosaic_Tiles_South.mat'
+tileDefFile_utm_options = "{} or {}".format(tileDefFile_utm_north, tileDefFile_utm_south)
+project_tileDefFile_dict = {
+    'arcticdem': 'PGC_Imagery_Mosaic_Tiles_Arctic.mat',
+    'rema': 'PGC_Imagery_Mosaic_Tiles_Antarctic.mat',
+    'earthdem': tileDefFile_utm_options,
+}
 
 def main():
 
@@ -15,11 +28,15 @@ def main():
     parser.add_argument("tiles", help="list of tiles, comma delimited")
     parser.add_argument("res", choices=['2','10'], help="resolution (2 or 10)")
 
-    
+
     parser.add_argument("--lib-path", default=matlab_scripts,
             help="path to referenced Matlab functions (default={}".format(matlab_scripts))
-    parser.add_argument("--tile-def", default=tileDefFile,
-            help="mosaic tile definition mat file(default={}".format(tileDefFile))
+    parser.add_argument("--project", default=None, choices=project_choices,
+                        help="sets the default value of project-specific arguments")
+    parser.add_argument("--tile-def", default=None,
+                        help="mosaic tile definition mat file (default is {})".format(
+                            ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_tileDefFile_dict.items()])
+                        ))
     parser.add_argument('--quads', action='store_true', default=False,
             help="build into quad subtiles")
     parser.add_argument("--pbs", action='store_true', default=False,
@@ -34,6 +51,13 @@ def main():
     tiles = args.tiles.split(',')
     srcdir = os.path.abspath(args.srcdir)
     scriptdir = os.path.abspath(os.path.dirname(sys.argv[0]))
+
+    if args.project is None and True in [arg is None for arg in [args.tile_def]]:
+        parser.error("--project arg must be provided if one of the following arguments is not provided: {}".format(
+            ' '.join(["--tile-def"])
+        ))
+    if args.tile_def is None:
+        args.tile_def = project_tileDefFile_dict[args.project]
 
     ## Verify qsubscript
     if args.qsubscript is None:
@@ -65,6 +89,27 @@ def main():
 
     if len(tasks) > 0:
         for task in tasks:
+
+            tile = task.t
+
+            tile_def = args.tile_def
+
+            if tile_def == tileDefFile_utm_options:
+                assert args.project == 'earthdem'
+
+                utm_tilename_parts = tile.split('_')
+                utm_tilename_prefix = utm_tilename_parts[0]
+                if not utm_tilename_prefix.startswith('utm'):
+                    parser.error("Expected only UTM tile names (e.g. 'utm10n_01_01'), but got '{}'".format(tile))
+
+                if tile_def == tileDefFile_utm_options:
+                    if utm_tilename_prefix.endswith('n'):
+                        tile_def = tileDefFile_utm_north
+                    elif utm_tilename_prefix.endswith('s'):
+                        tile_def = tileDefFile_utm_south
+                    else:
+                        parser.error("UTM tile name prefix does not end with 'n' or 's' (e.g. 'utm10n'): {}".format(tile))
+
             if task.st == '':
                 dstfn = "{}_{}m.mat".format(task.t,args.res)
             else:
@@ -74,9 +119,9 @@ def main():
             subtile_dir = os.path.join(srcdir,task.t,'subtiles')
 
             if os.path.isfile(dstfp):
-                print 'Output exists, skipping {}'.format(dstfn)
+                print('Output exists, skipping {}'.format(dstfn))
             elif os.path.isfile(sem):
-                print 'N array was empty on last run, skipping {}'.format(dstfn)
+                print('N array was empty on last run, skipping {}'.format(dstfn))
 
             else:
                 ## if pbs, submit to scheduler
@@ -93,17 +138,17 @@ def main():
                         args.res,
                         dstfp,
                         task.t,
-                        args.tile_def,
+                        tile_def,
                         task.st,
                     )
-                    print cmd
+                    print(cmd)
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)
 
                 ## else run matlab
                 else:
                     if task.st == '':
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{6}','{7}'); {2}('{3}',{4},'{5}','extent',[x0,x1,y0,y1]); exit" """.format(
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{6}','{7}'); projstr=getTileProjection('{7}'); {2}('{3}',{4},'{5}','projection',projstr,'extent',[x0,x1,y0,y1]); exit" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,
@@ -111,10 +156,10 @@ def main():
                             args.res,
                             dstfp,
                             task.t,
-                            args.tile_def
+                            tile_def
                         )
                     else:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{7}','{8}','quadrant','{6}'); {2}('{3}',{4},'{5}','quadrant','{6}','extent',[x0,x1,y0,y1]); exit" """.format(
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{7}','{8}','quadrant','{6}'); projstr=getTileProjection('{8}'); {2}('{3}',{4},'{5}','projection',projstr,'quadrant','{6}','extent',[x0,x1,y0,y1]); exit" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,
@@ -123,9 +168,9 @@ def main():
                             dstfp,
                             task.st,
                             task.t,
-                            args.tile_def
+                            tile_def
                         )
-                    print "{}, {}".format(i, cmd)
+                    print("{}, {}".format(i, cmd))
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)
 
