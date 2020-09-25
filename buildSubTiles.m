@@ -110,8 +110,27 @@ if ischar(meta)
     meta=load(meta);
 end
 
-if ~isfield(meta,'scene_alignment_meanrmse')
+%if ~isfield(meta,'scene_alignment_meanrmse')
+%    error('missing scene alignment field in meta structure')
+%end
+
+meta.fileName = strrep(meta.fileName, '_meta.txt', '_dem_10m.tif');
+
+if isfield(meta,'avg_rmse')
+    % this is from an old version of the meta files that used 0 in mean
+    error('avg_rmse field in meta structure, needs to be updated')
+elseif isfield(meta,'scene_alignment')
+    % need to rm zeros (first scene) and nans (unused redundant scenes),
+    % strips w/ 1 scene will be NaN
+    meta.scene_alignment_meanrmse = cellfun(@(x)...
+        mean(x.rmse(x.rmse~=0 & ~isnan(x.rmse))), meta.scene_alignment);
+elseif ~isfield(meta,'scene_alignment_meanrmse')
     error('missing scene alignment field in meta structure')
+end
+
+if ~isfield(meta,'A')
+    % get strip areas and alignment stats for quality selection
+    meta.A = cellfun(@(x,y) polyarea(x,y), meta.x,meta.y);
 end
 
 qcFlag = false;
@@ -133,23 +152,6 @@ end
 if isfield(meta,'strip_projection_name')
     in = strcmp(meta.strip_projection_name, tileProjName);
     meta = structfun(@(x) x(in), meta,'uniformoutput',0);
-end
-
-if ~isfield(meta,'A')
-    % get strip areas and alignment stats for quality selection
-    meta.A = cellfun(@(x,y) polyarea(x,y), meta.x,meta.y);
-end
-
-if isfield(meta,'avg_rmse')
-    % this is from an old version of the meta files that used 0 in mean
-    error('avg_rmse field in meta structure, needs to be updated')
-elseif isfield(meta,'scene_alignment')
-    % need to rm zeros (first scene) and nans (unused redundant scenes),
-    % strips w/ 1 scene will be NaN
-    meta.scene_alignment_meanrmse = cellfun(@(x)...
-        mean(x.rmse(x.rmse~=0 & ~isnan(x.rmse))), meta.scene_alignment);
-elseif ~isfield(meta,'scene_alignment_meanrmse')
-    error('missing scene alignment field in meta structure')
 end
 
 %% Initialize tile definition
