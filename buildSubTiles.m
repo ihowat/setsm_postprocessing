@@ -139,21 +139,6 @@ if isfield(meta,'qc')
     qcFlag = true;
 end
 
-% Get tile projection information, esp. from UTM tile name
-if isempty(projection) && isfield(tileDefs,'projstr')
-    projection = tileDefs.projstr;
-end
-[tileProjName,projection] = getProjName(tileName,projection);
-if isempty(projection)
-    error("'projection' must be provided by either varargin or as field in tile definition structure");
-end
-
-% trim strip database to only strips with a projection matching the tile
-if isfield(meta,'strip_projection_name')
-    in = strcmp(meta.strip_projection_name, tileProjName);
-    meta = structfun(@(x) x(in), meta,'uniformoutput',0);
-end
-
 %% Initialize tile definition
 
 if startsWith(tileName,'utm')
@@ -168,6 +153,21 @@ end
 %if tileDefs is filename, load it
 if ischar(tileDefs)
     tileDefs=load(tileDefs);
+end
+
+% Get tile projection information, esp. from UTM tile name
+if isempty(projection) && isfield(tileDefs,'projstr')
+    projection = tileDefs.projstr;
+end
+[tileProjName,projection] = getProjName(tileName,projection);
+if isempty(projection)
+    error("'projection' must be provided by either varargin or as field in tile definition structure");
+end
+
+% trim strip database to only strips with a projection matching the tile
+if isfield(meta,'strip_projection_name')
+    in = strcmp(meta.strip_projection_name, tileProjName);
+    meta = structfun(@(x) x(in), meta,'uniformoutput',0);
 end
 
 % tileDefs is a stucture, find this tile and extract range
