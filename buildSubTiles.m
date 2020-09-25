@@ -165,7 +165,7 @@ end
 
 %if tileDefs is filename, load it
 if ischar(tileDefs)
-    tileDefs=load(tileDefFile);
+    tileDefs=load(tileDefs);
 end
 
 % tileDefs is a stucture, find this tile and extract range
