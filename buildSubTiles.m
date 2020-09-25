@@ -84,11 +84,11 @@ if ~isempty(n)
     nstrt = varargin{n+1};
 end
 
-n = find(strcmpi(varargin,'dzFilt'));
-if ~isempty(n)
-    dzFilt = varargin{n+1};
-end
-fprintf('dzFilt = %d\n',dzFilt)
+%n = find(strcmpi(varargin,'dzFilt'));
+%if ~isempty(n)
+%    dzFilt = varargin{n+1};
+%end
+%fprintf('dzFilt = %d\n',dzFilt)
 
 n = find(strcmpi(varargin,'projection'));
 if ~isempty(n)
