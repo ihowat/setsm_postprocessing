@@ -22,7 +22,6 @@ function [projabbrev, projstr] = getProjName(tileName,projstr)
     };
 
     projabbrev = '';
-    projstr = '';
 
     if isempty(tileName) && isempty(projstr)
         error("Both 'tileName' and 'projstr' arguments cannot be empty");
