@@ -150,7 +150,7 @@ x = x0:dx:x1;
 y = y1:-dx:y0;
 
 % build tile output arrays
-z = nan(length(y),length(x));
+z = nan(length(y),length(x),'single');
 N = zeros(length(y),length(x),'uint8');
 Nmt = zeros(length(y),length(x),'uint8');
 z_mad = z;
