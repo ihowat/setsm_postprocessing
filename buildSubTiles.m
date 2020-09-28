@@ -19,6 +19,9 @@ function buildSubTiles(tileName,outDir,tileDefs,meta,varargin)
 %  - set minStripOverlap = 0.1 as default
 % - changed exist statements to flags
 % - added nstrt option
+% - robust stripid matching for 2m call
+% - added qc to 2m
+% - added make2m inarg
 
 % buildSubTiles build mosaics from strips in subtiles of 100x100km tiles
 %
@@ -37,11 +40,16 @@ res=10; % ouput mosaic resolution in meters
 subtileSize=1000; % subtile dimensions in meters
 buffer=subtileSize*.1; % size of tile/subtile boundary buffer (10%)
 maxNumberOfStrips=100; % maximum number of strips to load in subtile
-make2mFlag=false; % make 2m version or not
 refDemFile = ''; % optional refDemFile name palce holder
 minStripOverlap = 0.1; % minimum frac strip overlap of subtile
 
 % Parse varargins
+make2mFlag=false; % make 2m version or not
+n = find(strcmpi(varargin,'make2m'));
+if ~isempty(n)
+    make2mFlag = varargin{n+1};
+end
+
 n = find(strcmpi(varargin,'landTile'));
 if ~isempty(n)
     landTile = varargin{n+1};
@@ -61,8 +69,8 @@ n = find(strcmpi(varargin,'timeRange'));
 if ~isempty(n)
     timeRange = varargin{n+1};
     timeRangeFlag = true;
-    fprintf('timeRange = %s to %s\n',datenum(timeRange(1)),...
-        datenum(timeRange(2)))
+    fprintf('timeRange = %s to %s\n',datestr(timeRange(1)),...
+        datestr(timeRange(2)))
 end
 
 n = find(strcmpi(varargin,'minStripOverlap'));
@@ -82,12 +90,6 @@ n = find(strcmpi(varargin,'nstrt'));
 if ~isempty(n)
     nstrt = varargin{n+1};
 end
-
-%n = find(strcmpi(varargin,'dzFilt'));
-%if ~isempty(n)
-%    dzFilt = varargin{n+1};
-%end
-%fprintf('dzFilt = %d\n',dzFilt)
 
 %if output directory doesnt already exist, make it
 if ~exist(outDir,'dir')
@@ -120,7 +122,7 @@ meta.A = cellfun(@(x,y) polyarea(x,y), meta.x,meta.y);
 
 %if tileDefs is filename, load it
 if ischar(tileDefs)
-    tileDefs=load(tileDefs);
+    tileDefs=load(tileDefFile);
 end
 
 % tileDefs is a stucture, find this tile and extract range
@@ -609,30 +611,64 @@ for n=nstrt:subN
     
     if make2mFlag
         fprintf('making 2m version\n')
+        
         outName2m = strrep(outName,'_10m.mat','_2m.mat');
         
         % if strip segments were combined, need to expand offset vectors and fa
         % array to match orginal file list
         if length(fileNames0) ~= length(fileNames)
+                        
+            [~,stripid0] =  cellfun(@fileparts,fileNames0,'uniformoutput',0);
+            stripid0 =  cellfun(@(x) x(1:47),stripid0,'uniformoutput',0);
             
-            [~,stripid] =  cellfun(@fileparts,fileNames0,'uniformoutput',0);
+            [~,stripid] =  cellfun(@fileparts,fileNames,'uniformoutput',0);
             stripid =  cellfun(@(x) x(1:47),stripid,'uniformoutput',0);
-            [~,~,strip_ind] = unique(stripid);
+           
+            dZ0 = nan(size(stripid0));
+            dX0 = nan(size(stripid0));
+            dY0 = nan(size(stripid0));
             
-            dZ = dZ(strip_ind);
-            dX = dX(strip_ind);
-            dY = dY(strip_ind);
+            fa0 = false([size(fa,[1 2]),length(stripid0)]);
             
-            fa = fa(:,:,strip_ind);
+            for i=1:length(stripid0)
+                ind = find(strcmp(stripid0(i),stripid));
+                if isempty(ind)
+                    continue
+                end
+                dZ0(i) = dZ(ind);
+                dX0(i) = dX(ind);
+                dY0(i) = dY(ind);
+                fa0(:,:,i) = fa(:,:,ind);
+            end
+        else
+            dZ0 = dZ;
+            dX0 = dX;
+            dY0 = dY;
+        end
+        
+        qc.x = cell(size(dZ0));
+        qc.y = cell(size(dZ0));
+        
+        if qcFlag
+            
+            [~,names0] =  cellfun(@fileparts,fileNames0,'uniformoutput',0);
+            [~,metaNames] =  cellfun(@fileparts,meta.fileName,'uniformoutput',0);
+            
+            [~,ind,ind0] = intersect(metaNames, names0);
+            
+            qc.x(ind0) = meta.qc.x(ind);
+            qc.y(ind0) = meta.qc.y(ind);
             
         end
         
-        make2m(fileNames0,x,y,dZ,dX,dY,land,fa,outName2m);
+        fileNames0 = strrep(fileNames0,'_10m.tif','.tif');
+        
+        make2m(fileNames0,x,y,dZ0,dX0,dY0,land,fa0,qc,outName2m);
     end
     
 end
 
-function make2m(fileNames,x,y,dZ,dX,dY,land,fa,outName)
+function make2m(fileNames,x,y,dZ,dX,dY,land,fa,qc,outName)
 
 % make date vector
 [~,name] =  cellfun(@fileparts,fileNames,'uniformoutput',0);
@@ -647,6 +683,8 @@ dY(n_missing) = [];
 fileNames(n_missing) = [];
 fa(:,:,n_missing) = [];
 t(n_missing) = [];
+qc.x(n_missing) = [];
+qc.y(n_missing) = [];
 
 % set nan dX and dY to zeros for vertical shift only
 dX(isnan(dX)) = 0;
@@ -655,7 +693,21 @@ dY(isnan(dY)) = 0;
 fileNames = strrep(fileNames,'_10m.tif','.tif');
 
 [x,y,z,~,mt] =extractSubGrid(fileNames,min(x),max(x),...
-    min(y),max(y),2);
+    min(y),max(y),2,'applyBitmask',false);
+
+% apply qc masks if provided
+nn = find(~cellfun( @isempty, qc.x));
+for j=nn
+    ztmp = z(:,:,j);
+    BW = false(size(ztmp));
+    for k=1:length(qc.x{ind(j)})
+        BW = BW | roipoly(x,y,ztmp,qc.x{ind(j)}{k},...
+            qc.y{ind(j)}{k});
+    end
+    ztmp(BW) = NaN;
+    z(:,:,j) = ztmp;
+    clear BW ztmp
+end
 
 % merge segmentsfrom same strips
 % dont get offsets between segs in same strip:make a vector of z's
@@ -719,7 +771,6 @@ for k=1:size(z,3)
 end
 
 za_med = nanmedian(za,3);
-%za_std =  nanstd(za,[],3);
 za_mad = mad(za,1,3);
 N = uint8(sum(~isnan(za),3));
 Nmt = uint8(sum(mta,3));
@@ -738,44 +789,6 @@ tmean = nanmean(t,3);
 tmax = uint16(tmax);
 tmin = uint16(tmin);
 tmean = uint16(tmean);
-
-
-% Incomplete attempt at code for retrieving dates of median values
-% [za_sort,n]  = sort(za,3);
-% isodd=logical(mod(single(N),2));
-% n1=zeros(size(N),'uint8');
-% n2=zeros(size(N),'uint8');
-%
-% n1(isodd & N > 0) = uint8(ceil(single(N(isodd & N > 0))./2));
-% n2(isodd & N > 0) = n1(isodd & N > 0);
-%
-% n1(~isodd & N > 0) = uint8(single(N(~isodd & N > 0))./2);
-% n2(~isodd & N > 0) = n1(~isodd & N > 0)+1;
-%
-% [col,row] = meshgrid((1:size(za,2))',1:size(za,1));
-%
-% n1(N == 0) = [];
-% n2(N == 0) = [];
-% row(N == 0) = [];
-% col(N == 0) = [];
-%
-% ind1 = sub2ind(size(za),row(:),col(:),n1(:));
-% ind2 = sub2ind(size(za),row(:),col(:),n2(:));
-%
-% za1 = za_sort(ind1);
-% za2 = za_sort(ind2);
-%
-% za_med = nan(size(za,1),size(za,2),'single');
-% ind = sub2ind(size(za_med),row(:),col(:));
-% za_med(ind) = (za1+za2)./2;
-%
-% tmed= zeros(size(za,1),size(za,2),'uint16');
-% t_med(ind) = (ta1+ta2)./2;
-%
-% t =
-%
-% za1 = za_sort(ind1);
-% za2 = za_sort(ind2);
 
 fprintf('saving stripIDs, x, y za_med land za_mad N tmax tmin tmean to %s\n',outName)
 save(outName,'stripIDs','x','y','za_med','land','za_mad','N','Nmt','tmax','tmin','tmean','-v7.3');
