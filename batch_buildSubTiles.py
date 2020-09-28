@@ -62,6 +62,8 @@ def main():
             help="rerun tile, behavior determined by redoFlag in Matlab code")
     parser.add_argument("--sort-fix", action="store_true", default=False,
             help="run tile with buildSubTilesSortFix script")
+    parser.add_argument("--make-10m-only", action='store_true', default=False,
+            help="do not give 'make2m' argument in call to buildSubTiles.m, breaks --rerun capability")
     parser.add_argument("--qsubscript",
             help="qsub script to use in PBS submission (default is qsub_buildSubTiles.sh in script root folder)")
     parser.add_argument("--dryrun", action='store_true', default=False,
@@ -100,6 +102,8 @@ def main():
     matlab_script = 'buildSubTiles'
     if args.sort_fix:
         matlab_script = 'buildSubTilesSortFix'
+
+    make2m_arg = '' if args.make_10m_only else ",'make2m'"
 
     i=0
     if len(tiles) > 0:
@@ -161,18 +165,19 @@ def main():
                 i+=1
                 if args.pbs:
                     job_name = 'bst_{}'.format(tile)
-                    cmd = r'qsub -N {1} -v p1={2},p2={3},p3={4},p4={5},p5={6},p6={7},p7={8},p8={9},p9={10} {0}'.format(
+                    cmd = r'qsub -N {1} -v p1={2},p2={3},p3={4},p4={5},p5={6},p6={7},p7={8},p8={9},p9={10},p10="{11}" {0}'.format(
                         qsubpath,
                         job_name,
-                        scriptdir, #p1
+                        scriptdir,  #p1
                         args.lib_path,  #p2
                         matlab_script, #p3
-                        tile, #p4
+                        tile,  #p4
                         tile_dstdir, #p5
                         tile_def,  #p6
                         args.strip_db,  #p7
                         args.water_tile_dir,  #p8
                         ref_dem,  #p9
+                        make2m_arg,  #p10
                     )
                     print(cmd)
                     if not args.dryrun:
@@ -180,7 +185,7 @@ def main():
 
                 ## else run matlab
                 else:
-                    cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); {2}('{3}','{4}','{5}','{6}','landTile','{7}','refDemFile','{8}'); exit" """.format(
+                    cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); {2}('{3}','{4}','{5}','{6}','landTile','{7}','refDemFile','{8}'{9}); exit" """.format(
                         scriptdir,
                         args.lib_path,
                         matlab_script,
@@ -190,6 +195,7 @@ def main():
                         args.strip_db,
                         args.water_tile_dir,
                         ref_dem,
+                        make2m_arg,
                     )
                     print("{}, {}".format(i, cmd))
                     if not args.dryrun:
