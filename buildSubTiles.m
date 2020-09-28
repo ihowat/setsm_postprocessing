@@ -19,6 +19,9 @@ function buildSubTiles(tileName,outDir,tileDefs,meta,varargin)
 %  - set minStripOverlap = 0.1 as default
 % - changed exist statements to flags
 % - added nstrt option
+% - robust stripid matching for 2m call
+% - added qc to 2m
+% - added make2m inarg
 
 % buildSubTiles build mosaics from strips in subtiles of 100x100km tiles
 %
@@ -37,12 +40,17 @@ res=10; % ouput mosaic resolution in meters
 subtileSize=1000; % subtile dimensions in meters
 buffer=subtileSize*.1; % size of tile/subtile boundary buffer (10%)
 maxNumberOfStrips=100; % maximum number of strips to load in subtile
-make2mFlag=false; % make 2m version or not
 refDemFile = ''; % optional refDemFile name palce holder
 minStripOverlap = 0.1; % minimum frac strip overlap of subtile
 projection = ''; % projection string for tile scheme
 
 % Parse varargins
+make2mFlag=false; % make 2m version or not
+n = find(strcmpi(varargin,'make2m'));
+if ~isempty(n)
+    make2mFlag = varargin{n+1};
+end
+
 n = find(strcmpi(varargin,'landTile'));
 if ~isempty(n)
     landTile = varargin{n+1};
@@ -62,8 +70,8 @@ n = find(strcmpi(varargin,'timeRange'));
 if ~isempty(n)
     timeRange = varargin{n+1};
     timeRangeFlag = true;
-    fprintf('timeRange = %s to %s\n',datenum(timeRange(1)),...
-        datenum(timeRange(2)))
+    fprintf('timeRange = %s to %s\n',datestr(timeRange(1)),...
+        datestr(timeRange(2)))
 end
 
 n = find(strcmpi(varargin,'minStripOverlap'));
@@ -83,12 +91,6 @@ n = find(strcmpi(varargin,'nstrt'));
 if ~isempty(n)
     nstrt = varargin{n+1};
 end
-
-%n = find(strcmpi(varargin,'dzFilt'));
-%if ~isempty(n)
-%    dzFilt = varargin{n+1};
-%end
-%fprintf('dzFilt = %d\n',dzFilt)
 
 n = find(strcmpi(varargin,'projection'));
 if ~isempty(n)
@@ -110,9 +112,20 @@ if ischar(meta)
     meta=load(meta);
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% PGC TODO:
+%% Restore commented-out field check and remove OTF
+%% field population after we move away from old-style
+%% strip dbase compilation and start using the new
+%% shapefile dbase method with initializeMosaic.m
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 %if ~isfield(meta,'scene_alignment_meanrmse')
 %    error('missing scene alignment field in meta structure')
 %end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 meta.fileName = strrep(meta.fileName, '_meta.txt', '_dem_10m.tif');
 
@@ -133,6 +146,9 @@ if ~isfield(meta,'A')
     meta.A = cellfun(@(x,y) polyarea(x,y), meta.x,meta.y);
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 qcFlag = false;
 if isfield(meta,'qc')
     fprintf('Applying qc data\n')
@@ -141,6 +157,11 @@ end
 
 %% Initialize tile definition
 
+%if tileDefs is filename, load it
+if ischar(tileDefs)
+    tileDefs=load(tileDefs);
+end
+
 if startsWith(tileName,'utm')
     sl = split(tileName,'_');
     tilePrefix = [sl{1},'_'];
@@ -148,11 +169,6 @@ if startsWith(tileName,'utm')
 else
     tilePrefix = '';
     tileName_in_tileDef = tileName;
-end
-
-%if tileDefs is filename, load it
-if ischar(tileDefs)
-    tileDefs=load(tileDefs);
 end
 
 % Get tile projection information, esp. from UTM tile name
@@ -179,7 +195,7 @@ if isstruct(tileDefs)
     y0=tileDefs.y0(tileInd);
     x1=tileDefs.x1(tileInd);
     y1=tileDefs.y1(tileInd);
-
+    
     %otherwise
 elseif length(tileDefs) == 4
     x0=tileDefs(1);
@@ -199,9 +215,9 @@ if exist('landTile','var')
             x1+buffer,y0-buffer,y1+buffer,res,'includeIce');
         landTile.z = landTile.z == 1;
     end
-
+    
     landTileFlag = true;
-
+    
     % check if any land exists in this tile, stop if not
     if ~any(landTile.z(:))
         fprintf('no land in tile, returning\n')
@@ -225,7 +241,7 @@ subN=numel(subx0);
 subTileFiles=dir([outDir,'/*_',num2str(res),'m.mat']);
 if ~isempty(subTileFiles)
     subTileFiles=cellfun( @(x) [outDir,'/',x],{subTileFiles.name},'uniformoutput',0);
-
+    
     % Get column-wise number of subtile from file names - assumes the subtile
     % names is {tilex}_{tily}_{subtilenum}_....
     [~,subTileName] = cellfun(@fileparts,subTileFiles,'uniformoutput',0);
@@ -239,9 +255,9 @@ if ~isempty(subTileFiles)
     % sort subtilefiles by ascending subtile number order
     [subTileNum,n] = sort(subTileNum); % sort the numbers
     subTileFiles = subTileFiles(n); % sort the file list
-
+    
     nstrt = subTileNum(end)+1; % set first subtile next after last exisitng
-
+    
     % check to make sure last file was complete
     mvars  = who('-file',subTileFiles{end});
     if ~any(ismember(mvars,'za_med'))
@@ -254,7 +270,7 @@ end
 
 %% subtile loop
 for n=nstrt:subN
-
+    
     clear  fa dX dY dZ land ice dzdt tmax tmin N Nmt t
     clear x y z offsets za za_med za_mad fileNames fileNames0
     
@@ -273,7 +289,7 @@ for n=nstrt:subN
     else
         land = true(length(y),length(x));
     end
-
+    
     if ~any(land(:))
         fprintf('No land in subtile %d, skipping\n',n)
         continue
@@ -284,15 +300,15 @@ for n=nstrt:subN
     % convert to polyshape
     subtilePoly = polyshape([subx0(n);subx0(n);subx1(n);subx1(n)],...
         [suby0(n);suby1(n);suby1(n);suby0(n)]);
-
+    
     % index of strips in this subtile
     ind=stripSearch(meta.x,meta.y,subtilePoly);
-
+    
     % if qc data exists, filter out 5's
     if qcFlag
         ind = ind(meta.qc.flag(ind) ~= 5);
     end
-
+    
     %if date range supplied, crop to date range s
     if timeRangeFlag
         % get date from filename
@@ -302,48 +318,48 @@ for n=nstrt:subN
         
         ind(t < timeRange(1) | t > timeRange(2)) = [];
     end
-
+    
     % check for maximum #'s of overlaps
     if length(ind) > maxNumberOfStrips
-
+        
         %first remove strips with single subscenes
         ind(isnan(meta.scene_alignment_meanrmse(ind))) = [];
     end
-
+    
     % check if still more strips than max
     if length(ind) >  maxNumberOfStrips
-
+        
         % sort by weigthed area and coverage
         scene_alignment_meanrmse_scaled= -(meta.scene_alignment_meanrmse(ind)-...
             mean(meta.scene_alignment_meanrmse(ind)))./...
             std(meta.scene_alignment_meanrmse(ind));
-
+        
         % normalize areas for group
         A_scaled = (meta.A(ind)-mean(meta.A(ind)))./std(meta.A(ind));
-
+        
         % normalize scene alignment stats for group
         scene_alignment_meanrmse_scaled = scene_alignment_meanrmse_scaled +...
             abs(min(scene_alignment_meanrmse_scaled));
-
+        
         % take the sum of normalized values
         A_scaled = A_scaled + abs(min(A_scaled));
-
+        
         % sort by scaled sum
         [~,ind_rank] = sort(A_scaled.*scene_alignment_meanrmse_scaled,...
             'descend');
-
+        
         % take top N strips in sort
         ind = ind(ind_rank(1:maxNumberOfStrips));
     end
-
+    
     if isempty(ind)
         fprintf('no overlapping strips, skipping\n')
         continue
     end
-
+    
     % convert meta names into dem names
     fileNames  = meta.fileName(ind);
-
+    
     % make date vector
     [~,name] =  cellfun(@fileparts,fileNames,'uniformoutput',0);
     t=cellfun(@(x) datenum(x(6:13),'yyyymmdd'),name)';
@@ -352,13 +368,13 @@ for n=nstrt:subN
     fprintf('extracting %d strip subsets ',length(fileNames))
     [x,y,z,missingFlag,mt] =extractSubGrid(fileNames,subx0(n),subx1(n),...
         suby0(n),suby1(n),res,'applyBitmask',false);
-
+    
     % remove layers missing data
     z = z(:,:,~missingFlag);
     mt = mt(:,:,~missingFlag);
     fileNames=fileNames(~missingFlag);
     ind = ind(~missingFlag);
-
+    
     % apply qc masks if provided
     if qcFlag
         nn = find(meta.qc.flag(ind) == 3);
@@ -374,17 +390,17 @@ for n=nstrt:subN
             clear BW ztmp
         end
     end
-
+    
     % save full filename list with repeat segments for 2m
     fileNames0 = fileNames;
-
+    
     % merge segmentsfrom same strips
     % dont get offsets between segs in same strip:make a vector of z's
     % that belong to the same strip
     [~,stripid] =  cellfun(@fileparts,fileNames,'uniformoutput',0);
     stripid =  cellfun(@(x) x(1:47),stripid,'uniformoutput',0);
     unique_stripid = unique(stripid);
-
+    
     r=[];
     it=1;
     for it=1:length(unique_stripid)
@@ -396,12 +412,12 @@ for n=nstrt:subN
             r = [r(:);segs(2:end)];
         end
     end
-
+    
     z(:,:,r) = [];
     mt(:,:,r) = [];
     fileNames(r) = [];
     t(r) = [];
-
+    
     clear it segs r
     
     if minStripOverlap > 0
@@ -414,45 +430,45 @@ for n=nstrt:subN
         fileNames(r) = [];
         t(r) = [];
     end
-
+    
     %% calculate DEM pairwise offsets
     fprintf('performing pairwise coregistration, ')
     offsets=coregisterStack(x,y,z,land);
-
+    
     %% adjustment
     
     % set offsets with horizontal shift failure to zero
     offsets.dx(offsets.dxe == 0) = NaN;
     offsets.dy(offsets.dye == 0) = NaN;
-
+    
     offsets.dxe(isnan(offsets.dx)) = NaN;
     offsets.dye(isnan(offsets.dy)) = NaN;
-
+    
     if ~any(~isnan(offsets.dz))
-
+        
         % set adjustment thresholds to inf and shifts to zero
         dZ = zeros(size(z,3),1);
         dX = zeros(size(z,3),1);
         dY = zeros(size(z,3),1);
-
+        
     else
-
+        
         %number of grid points with coverage
         c0 = any(z,3);
         c0 = sum(c0(:));
-
+        
         % iteratively perform adjustment, relaxing thresholds by 10%, up to a
         % maximum of 500%  , until coverage is maximum
         it=1;
         while it < 5
-
+            
             % pairwise coregistration statistics filter threshold defaults
             offsetdiffmax = 50;
             offsetErrMax = 0.1*it;
             min_sigma_dz_coregMax=4*it;
             min_abs_mean_dz_coregMax=0.1*it;
             min_abs_median_dz_coregMax = 1*it;
-
+            
             % perform adjustment for this iteration
             [dZ,dX,dY] = adjustOffsets(offsets,...
                 'offsetdiffmax',offsetdiffmax,...
@@ -460,27 +476,27 @@ for n=nstrt:subN
                 'min_sigma_dz_coregMax',min_sigma_dz_coregMax,...
                 'min_abs_mean_dz_coregMax',min_abs_mean_dz_coregMax,...
                 'min_abs_median_dz_coregMax',min_abs_median_dz_coregMax);
-
+            
             %check for spatial coverage of z layers with solutions
             c1 = any(z(:,:,~isnan(dZ)),3);
             c1 = sum(c1(:));
-
+            
             % if coverage is 100%, break
             if c1 == c0
                 break
             end
-
+            
             % if coverage is < 100%, increase thresholds by 10% and
             % repeat
             it = it+0.1;
         end
-
+        
         % If adjustment fails, use either mean offset rmse or reference dem
         if ~any(~isnan(dZ))
-
+            
             % dem sorting vector in ascending order
             nsort = [];
-
+            
             % check for reference DEM file
             if refDemFileFlag
                 
@@ -493,13 +509,13 @@ for n=nstrt:subN
                 if ~any(~isnan(zr.z(:)))
                     fprintf('Reference dem has no data\n');
                 else
-
+                    
                     % interpolate reference dem to subtile
                     zri = interp2(zr.x,zr.y(:),zr.z,x,y(:),'*linear');
-
+                    
                     % create vertical std dev vector
                     dz_std = nan(size(z,3),1);
-
+                    
                     % loop through dems in subtile stack and calculate vertical
                     % difference between dem and reference dem, saving the
                     % standard deviation over land.
@@ -507,31 +523,31 @@ for n=nstrt:subN
                         dz =  zri - z(:,:,i);
                         dz_std(i) = nanstd(dz(land));
                     end
-
+                    
                     if ~any(~isnan(dz_std))
                         fprintf('All reference dem differences stddev values are nans\n');
                     else
-
+                        
                         % sort the dems by lowest std dev from reference and select
                         % the least number of dems needed for 100% cover
                         [~,nsort] = sort(dz_std,'ascend');
                         nsort(isnan(dz_std(nsort))) = [];
-
+                        
                     end
                 end
             end
-
+            
             % check if ref dem comparison successful
             if isempty(nsort) && size(z,3) > 2
                 % if no ref dem, sort by mean coregistration sigma
                 avg_sigma_dz_coreg =  accumarray([offsets.i;offsets.j],...
                     [offsets.sigma_dz_coreg;offsets.sigma_dz_coreg],...
                     [],@nanmean);
-
+                
                 [~,nsort] = sort(avg_sigma_dz_coreg,'ascend');
                 
             end
-
+            
             if ~isempty(nsort)
                 % successively calculate coverage provided by each ith dem
                 % in order of increasing std dev from reference, breaking
@@ -549,7 +565,7 @@ for n=nstrt:subN
             else
                 nsort = 1:size(z,3);
             end
-
+            
             % set adjustment thresholds to inf to shut them off or
             % indicate no adjustment
             offsetdiffmax =50;
@@ -557,20 +573,20 @@ for n=nstrt:subN
             min_sigma_dz_coregMax= inf;
             min_abs_mean_dz_coregMax= inf;
             min_abs_median_dz_coregMax = inf;
-
+            
             % only perform adjustment if more than 1 dem
             if length(nsort) > 1
-
+                
                 % find coregistration offsets for pairs of nsort dems
                 in = ismember(offsets.i,nsort) & ismember(offsets.j,nsort);
-
+                
                 % if these DEMs dont overlap, or are of the same strip,
                 % they wont have offsets: skip
                 if any(in)
-
+                    
                     % sample the offset structure for the pairs of nsort
                     offsets_sub = structfun(@(x) x(in), offsets,'uniformoutput',0);
-
+                    
                     % perform adjustment for pairs of nsort
                     [dZ(nsort),dX(nsort),dY(nsort)] = adjustOffsets(offsets_sub,...
                         'offsetdiffmax',offsetdiffmax,...
@@ -580,7 +596,7 @@ for n=nstrt:subN
                         'min_abs_median_dz_coregMax',min_abs_median_dz_coregMax);
                 end
             end
-
+            
             % if adjustment still fails, or just one dem, just set to
             % zero for nsort "best" dems.
             if ~any(~isnan(dZ))
@@ -594,33 +610,33 @@ for n=nstrt:subN
     %% apply adustment
     % layers with missing adjustments
     n_missing = isnan(dZ);
-
+    
     % set nan dX and dY to zeros for vertical shift only
     dX(isnan(dX)) = 0;
     dY(isnan(dY)) = 0;
-
+    
     % make adjusted z array
     za=nan(size(z),'single');
-
+    
     % make adjusted mt arrays
     mta = false(size(mt));
-
+    
     % index of layers with adjustments
     iterVec = 1:size(z,3);
     iterVec(n_missing) = [];
-
+    
     fprintf('applying adjustment\n')
     clear k
     for k=iterVec
         za(:,:,k) = interp2(x + dX(k),y + dY(k), z(:,:,k) + dZ(k),...
             x,y,'*linear');
-
+        
         mtak = interp2(x + dX(k),y + dY(k), single(mt(:,:,k)),...
             x,y,'*nearest');
-
+        
         mtak(isnan(mtak)) = 0;
         mtak = logical(mtak);
-
+        
         mta(:,:,k) = mtak;
         
     end
@@ -636,7 +652,7 @@ for n=nstrt:subN
     za_mad = single(mad(za,1,3));
     N = uint8(sum(~isnan(za),3));
     Nmt = uint8(sum(mta,3));
-
+    
     t=t-datenum('1/1/2000 00:00:00');
     t=reshape(t,1,1,[]);
     t=repmat(t,[length(y) length(x) 1]);
@@ -654,36 +670,70 @@ for n=nstrt:subN
         'uniformoutput', 0);
     stripIDs = cellfun( @(x) x{1}, stripIDs,...
         'uniformoutput', 0);
-
+    
     save(outName,'stripIDs','x','y','land','za_med','za_mad','N','Nmt',...
         'tmax','tmin','tmean','-v7.3')
-
+    
     if make2mFlag
         fprintf('making 2m version\n')
-        outName2m = strrep(outName,'_10m.mat','_2m.mat');
 
+        outName2m = strrep(outName,'_10m.mat','_2m.mat');
+        
         % if strip segments were combined, need to expand offset vectors and fa
         % array to match orginal file list
         if length(fileNames0) ~= length(fileNames)
 
-            [~,stripid] =  cellfun(@fileparts,fileNames0,'uniformoutput',0);
+            [~,stripid0] =  cellfun(@fileparts,fileNames0,'uniformoutput',0);
+            stripid0 =  cellfun(@(x) x(1:47),stripid0,'uniformoutput',0);
+
+            [~,stripid] =  cellfun(@fileparts,fileNames,'uniformoutput',0);
             stripid =  cellfun(@(x) x(1:47),stripid,'uniformoutput',0);
-            [~,~,strip_ind] = unique(stripid);
 
-            dZ = dZ(strip_ind);
-            dX = dX(strip_ind);
-            dY = dY(strip_ind);
+            dZ0 = nan(size(stripid0));
+            dX0 = nan(size(stripid0));
+            dY0 = nan(size(stripid0));
 
-            fa = fa(:,:,strip_ind);
+            fa0 = false([size(fa,[1 2]),length(stripid0)]);
 
+            for i=1:length(stripid0)
+                ind = find(strcmp(stripid0(i),stripid));
+                if isempty(ind)
+                    continue
+                end
+                dZ0(i) = dZ(ind);
+                dX0(i) = dX(ind);
+                dY0(i) = dY(ind);
+                fa0(:,:,i) = fa(:,:,ind);
+            end
+        else
+            dZ0 = dZ;
+            dX0 = dX;
+            dY0 = dY;
         end
 
-        make2m(fileNames0,x,y,dZ,dX,dY,land,fa,outName2m);
+        qc.x = cell(size(dZ0));
+        qc.y = cell(size(dZ0));
+
+        if qcFlag
+
+            [~,names0] =  cellfun(@fileparts,fileNames0,'uniformoutput',0);
+            [~,metaNames] =  cellfun(@fileparts,meta.fileName,'uniformoutput',0);
+
+            [~,ind,ind0] = intersect(metaNames, names0);
+
+            qc.x(ind0) = meta.qc.x(ind);
+            qc.y(ind0) = meta.qc.y(ind);
+            
+        end
+        
+        fileNames0 = strrep(fileNames0,'_10m.tif','.tif');
+
+        make2m(fileNames0,x,y,dZ0,dX0,dY0,land,fa0,qc,outName2m);
     end
     
 end
 
-function make2m(fileNames,x,y,dZ,dX,dY,land,fa,outName)
+function make2m(fileNames,x,y,dZ,dX,dY,land,fa,qc,outName)
 
 % make date vector
 [~,name] =  cellfun(@fileparts,fileNames,'uniformoutput',0);
@@ -698,6 +748,8 @@ dY(n_missing) = [];
 fileNames(n_missing) = [];
 fa(:,:,n_missing) = [];
 t(n_missing) = [];
+qc.x(n_missing) = [];
+qc.y(n_missing) = [];
 
 % set nan dX and dY to zeros for vertical shift only
 dX(isnan(dX)) = 0;
@@ -706,7 +758,21 @@ dY(isnan(dY)) = 0;
 fileNames = strrep(fileNames,'_10m.tif','.tif');
 
 [x,y,z,~,mt] =extractSubGrid(fileNames,min(x),max(x),...
-    min(y),max(y),2);
+    min(y),max(y),2,'applyBitmask',false);
+
+% apply qc masks if provided
+nn = find(~cellfun( @isempty, qc.x));
+for j=nn
+    ztmp = z(:,:,j);
+    BW = false(size(ztmp));
+    for k=1:length(qc.x{ind(j)})
+        BW = BW | roipoly(x,y,ztmp,qc.x{ind(j)}{k},...
+            qc.y{ind(j)}{k});
+    end
+    ztmp(BW) = NaN;
+    z(:,:,j) = ztmp;
+    clear BW ztmp
+end
 
 % merge segmentsfrom same strips
 % dont get offsets between segs in same strip:make a vector of z's
@@ -770,7 +836,6 @@ for k=1:size(z,3)
 end
 
 za_med = nanmedian(za,3);
-%za_std =  nanstd(za,[],3);
 za_mad = mad(za,1,3);
 N = uint8(sum(~isnan(za),3));
 Nmt = uint8(sum(mta,3));
@@ -789,44 +854,6 @@ tmean = nanmean(t,3);
 tmax = uint16(tmax);
 tmin = uint16(tmin);
 tmean = uint16(tmean);
-
-
-% Incomplete attempt at code for retrieving dates of median values
-% [za_sort,n]  = sort(za,3);
-% isodd=logical(mod(single(N),2));
-% n1=zeros(size(N),'uint8');
-% n2=zeros(size(N),'uint8');
-%
-% n1(isodd & N > 0) = uint8(ceil(single(N(isodd & N > 0))./2));
-% n2(isodd & N > 0) = n1(isodd & N > 0);
-%
-% n1(~isodd & N > 0) = uint8(single(N(~isodd & N > 0))./2);
-% n2(~isodd & N > 0) = n1(~isodd & N > 0)+1;
-%
-% [col,row] = meshgrid((1:size(za,2))',1:size(za,1));
-%
-% n1(N == 0) = [];
-% n2(N == 0) = [];
-% row(N == 0) = [];
-% col(N == 0) = [];
-%
-% ind1 = sub2ind(size(za),row(:),col(:),n1(:));
-% ind2 = sub2ind(size(za),row(:),col(:),n2(:));
-%
-% za1 = za_sort(ind1);
-% za2 = za_sort(ind2);
-%
-% za_med = nan(size(za,1),size(za,2),'single');
-% ind = sub2ind(size(za_med),row(:),col(:));
-% za_med(ind) = (za1+za2)./2;
-%
-% tmed= zeros(size(za,1),size(za,2),'uint16');
-% t_med(ind) = (ta1+ta2)./2;
-%
-% t =
-%
-% za1 = za_sort(ind1);
-% za2 = za_sort(ind2);
 
 fprintf('saving stripIDs, x, y za_med land za_mad N tmax tmin tmean to %s\n',outName)
 save(outName,'stripIDs','x','y','za_med','land','za_mad','N','Nmt','tmax','tmin','tmean','-v7.3');
