@@ -60,6 +60,8 @@ def main():
             help="submit tasks to PBS")
     parser.add_argument("--rerun", action='store_true', default=False,
             help="rerun tile, behavior determined by redoFlag in Matlab code")
+    parser.add_argument("--rerun-without-cleanup", action='store_true', default=False,
+            help="rerun tile without attempting to clean up potentially corrupted subtiles")
     parser.add_argument("--sort-fix", action="store_true", default=False,
             help="run tile with buildSubTilesSortFix script")
     parser.add_argument("--make-10m-only", action='store_true', default=False,
@@ -88,6 +90,9 @@ def main():
     if args.water_tile_dir is None:
         args.water_tile_dir = waterTileDir_dict[args.project]
 
+    if args.rerun and args.rerun_without_cleanup:
+        parser.error("--rerun and --rerun-without-cleanup are mutually exclusive")
+
     ## Verify qsubscript
     if args.qsubscript is None:
         qsubpath = os.path.join(scriptdir,'qsub_buildSubTiles.sh')
@@ -103,7 +108,7 @@ def main():
     if args.sort_fix:
         matlab_script = 'buildSubTilesSortFix'
 
-    make2m_arg = '' if args.make_10m_only else ",'make2m'"
+    make2m_arg = 'false' if args.make_10m_only else 'true'
 
     i=0
     if len(tiles) > 0:
@@ -139,24 +144,32 @@ def main():
                     os.makedirs(tile_dstdir)
             dstfps = glob.glob(os.path.join(tile_dstdir,'{}_*2m.mat'.format(tile)))
 
-            run_tile = True            
-            if args.rerun and not args.sort_fix:
+            run_tile = True
+            if args.sort_fix or args.rerun_without_cleanup:
+                pass
+            elif args.rerun:
                 print('Verifying tile {} before rerun'.format(tile))
-                if os.path.isfile(os.path.join(tile_dstdir,'{}_10000_2m.mat'.format(tile))):
-                    print('Tile seems complete ({}_10000_2m.mat exists)'.format(tile))
-                    run_tile = False
+                if args.make_10m_only:
+                    if os.path.isfile(os.path.join(tile_dstdir,'{}_10000_10m.mat'.format(tile))):
+                        print('Tile seems complete ({}_10000_10m.mat exists)'.format(tile))
+                        run_tile = False
+
+                if not args.make_10m_only:
+                    if os.path.isfile(os.path.join(tile_dstdir,'{}_10000_2m.mat'.format(tile))):
+                        print('Tile seems complete ({}_10000_2m.mat exists)'.format(tile))
+                        run_tile = False
                 
-                ## clean up subtiles with only 10m version
-                dstfps_10m = glob.glob(os.path.join(tile_dstdir,'{}_*10m.mat'.format(tile)))
-                for dstfp_10m in dstfps_10m:
-                    dstfp_2m = dstfp_10m.replace('10m.mat','2m.mat')
-                    if not os.path.isfile(dstfp_2m):
-                        print('Removing 10m subtile missing 2m component: {}'.format(os.path.basename(dstfp_10m)))
-                        run_tile = True
-                        if not args.dryrun:
-                            os.remove(dstfp_10m)
+                    ## clean up subtiles with only 10m version
+                    dstfps_10m = glob.glob(os.path.join(tile_dstdir,'{}_*10m.mat'.format(tile)))
+                    for dstfp_10m in dstfps_10m:
+                        dstfp_2m = dstfp_10m.replace('10m.mat','2m.mat')
+                        if not os.path.isfile(dstfp_2m):
+                            print('Removing 10m subtile missing 2m component: {}'.format(os.path.basename(dstfp_10m)))
+                            run_tile = True
+                            if not args.dryrun:
+                                os.remove(dstfp_10m)
             
-            if len(dstfps) > 0 and not args.rerun and not args.sort_fix:
+            elif len(dstfps) > 0:
                 print('{} subtiles exists, skipping'.format(tile))
                 run_tile = False
             
@@ -165,7 +178,7 @@ def main():
                 i+=1
                 if args.pbs:
                     job_name = 'bst_{}'.format(tile)
-                    cmd = r'qsub -N {1} -v p1={2},p2={3},p3={4},p4={5},p5={6},p6={7},p7={8},p8={9},p9={10},p10="{11}" {0}'.format(
+                    cmd = r'qsub -N {1} -v p1={2},p2={3},p3={4},p4={5},p5={6},p6={7},p7={8},p8={9},p9={10},p10={11} {0}'.format(
                         qsubpath,
                         job_name,
                         scriptdir,  #p1
