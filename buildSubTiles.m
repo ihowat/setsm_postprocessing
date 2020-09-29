@@ -160,6 +160,7 @@ end
 %if tileDefs is filename, load it
 if ischar(tileDefs)
     tileDefs=load(tileDefs);
+
 end
 
 if startsWith(tileName,'utm')
@@ -709,6 +710,7 @@ for n=nstrt:subN
             dZ0 = dZ;
             dX0 = dX;
             dY0 = dY;
+            fa0 = fa;
         end
 
         qc.x = cell(size(dZ0));
