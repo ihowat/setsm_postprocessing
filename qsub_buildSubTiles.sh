@@ -34,7 +34,7 @@ echo "var8: ${p9}"
 echo "var9: ${p10}"
 echo
 
-echo matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}','${p5}','${p6}','${p7}','landTile','${p8}','refDemFile','${p9}'${p10}); exit"
-time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}','${p5}','${p6}','${p7}','landTile','${p8}','refDemFile','${p9}'${p10}); exit"
+echo matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}','${p5}','${p6}','${p7}','landTile','${p8}','refDemFile','${p9}','make2m',${p10}); exit"
+time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}','${p5}','${p6}','${p7}','landTile','${p8}','refDemFile','${p9}','make2m',${p10}); exit"
 
 echo "Done"
