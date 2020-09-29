@@ -1,8 +1,8 @@
-function mosaic(db,tiles,res,outdir,varargin)
+function mosaic(db,tiles,res,outdir,projstr,varargin)
 % MOSAIC upper level function for mosaicking DEM strips to a set of tiles
 %
-%  mosaic(db,tiles,res,outdir)
-%  mosaic(db,tiles,res,outdir,gcp)
+%  mosaic(db,tiles,res,outdir,projstr)
+%  mosaic(db,tiles,res,outdir,projstr,gcp)
 
 buffer=100;
 
@@ -100,7 +100,7 @@ for i=1:length(tilef)
         z=z(buffer+1:end-buffer,buffer+1:end-buffer);
         z(isnan(z)) = -9999;
         
-        writeGeotiff(OutDemName,x,y,z,4,-9999,'polar stereo north')
+        writeGeotiff(OutDemName,x,y,z,4,-9999,projstr)
         clear z
     end
     
@@ -108,7 +108,7 @@ for i=1:length(tilef)
     if ~exist(OutMatchtagName,'file');
         load(fi,'mt');
         mt =mt(buffer+1:end-buffer,buffer+1:end-buffer);
-        writeGeotiff(OutMatchtagName,x,y,mt,1,0,'polar stereo north')
+        writeGeotiff(OutMatchtagName,x,y,mt,1,0,projstr)
         clear mt
     end
     
@@ -116,7 +116,7 @@ for i=1:length(tilef)
     if ~exist(OutOrthoName ,'file');
         load(fi,'or');
         or =or(buffer+1:end-buffer,buffer+1:end-buffer);
-        writeGeotiff(OutOrthoName ,x,y,or,2,0,'polar stereo north')
+        writeGeotiff(OutOrthoName ,x,y,or,2,0,projstr)
         clear or
     end;
     
@@ -124,7 +124,7 @@ for i=1:length(tilef)
     if ~exist(OutDaynumName,'file');
         load(fi,'dy');
         dy =dy(buffer+1:end-buffer,buffer+1:end-buffer);
-        writeGeotiff(OutDaynumName,x,y,dy,2,0,'polar stereo north')
+        writeGeotiff(OutDaynumName,x,y,dy,2,0,projstr)
         clear dy
     end
 

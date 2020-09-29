@@ -4,17 +4,17 @@ function  [dZ,dX,dY,global_ids] = adjustOffsets(offsets,varargin)
 %[dZ,dX,dY,dem_index] = adjustOffsets(offsets) returns the optimal shifts in x,y,z 
 % given the offsets. Inarg "offsets" is a structure with fields:
 % 
-%                     i: [n×1 double] dem 1 index
-%                     j: [n×1 double] dem 2 index
-%                    dz: [n×1 double] z offset (dem 1 - dem 2)
-%                    dx: [n×1 double] x offset (dem 1 - dem 2)
-%                    dy: [n×1 double] y offset (dem 1 - dem 2)
-%                   dze: [n×1 double] z offset 1-sigma error
-%                   dxe: [n×1 double] x offset 1-sigma error
-%                   dye: [n×1 double] y offset 1-sigma error
-%         mean_dz_coreg: [n×1 double] mean diff in z after corgestration
-%       median_dz_coreg: [n×1 double] median diff in z after corgestration
-%        sigma_dz_coreg: [n×1 double] std dev of diff in z after corgestration
+%                     i: [nÃ—1 double] dem 1 index
+%                     j: [nÃ—1 double] dem 2 index
+%                    dz: [nÃ—1 double] z offset (dem 1 - dem 2)
+%                    dx: [nÃ—1 double] x offset (dem 1 - dem 2)
+%                    dy: [nÃ—1 double] y offset (dem 1 - dem 2)
+%                   dze: [nÃ—1 double] z offset 1-sigma error
+%                   dxe: [nÃ—1 double] x offset 1-sigma error
+%                   dye: [nÃ—1 double] y offset 1-sigma error
+%         mean_dz_coreg: [nÃ—1 double] mean diff in z after corgestration
+%       median_dz_coreg: [nÃ—1 double] median diff in z after corgestration
+%        sigma_dz_coreg: [nÃ—1 double] std dev of diff in z after corgestration
 %
 % [...] = adjustOffsets(offsets,'parameter',value) specifies filter values
 % for ignoring pairwise offsets. Paremeters and defaults are:

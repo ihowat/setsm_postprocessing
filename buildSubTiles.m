@@ -42,6 +42,7 @@ buffer=subtileSize*.1; % size of tile/subtile boundary buffer (10%)
 maxNumberOfStrips=100; % maximum number of strips to load in subtile
 refDemFile = ''; % optional refDemFile name palce holder
 minStripOverlap = 0.1; % minimum frac strip overlap of subtile
+projection = ''; % projection string for tile scheme
 
 % Parse varargins
 make2mFlag=false; % make 2m version or not
@@ -91,6 +92,12 @@ if ~isempty(n)
     nstrt = varargin{n+1};
 end
 
+n = find(strcmpi(varargin,'projection'));
+if ~isempty(n)
+    projection = varargin{n+1};
+end
+fprintf('projection = %s\n',projection)
+
 %if output directory doesnt already exist, make it
 if ~exist(outDir,'dir')
     mkdir(outDir)
@@ -105,9 +112,42 @@ if ischar(meta)
     meta=load(meta);
 end
 
-if ~isfield(meta,'scene_alignment_meanrmse')
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% PGC TODO:
+%% Restore commented-out field check and remove OTF
+%% field population after we move away from old-style
+%% strip dbase compilation and start using the new
+%% shapefile dbase method with initializeMosaic.m
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%if ~isfield(meta,'scene_alignment_meanrmse')
+%    error('missing scene alignment field in meta structure')
+%end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+meta.fileName = strrep(meta.fileName, '_meta.txt', '_dem_10m.tif');
+
+if isfield(meta,'avg_rmse')
+    % this is from an old version of the meta files that used 0 in mean
+    error('avg_rmse field in meta structure, needs to be updated')
+elseif isfield(meta,'scene_alignment')
+    % need to rm zeros (first scene) and nans (unused redundant scenes),
+    % strips w/ 1 scene will be NaN
+    meta.scene_alignment_meanrmse = cellfun(@(x)...
+        mean(x.rmse(x.rmse~=0 & ~isnan(x.rmse))), meta.scene_alignment);
+elseif ~isfield(meta,'scene_alignment_meanrmse')
     error('missing scene alignment field in meta structure')
 end
+
+if ~isfield(meta,'A')
+    % get strip areas and alignment stats for quality selection
+    meta.A = cellfun(@(x,y) polyarea(x,y), meta.x,meta.y);
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 qcFlag = false;
 if isfield(meta,'qc')
@@ -115,20 +155,42 @@ if isfield(meta,'qc')
     qcFlag = true;
 end
 
-% get strip areas and alignment stats for quality selection
-meta.A = cellfun(@(x,y) polyarea(x,y), meta.x,meta.y);
-
 %% Initialize tile definition
 
 %if tileDefs is filename, load it
 if ischar(tileDefs)
     tileDefs=load(tileDefs);
+
+end
+
+if startsWith(tileName,'utm')
+    sl = split(tileName,'_');
+    tilePrefix = [sl{1},'_'];
+    tileName_in_tileDef = strjoin(sl(2:3),'_');
+else
+    tilePrefix = '';
+    tileName_in_tileDef = tileName;
+end
+
+% Get tile projection information, esp. from UTM tile name
+if isempty(projection) && isfield(tileDefs,'projstr')
+    projection = tileDefs.projstr;
+end
+[tileProjName,projection] = getProjName(tileName,projection);
+if isempty(projection)
+    error("'projection' must be provided by either varargin or as field in tile definition structure");
+end
+
+% trim strip database to only strips with a projection matching the tile
+if isfield(meta,'strip_projection_name')
+    in = strcmp(meta.strip_projection_name, tileProjName);
+    meta = structfun(@(x) x(in), meta,'uniformoutput',0);
 end
 
 % tileDefs is a stucture, find this tile and extract range
 if isstruct(tileDefs)
-    tileInd = find(strcmp(tileDefs.I,tileName));
-    
+    tileInd = find(strcmp(tileDefs.I,tileName_in_tileDef));
+
     % get tile boundaries
     x0=tileDefs.x0(tileInd);
     y0=tileDefs.y0(tileInd);
@@ -185,7 +247,11 @@ if ~isempty(subTileFiles)
     % names is {tilex}_{tily}_{subtilenum}_....
     [~,subTileName] = cellfun(@fileparts,subTileFiles,'uniformoutput',0);
     subTileName=cellfun(@(x) strsplit(x,'_'),subTileName,'uniformoutput',0);
-    subTileNum = cellfun(@(x) str2num(x{3}),subTileName);
+    if length(subTileName) > 0 && startsWith(subTileName{1}{1},'utm')
+        subTileNum = cellfun(@(x) str2num(x{4}),subTileName);
+    else
+        subTileNum = cellfun(@(x) str2num(x{3}),subTileName);
+    end
     
     % sort subtilefiles by ascending subtile number order
     [subTileNum,n] = sort(subTileNum); % sort the numbers
@@ -611,25 +677,25 @@ for n=nstrt:subN
     
     if make2mFlag
         fprintf('making 2m version\n')
-        
+
         outName2m = strrep(outName,'_10m.mat','_2m.mat');
         
         % if strip segments were combined, need to expand offset vectors and fa
         % array to match orginal file list
         if length(fileNames0) ~= length(fileNames)
-                        
+
             [~,stripid0] =  cellfun(@fileparts,fileNames0,'uniformoutput',0);
             stripid0 =  cellfun(@(x) x(1:47),stripid0,'uniformoutput',0);
-            
+
             [~,stripid] =  cellfun(@fileparts,fileNames,'uniformoutput',0);
             stripid =  cellfun(@(x) x(1:47),stripid,'uniformoutput',0);
-           
+
             dZ0 = nan(size(stripid0));
             dX0 = nan(size(stripid0));
             dY0 = nan(size(stripid0));
-            
+
             fa0 = false([size(fa,[1 2]),length(stripid0)]);
-            
+
             for i=1:length(stripid0)
                 ind = find(strcmp(stripid0(i),stripid));
                 if isempty(ind)
@@ -646,24 +712,24 @@ for n=nstrt:subN
             dY0 = dY;
             fa0 = fa;
         end
-        
+
         qc.x = cell(size(dZ0));
         qc.y = cell(size(dZ0));
-        
+
         if qcFlag
-            
+
             [~,names0] =  cellfun(@fileparts,fileNames0,'uniformoutput',0);
             [~,metaNames] =  cellfun(@fileparts,meta.fileName,'uniformoutput',0);
-            
+
             [~,ind,ind0] = intersect(metaNames, names0);
-            
+
             qc.x(ind0) = meta.qc.x(ind);
             qc.y(ind0) = meta.qc.y(ind);
             
         end
         
         fileNames0 = strrep(fileNames0,'_10m.tif','.tif');
-        
+
         make2m(fileNames0,x,y,dZ0,dX0,dY0,land,fa0,qc,outName2m);
     end
     

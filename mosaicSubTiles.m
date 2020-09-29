@@ -10,7 +10,7 @@ function mosaicSubTiles(varargin)
 % output as strrep(outName,'.mat','.tif'). Mosaic extend deteremined
 % from subtile extents.
 %
-% mosaicSubTiles(...,'quad') only mosaics the subtiles with the quadrant of
+% mosaicSubTiles(...,'quadrant') only mosaics the subtiles with the quadrant of
 % the full tile given by the x_y quad string '1_1','1_2','2_1','2_2'
 %
 % version 2:
@@ -57,7 +57,14 @@ subTileFiles=cellfun( @(x) [subTileDir,'/',x],{subTileFiles.name},'uniformoutput
 % names is {tilex}_{tily}_{subtilenum}_....
 [~,subTileName] = cellfun(@fileparts,subTileFiles,'uniformoutput',0);
 subTileName=cellfun(@(x) strsplit(x,'_'),subTileName,'uniformoutput',0);
-subTileNum = cellfun(@(x) str2num(x{3}),subTileName);
+if length(subTileName) > 0 && startsWith(subTileName{1}{1},'utm')
+    subTileNum = cellfun(@(x) str2num(x{4}),subTileName);
+else
+    subTileNum = cellfun(@(x) str2num(x{3}),subTileName);
+end
+
+% Get tile projection information, esp. from UTM tile name
+[tileProjName,projection] = getProjName(subTileName{1}{1},projection);
 
 % sort subtilefiles by ascending subtile number order
 [subTileNum,n] = sort(subTileNum);
@@ -116,23 +123,23 @@ if ~exist('x0','var')
     % lower-left subtile
     m = matfile(subTileFiles{1});
     x0 = m.x(1,1);
-    
+
     % upper-right subtile
     m = matfile(subTileFiles{end});
     x1 = m.x(1,end);
-    
+
     % find upper right subtile from each 100th file
     mod100subTileNum = mod(subTileNum,100);
     mod100subTileNum(mod100subTileNum == 0) = 100;
-    
+
     [~,nMinRow] =  min(mod100subTileNum);
     m = matfile(subTileFiles{nMinRow});
     y0 = m.y(end,1);
-    
+
     [~,nMaxRow] =  max(mod100subTileNum);
     m = matfile(subTileFiles{nMaxRow});
     y1 = m.y(1,1);
-    
+
 end
 
 % make a polyshape out of boundary for checking subtile overlap

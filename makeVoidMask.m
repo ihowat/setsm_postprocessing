@@ -8,14 +8,18 @@ function makeVoidMask(subTileName)
 % subTileName example: 49_10_1_1
 
 sl = split(subTileName,'_');
-tileName = strjoin(sl(1:2),'_');
-demDir = 'V:\pgc\data\scratch\claire\pgc\arcticdem\mosaic\2m_v4';
+if startsWith(sl{1},'utm')
+    tileName = strjoin(sl(1:3),'_');
+else
+    tileName = strjoin(sl(1:2),'_');
+end
+demDir = 'V:\pgc\data\elev\dem\setsm\ArcticDEM\mosaic\v4.1\2m';
 demFile = dir([demDir,'/',tileName,'/',subTileName,'_2m_dem.tif']);
 demFile = cellfun(@(x) [demDir,'/',tileName,'/',x], {demFile.name}, 'uniformOutput', false);
 
 fprintf('Loading tile %s water mask\n',tileName)
 waterMask='~/49_10_water.tif';
-waterTileDir='V:\pgc\data\scratch\claire\pgc\arcticdem\coastline\global_surface_water\tiles_v2';
+waterTileDir='V:\pgc\data\projects\arcticdem\watermasks\global_surface_water\tiled_watermasks';
 waterMask = dir([waterTileDir,'/',tileName,'_water.tif']);
 waterMask = cellfun(@(x) [waterTileDir,'/',x], {waterMask.name}, 'uniformOutput',false);
 if isempty(waterMask)

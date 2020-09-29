@@ -7,7 +7,16 @@ function ice = getTileIceMask(iceTileDir,tileName,x0,x1,y0,y1,dx)
 % coordinate range x0,x1,y0,y1 - reads neigboring tiles and pulls needed
 % data for buffers.
 
-tileNum = strsplit(tileName,'_');
+if startsWith(tileName,'utm')
+    sl = split(tileName,'_');
+    tilePrefix = [sl{1},'_'];
+    tileName_in_tileDef = strjoin(sl(2:3),'_');
+else
+    tilePrefix = '';
+    tileName_in_tileDef = tileName;
+end
+
+tileNum = strsplit(tileName_in_tileDef,'_');
 tileCol = str2num(tileNum{1});
 tileRow = str2num(tileNum{2});
 tileCol = [tileCol;tileCol  ;tileCol  ;tileCol+1; tileCol-1; tileCol+1; tileCol+1; tileCol-1; tileCol-1];
@@ -17,12 +26,18 @@ ice.x = x0:dx:x1;
 ice.y = y1:-dx:y0;
 ice.z = false(length(ice.y),length(ice.x));
 
+if ~isfolder(iceTileDir)
+    fprintf('getTileIceMask does not exist: %s\n', iceTileDir)
+    fprintf('Assuming all area is not ice, please fix!\n')
+    return
+end
+
 %%
 i=1;
 for i=1:length(tileRow)
     
  
-    iceTileName=[iceTileDir,'/',sprintf('%02d',tileCol(i)),'_',...
+    iceTileName=[iceTileDir,'/',tilePrefix,sprintf('%02d',tileCol(i)),'_',...
         sprintf('%02d',tileRow(i)),'_ice.tif'];
 
        

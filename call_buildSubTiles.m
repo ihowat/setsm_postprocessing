@@ -7,6 +7,7 @@ if ismac
     addpath('/Users/ihowat/unity-home/demtools');
     waterTileDir='~/data/pgc_projects/ak_water_rasters_v2';
     refDemFile='~/tandemx_alaska_mosaic_3413_tap90m.tif';
+    projstr='polar stereo north';
     % coastlinePolyFile='/Users/ihowat/gdrive/projects/earthdem/gshhg_237_alaska_coastline_3413.mat';
     % lakePolyFile='/Users/ihowat/gdrive/projects/earthdem/gshhg_237_alaska_lakes_3413.mat';
 else
@@ -16,9 +17,10 @@ else
     addpath('/home/howat.4/demtools');
     waterTileDir='/fs/byo/howat-data/pgc_projects/ak_water_rasters_v2';
     refDemFile='/fs/project/howat.4/EarthDEM/tandemx_alaska_mosaic_3413_tap90m.tif';
+    projstr='polar stereo north';
     %     coastlinePolyFile='gshhg_237_alaska_coastline_3413.mat';
     %     lakePolyFile='gshhg_237_alaska_lakes_3413.mat';
 end
 
 
-buildSubTiles(tileName,outDir,tileDefFile,databaseFile,waterTileDir,refDemFile)
+buildSubTiles(tileName,outDir,tileDefFile,databaseFile,waterTileDir,refDemFile,'projstr',projstr)

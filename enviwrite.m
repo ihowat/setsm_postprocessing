@@ -26,8 +26,9 @@ z = zr;
 
 % Default option values
 fmt = 4;                 % floating point format
-proj = 'UTM';
-hemi = 'north';
+proj = [];
+hemi = [];
+zone = [];
 datum = 'wgs-84';
 units = 'Meters';
 proj_info = [];
@@ -67,20 +68,52 @@ for n = (minarg+1:2:nargin-1)
     end
 end
 
-
-switch lower(proj)
-    
-    case 'polar stereo north'
-        proj_info = '31, 6378137.0, 6356752.3, 70.000000, -45.000000, 0, 0, WGS-84, Polar Stereo North, units=Meters';
-
-     case 'polar stereo south'   
-        proj_info = '31, 637813.0, 635674.5, -71.000000, 0.000000, 0, 0, WGS-84, Polar Stereo South, units=Meters';
-        
-    case 'bamber'
-         proj_info = '31, 6378137.0, 6356752.3, 70.000000, -39.000000, 1, 1, WGS-84, bamber, units=Meters';
-    case 'bamber2'
-         proj_info = '31, 6378137.0, 6356752.3, 71.000000, -39.000000, 1, 1, WGS-84, bamber, units=Meters';
+if isempty(proj)
+    error('''proj'' parameter must be provided.');
 end
+
+proj_name = '';
+
+if strcmpi(proj, 'utm')
+    proj_name = 'UTM';
+    if isempty(hemi) || isempty(zone)
+        error('Both ''hemi'' and ''zone'' parameters must be provided when ''proj''=''UTM''');
+    end
+else
+    switch lower(proj)
+
+        case 'polar stereo north'
+            proj_name = 'Polar Stereographic';
+            proj_info = '31, 6378137.0, 6356752.3, 70.000000, -45.000000, 0, 0, WGS-84, Polar Stereo North, units=Meters';
+
+        case 'polar stereo south'
+            proj_name = 'Polar Stereographic';
+            proj_info = '31, 637813.0, 635674.5, -71.000000, 0.000000, 0, 0, WGS-84, Polar Stereo South, units=Meters';
+
+        case 'canada albers equal area conic';
+            proj_name = 'Albers Equal Area Conic';
+            proj_info = '9, 6378137, 6356752.314140356, 40, -96, 0, 0, 50, 70, North America 1983, Albers Conical Equal Area';
+            datum = 'North America 1983';
+
+        case 'wgs84';
+            proj_name = 'Geographic Lat/Lon';
+            coord_sys_string = '{GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]}';
+            datum = 'WGS-84';
+
+        case 'bamber'
+            proj_name = 'bamber';
+            proj_info = '31, 6378137.0, 6356752.3, 70.000000, -39.000000, 1, 1, WGS-84, bamber, units=Meters';
+
+        case 'bamber2'
+            proj_name = 'bamber2';
+            proj_info = '31, 6378137.0, 6356752.3, 71.000000, -39.000000, 1, 1, WGS-84, bamber, units=Meters';
+    end
+end
+
+if isempty(proj_name)
+    error('''proj'' parameter is not currently handled: %s', proj);
+end
+
 
 if size(x,1) > 1 && size(x,2) > 1
     x = x(1,:);
@@ -135,11 +168,14 @@ fprintf(fid,'%s\n',['data type = ',num2str(fmt)]);
 fprintf(fid,'%s\n','interleave = bsq');
 fprintf(fid,'%s\n','sensor type = Unknown');
 fprintf(fid,'%s\n','byte order = 0');
-if strcmpi(proj,'UTM'); 
-fprintf(fid,'%s\n',['map info = { ',proj,', 1.000, 1.000, ',num2str(x1),', ',num2str(y1),', ',num2str(dx),', ',num2str(dy),', ',num2str(zone),', ',hemi,', ',datum,', units=',units,'}']);
+if strcmpi(proj,'utm')
+    fprintf(fid,'%s\n',['map info = { ',proj_name,', 1.000, 1.000, ',num2str(x1),', ',num2str(y1),', ',num2str(dx),', ',num2str(dy),', ',num2str(zone),', ',hemi,', ',datum,', units=',units,'}']);
+elseif strcmpi(proj,'wgs84')
+    fprintf(fid,'%s\n',['map info = { ',proj_name,', 1.000, 1.000, ',num2str(x1),', ',num2str(y1),', ',num2str(dx),', ',num2str(dy),',',datum,'}']);
+    fprintf(fid,'%s\n',['coordinate system string = {',coord_sys_string,'}']);
 else
-    fprintf(fid,'%s\n',['map info = { ',proj,', 1.000, 1.000, ',num2str(x1),', ',num2str(y1),', ',num2str(dx),', ',num2str(dy),',',datum,', units=',units,'}']);
+    fprintf(fid,'%s\n',['map info = { ',proj_name,', 1.000, 1.000, ',num2str(x1),', ',num2str(y1),', ',num2str(dx),', ',num2str(dy),',',datum,', units=',units,'}']);
     fprintf(fid,'%s\n',['projection info = {',proj_info,'}']);
-end;
+end
 fprintf(fid,'%s\n','wavelength units = Unknown');
 fclose(fid);% close the file
