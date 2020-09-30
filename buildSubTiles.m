@@ -699,8 +699,12 @@ for n=nstrt:subN
             dX0 = nan(size(stripid0));
             dY0 = nan(size(stripid0));
 
-            fa0 = false([size(fa,[1 2]),length(stripid0)]);
-
+            % not compatible < matlab 2019b
+            %fa0 = false([size(fa,[1 2]),length(stripid0)]);
+            
+            % back-compatible version
+            fa0 = false([size(fa,1),size(fa,2),length(stripid0)]);
+    
             for i=1:length(stripid0)
                 ind = find(strcmp(stripid0(i),stripid));
                 if isempty(ind)
