@@ -776,9 +776,9 @@ nn = find(~cellfun( @isempty, qc.x));
 for j=nn
     ztmp = z(:,:,j);
     BW = false(size(ztmp));
-    for k=1:length(qc.x{ind(j)})
-        BW = BW | roipoly(x,y,ztmp,qc.x{ind(j)}{k},...
-            qc.y{ind(j)}{k});
+    for k=1:length(qc.x{j})
+        BW = BW | roipoly(x,y,ztmp,qc.x{j}{k},...
+            qc.y{j}{k});
     end
     ztmp(BW) = NaN;
     z(:,:,j) = ztmp;
