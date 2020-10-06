@@ -773,15 +773,15 @@ fileNames = strrep(fileNames,'_10m.tif','.tif');
 
 % apply qc masks if provided
 nn = find(~cellfun( @isempty, qc.x));
-for j=nn
-    ztmp = z(:,:,j);
+for j=1:length(nn)
+    ztmp = z(:,:,nn(j));
     BW = false(size(ztmp));
-    for k=1:length(qc.x{j})
-        BW = BW | roipoly(x,y,ztmp,qc.x{j}{k},...
-            qc.y{j}{k});
+    for k=1:length(qc.x{nn(j)})
+        BW = BW | roipoly(x,y,ztmp,qc.x{nn(j)}{k},...
+            qc.y{nn(j)}{k});
     end
     ztmp(BW) = NaN;
-    z(:,:,j) = ztmp;
+    z(:,:,nn(j)) = ztmp;
     clear BW ztmp
 end
 
