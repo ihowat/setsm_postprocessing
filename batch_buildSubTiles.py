@@ -22,7 +22,7 @@ project_tileDefFile_dict = {
 project_databaseFile_dict = {
     'arcticdem': 'arcticDEMdatabase4_2m_v4_20200806.mat',
     'rema': 'REMAdatabase4_2m_v4_20200806.mat',
-    'earthdem': 'EarthDEMdatabase4_2m_v4_20200825_projname_utmcoords_europe.mat',
+    'earthdem': 'EarthDEMdatabase4_2m_v4_20201012_combined.mat',
 }
 waterTileDir_dict = {
     'arcticdem': '/mnt/pgc/data/projects/arcticdem/watermasks/global_surface_water/tiled_watermasks/',
@@ -37,7 +37,7 @@ def main():
     parser.add_argument("dstdir", help="target directory (tile subfolders will be created)")
     parser.add_argument("tiles", help="list of mosaic tiles, comma delimited")
 
-    parser.add_argument("--ref-dem", help="reference DEM (required for ArcticDEM & REMA, automatically selected "
+    parser.add_argument("--ref-dem", default=None, help="reference DEM (required for ArcticDEM & REMA, automatically selected "
                         "for EarthDEM by file path template {})".format(earthdem_ref_dem_template))
     parser.add_argument("--project", default=None, choices=project_choices,
                         help="sets the default value of project-specific arguments")
@@ -77,6 +77,13 @@ def main():
     dstdir = os.path.abspath(args.dstdir)
     scriptdir = os.path.abspath(os.path.dirname(sys.argv[0]))
 
+    matlab_script = 'buildSubTiles'
+    if args.sort_fix:
+        matlab_script = 'buildSubTilesSortFix'
+
+    make2m_arg = 'false' if args.make_10m_only else 'true'
+
+    ## Set default arguments by project setting
     if args.project is None and True in [arg is None for arg in [args.tile_def, args.strip_db, args.water_tile_dir]]:
         parser.error("--project arg must be provided if one of the following arguments is not provided: {}".format(
             ' '.join(["--tile-def", "--strip-db", "--water-tile-dir"])
@@ -90,6 +97,25 @@ def main():
     if args.water_tile_dir is None:
         args.water_tile_dir = waterTileDir_dict[args.project]
 
+    ## Verify path arguments
+    if not os.path.isdir(dstdir):
+        parser.error("srcdir does not exist: {}".format(dstdir))
+    if args.ref_dem is not None and not os.path.isfile(args.ref_dem):
+        parser.error("--ref-dem does not exist: {}".format(args.ref_dem))
+    if args.project == 'earthdem':
+        pass
+    else:
+        tile_def_abs = os.path.join(scriptdir, args.tile_def)
+        if not os.path.isfile(tile_def_abs):
+            parser.error("--tile-def file does not exit: {}".format(tile_def_abs))
+    strip_db_abs = os.path.join(scriptdir, args.strip_db)
+    if not os.path.isfile(strip_db_abs):
+        parser.error("--strip-db does not exist: {}".format(strip_db_abs))
+    if not os.path.isdir(args.water_tile_dir):
+        parser.error("--water-tile-dir does not exist: {}".format(args.water_tile_dir))
+    if not os.path.isdir(args.lib_path):
+        parser.error("--lib-path does not exist: {}".format(args.lib_path))
+
     if args.rerun and args.rerun_without_cleanup:
         parser.error("--rerun and --rerun-without-cleanup are mutually exclusive")
 
@@ -100,15 +126,6 @@ def main():
         qsubpath = os.path.abspath(args.qsubscript)
     if not os.path.isfile(qsubpath):
         parser.error("qsub script path is not valid: %s" %qsubpath)
-
-    if not os.path.isdir(dstdir):
-        parser.error("dstdir does not exist: {}".format(dstdir))
-
-    matlab_script = 'buildSubTiles'
-    if args.sort_fix:
-        matlab_script = 'buildSubTilesSortFix'
-
-    make2m_arg = 'false' if args.make_10m_only else 'true'
 
     i=0
     if len(tiles) > 0:
@@ -136,6 +153,10 @@ def main():
                         tile_def = tileDefFile_utm_south
                     else:
                         parser.error("UTM tile name prefix does not end with 'n' or 's' (e.g. 'utm10n'): {}".format(tile))
+
+                tile_def_abs = os.path.join(scriptdir, tile_def)
+                if not os.path.isfile(tile_def_abs):
+                    parser.error("tile def file does not exit: {}".format(tile_def_abs))
 
             ## if output does not exist, add to task list
             tile_dstdir = os.path.join(dstdir,tile,'subtiles')
@@ -198,7 +219,7 @@ def main():
 
                 ## else run matlab
                 else:
-                    cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); {2}('{3}','{4}','{5}','{6}','landTile','{7}','refDemFile','{8}'{9}); exit" """.format(
+                    cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); {2}('{3}','{4}','{5}','{6}','landTile','{7}','refDemFile','{8}','make2m',{9}); exit" """.format(
                         scriptdir,
                         args.lib_path,
                         matlab_script,

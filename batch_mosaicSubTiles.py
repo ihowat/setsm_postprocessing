@@ -28,7 +28,6 @@ def main():
     parser.add_argument("tiles", help="list of tiles, comma delimited")
     parser.add_argument("res", choices=['2','10'], help="resolution (2 or 10)")
 
-
     parser.add_argument("--lib-path", default=matlab_scripts,
             help="path to referenced Matlab functions (default={}".format(matlab_scripts))
     parser.add_argument("--project", default=None, choices=project_choices,
@@ -52,12 +51,27 @@ def main():
     srcdir = os.path.abspath(args.srcdir)
     scriptdir = os.path.abspath(os.path.dirname(sys.argv[0]))
 
+    matlab_script = 'mosaicSubTiles'
+
+    ## Set default arguments by project setting
     if args.project is None and True in [arg is None for arg in [args.tile_def]]:
         parser.error("--project arg must be provided if one of the following arguments is not provided: {}".format(
             ' '.join(["--tile-def"])
         ))
     if args.tile_def is None:
         args.tile_def = project_tileDefFile_dict[args.project]
+
+    ## Verify path arguments
+    if not os.path.isdir(srcdir):
+        parser.error("srcdir does not exist: {}".format(srcdir))
+    if not os.path.isdir(args.lib_path):
+        parser.error("--lib-path does not exist: {}".format(args.lib_path))
+    if args.project == 'earthdem':
+        pass
+    else:
+        tile_def_abs = os.path.join(scriptdir, args.tile_def)
+        if not os.path.isfile(tile_def_abs):
+            parser.error("--tile-def file does not exit: {}".format(tile_def_abs))
 
     ## Verify qsubscript
     if args.qsubscript is None:
@@ -66,11 +80,6 @@ def main():
         qsubpath = os.path.abspath(args.qsubscript)
     if not os.path.isfile(qsubpath):
         parser.error("qsub script path is not valid: %s" %qsubpath)
-
-    # if not os.path.isdir(dstdir):
-    #     parser.error("dstdir does not exist: {}".format(dstdir))
-
-    matlab_script = 'mosaicSubTiles'
 
     tasks = []
 
@@ -109,6 +118,10 @@ def main():
                         tile_def = tileDefFile_utm_south
                     else:
                         parser.error("UTM tile name prefix does not end with 'n' or 's' (e.g. 'utm10n'): {}".format(tile))
+
+                tile_def_abs = os.path.join(scriptdir, tile_def)
+                if not os.path.isfile(tile_def_abs):
+                    parser.error("tile def file does not exit: {}".format(tile_def_abs))
 
             if task.st == '':
                 dstfn = "{}_{}m.mat".format(task.t,args.res)
