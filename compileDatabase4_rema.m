@@ -9,20 +9,39 @@ end
 
 res=2;
 %dbase_in =[homeDir,'/data4/REMA/polarDEMdatabase_',num2str(res),'m.mat'];
-dbase_in='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/REMAdatabase4_2m_v4_20200723.mat';
-dbase_out='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/REMAdatabase4_2m_v4_20200806.mat';
+dbase_in='';
+dbase_out='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/REMAdatabase4_2m_v4_20201020.mat';
+
+reproject_list = strrep(dbase_out, '.mat', '_reproject_list.txt');
+if isfile(reproject_list) && ~isfile([reproject_list,'.bak'])
+    reproject_list_stat = dir(reproject_list);
+    if reproject_list_stat.bytes > 0
+        copyfile(reproject_list, [reproject_list,'.bak']);
+    end
+end
+reproject_list_fp = fopen(reproject_list, 'wt');
+
+%mosaic_zones_shp = '/mnt/pgc/data/projects/earthdem/EarthDEM_mosaic_zones_v4.shp';
+mosaic_zones_shp = 'EarthDEM_mosaic_zones_v4.shp';
+mosaic_zones_mapstruct = shaperead(mosaic_zones_shp);
+%mosaic_zones_mapstruct = shaperead(mosaic_zones_shp, 'UseGeoCoords',true);
+mosaic_zones_polyshape_arr = arrayfun(@(feat) polyshape(feat.X, feat.Y), mosaic_zones_mapstruct);
+
+proj4_projname_dict = containers.Map;
+proj4_geotiffinfo_dict = containers.Map;
+proj4_epsg_dict = containers.Map;
 
 %%% CHECK THIS SETTING %%%
-report_number_of_strips_to_append_but_dont_actually_append = true;
+report_number_of_strips_to_append_but_dont_actually_append = false;
 %%% CHECK THIS SETTING %%%
 
 regionDirs=[
-%    dir('/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/REMA/region/rema_*'),
-%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_*'),
+%    dir('/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_*/strips_v4/2m*'),
+    dir('/mnt/pgc/data/elev/dem/setsm/REMA/region/rema_*/strips_v4/2m*'),
+%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_*/strips_v4/2m*'),
 ];
 regionDirs=regionDirs([regionDirs.isdir]);
-regionDirs=cellfun(@(regionDir, regionName) [regionDir,'/',regionName,'/strips_v4/2m'], {regionDirs.folder}, {regionDirs.name},...
+regionDirs=cellfun(@(regionDir, regionName) [regionDir,'/',regionName], {regionDirs.folder}, {regionDirs.name},...
     'UniformOutput',false);
 
 
@@ -53,9 +72,16 @@ meta=[];
 
 i=1;
 for i=1:length(regionDirs)
-        
+
     regionDir=regionDirs{i};
-    
+
+    [~,stripResDirname,~] = fileparts(regionDir);
+    if strcmp(stripResDirname, '2m')
+        is_reprojected = false;
+    else
+        is_reprojected = true;
+    end
+
     if exist(regionDir,'dir')
 
 %        if exist('out0','var')
@@ -89,8 +115,10 @@ for i=1:length(regionDirs)
             fprintf('None found\n')
             continue
         end
-        [~,stripDnames,~] = cellfun(@fileparts, stripDirs, 'UniformOutput', false);
 
+
+        % check for duplicate strips
+        [~,stripDnames,~] = cellfun(@fileparts, stripDirs, 'UniformOutput', false);
         test_dup_stripids=stripDnames;
         k=1;
         for k=1:length(test_dup_stripids)
@@ -112,8 +140,10 @@ for i=1:length(regionDirs)
             return
         end
 
+
+        % difference strips with database to be appended to
         if exist('out0','var')
-            [~,IA] = intersect(stripDnames, stripDnames0);
+            [~,IA] = intersect(stripDirs, stripDirs0);
             stripDirs(IA) = [];
             if isempty(stripDirs)
                 fprintf('No new strips to add\n')
@@ -121,22 +151,23 @@ for i=1:length(regionDirs)
             end
         end
 
-        stripDirs_filtered={};
-        k=0;
-        j=1;
-        for j=1:length(stripDirs)
-            strippair_dir=stripDirs{j};
 
-            finfilecheck=dir([strippair_dir,'/*.fin']);
-            if isempty(finfilecheck); continue; end
+        if ~is_reprojected
+            % check for .fin file and data in strip folders
+            [~,stripDnames,~] = cellfun(@fileparts, stripDirs, 'UniformOutput', false);
 
-            demfilecheck=dir([strippair_dir,'/*dem.tif']);
-            if isempty(demfilecheck); continue; end
+            stripDirs_miss_fin_ind = cellfun(@(x, y) ~isfile([x,'/',y,'.fin']), stripDirs, stripDnames);
+            stripDirs_miss_data_ind = cellfun(@(x, y) ~isfile([x,'/',regexprep(y,'_v\d{6}',''),'_seg1_dem.tif']), stripDirs, stripDnames);
 
-            k=k+1;
-            stripDirs_filtered{k}=strippair_dir;
+            missing_fin_count = nnz(stripDirs_miss_fin_ind);
+            if missing_fin_count > 0
+                fprintf("WARNING! Found %d strippair folders with no .fin file:", missing_fin_count)
+                stripDirs(stripDirs_miss_fin_ind)
+            end
+
+            stripDirs(stripDirs_miss_fin_ind | stripDirs_miss_data_ind) = [];
         end
-        stripDirs=stripDirs_filtered;
+
 
         num_strips_to_add=length(stripDirs);
         fprintf('%d to add\n', num_strips_to_add);
@@ -144,7 +175,7 @@ for i=1:length(regionDirs)
         if report_number_of_strips_to_append_but_dont_actually_append
             continue
         end
-        
+
         k=1;
         last_print_len=0;
         for k=1:length(stripDirs)
@@ -153,8 +184,10 @@ for i=1:length(regionDirs)
             fprintf(repmat('\b', 1, last_print_len));
             last_print_len=fprintf('Reading strip (%d/%d): %s',k,num_strips_to_add,stripDir);
 
-            finFile=dir([stripDir,'/*.fin']);
-            if isempty(finFile); continue; end
+            if ~is_reprojected
+                finFile=dir([stripDir,'/*.fin']);
+                if isempty(finFile); continue; end
+            end
 
             metaFiles=dir([stripDir,'/*meta.txt']);
             if isempty(metaFiles); continue; end
@@ -164,10 +197,98 @@ for i=1:length(regionDirs)
             for j=1:length(metaFiles)
                 metaFile=metaFiles{j};
 %                fprintf('adding file %s\n',metaFile)
-                if isempty(meta)
-                    meta=readStripMeta(metaFile,'noSceneMeta');
+                strip_meta = readStripMeta(metaFile,'noSceneMeta');
+                strip_proj4 = strip_meta.strip_projection_proj4;
+
+
+                % populate strip meta "strip_projection_name" field
+                if any(strcmp(keys(proj4_projname_dict), strip_proj4))
+                    strip_projname = proj4_projname_dict(strip_proj4);
                 else
-                    meta(length(meta)+1)=readStripMeta(metaFile,'noSceneMeta');
+                    strip_projname = '';
+
+                    for mosaic_zone_ms_i = 1:length(mosaic_zones_mapstruct)
+                        mosaic_zone_feat = mosaic_zones_mapstruct(mosaic_zone_ms_i);
+
+                        cmd = sprintf('python proj_issame.py "%s" "EPSG:%d" ', strip_proj4, mosaic_zone_feat.epsg);
+                        [status, cmdout] = system(cmd);
+                        if ~isempty(cmdout)
+                            fprintf(['\n',cmdout,'\n']);
+                        end
+                        if status == 0
+                            strip_projname = mosaic_zone_feat.name;
+                            break;
+                        end
+                    end
+
+                    if isempty(strip_projname)
+                        fprintf('\nERROR! Could not find matching mosaic zone projection for strip PROJ.4 string: %s\n', strip_proj4);
+                    end
+
+                    proj4_projname_dict(strip_proj4) = strip_projname;
+                end
+
+                strip_meta.strip_projection_name = strip_projname;
+
+
+                if ~is_reprojected
+                    % determine if strip needs to be reprojected
+                    if any(strcmp(keys(proj4_geotiffinfo_dict), strip_proj4))
+                        strip_gtinfo = proj4_geotiffinfo_dict(strip_proj4);
+                    else
+                        demFile = strrep(metaFile, 'meta.txt', 'dem.tif');
+                        cmd = sprintf('python proj_issame.py "%s" "%s" ', demFile, strip_proj4);
+                        [status, cmdout] = system(cmd);
+                        if ~isempty(cmdout)
+                            fprintf(['\n',cmdout,'\n']);
+                        end
+                        if status ~= 0
+                            fprintf('\nProjection of strip DEM raster and PROJ.4 string in strip meta.txt file are not equal: %s, %s\n', demFile, strip_proj4);
+                        end
+                        strip_gtinfo = geotiffinfo(demFile);
+                        proj4_geotiffinfo_dict(strip_proj4) = strip_gtinfo;
+                    end
+
+                    [strip_lat, strip_lon] = projinv(strip_gtinfo, strip_meta.x, strip_meta.y);
+                    strip_poly = polyshape(strip_lon, strip_lat);
+                    mosaic_zones_overlapped = overlaps(strip_poly, mosaic_zones_polyshape_arr);
+                    mosaic_zones_overlapped_ms = mosaic_zones_mapstruct(mosaic_zones_overlapped);
+
+                    for mosaic_zone_ms_i = 1:length(mosaic_zones_overlapped_ms)
+                        mosaic_zone_ms = mosaic_zones_overlapped_ms(mosaic_zone_ms_i);
+
+                        reproject_strip = true;
+
+                        if any(strcmp(keys(proj4_epsg_dict), strip_proj4))
+                            if proj4_epsg_dict(strip_proj4) == mosaic_zone_ms.epsg
+                                reproject_strip = false;
+                            end
+                        else
+                            cmd = sprintf('python proj_issame.py "%s" "EPSG:%d" ', strip_proj4, mosaic_zone_ms.epsg);
+                            [status, cmdout] = system(cmd);
+                            if ~isempty(cmdout)
+                                fprintf(['\n',cmdout,'\n']);
+                            end
+                            if status == 0
+                                proj4_epsg_dict(strip_proj4) = mosaic_zone_ms.epsg;
+                                reproject_strip = false;
+                            end
+                        end
+
+                        if reproject_strip
+                            metaFile_reproj = strrep(metaFile, 'strips_v4/2m', ['strips_v4/2m_',mosaic_zone_ms.name]);
+                            if ~isfile(metaFile_reproj)
+                                fprintf(reproject_list_fp, "%s %s %d\n", metaFile, mosaic_zone_ms.name, mosaic_zone_ms.epsg);
+                            end
+                        end
+                    end
+                end
+
+
+                if isempty(meta)
+                    meta=strip_meta;
+                else
+                    meta(length(meta)+1)=strip_meta;
                 end
 
             end
@@ -175,6 +296,8 @@ for i=1:length(regionDirs)
         fprintf('\n')
     end
 end
+
+fclose(reproject_list_fp);
 
 if isempty(meta)
     fprintf('\nNo new records to add to database\n')
