@@ -22,7 +22,7 @@ project_tileDefFile_dict = {
 project_databaseFile_dict = {
     'arcticdem': 'arcticDEMdatabase4_2m_v4_20200806.mat',
     'rema': 'REMAdatabase4_2m_v4_20200806.mat',
-    'earthdem': 'EarthDEMdatabase4_2m_v4_20200825_projname_utmcoords_europe.mat',
+    'earthdem': 'EarthDEMdatabase4_2m_v4_20201012_combined.mat',
 }
 waterTileDir_dict = {
     'arcticdem': '/mnt/pgc/data/projects/arcticdem/watermasks/global_surface_water/tiled_watermasks/',
