@@ -142,7 +142,7 @@ def main():
             if not os.path.isdir(tile_dstdir):
                 if not args.dryrun:
                     os.makedirs(tile_dstdir)
-            dstfps = glob.glob(os.path.join(tile_dstdir,'{}_*2m.mat'.format(tile)))
+            dstfps = glob.glob(os.path.join(tile_dstdir,'{}_*m.mat'.format(tile)))
 
             run_tile = True
             if args.sort_fix or args.rerun_without_cleanup:
