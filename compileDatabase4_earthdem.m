@@ -351,6 +351,7 @@ out.satID=cellstr(stripNameChar(:,1:4))';
 
 out.creation_date = [out.creation_date{:}];
 out.strip_creation_date = [out.strip_creation_date{:}];
+out.A = [out.A{:}];
 
 fprintf('Writing %d new records to database file\n',length(out.fileName));
 if exist('out0','var')
