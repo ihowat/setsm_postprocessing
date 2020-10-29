@@ -165,21 +165,26 @@ def main():
                     os.makedirs(tile_dstdir)
             dstfps = glob.glob(os.path.join(tile_dstdir,'{}_*m.mat'.format(tile)))
 
+            if args.make_10m_only:
+                final_subtile_fp = os.path.join(tile_dstdir,'{}_10000_10m.mat'.format(tile))
+            else:
+                final_subtile_fp = os.path.join(tile_dstdir,'{}_10000_2m.mat'.format(tile))
+            finfile = final_subtile_fp.replace('.mat', '.fin')
+
             run_tile = True
             if args.sort_fix or args.rerun_without_cleanup:
                 pass
             elif args.rerun:
                 print('Verifying tile {} before rerun'.format(tile))
-                if args.make_10m_only:
-                    if os.path.isfile(os.path.join(tile_dstdir,'{}_10000_10m.mat'.format(tile))):
-                        print('Tile seems complete ({}_10000_10m.mat exists)'.format(tile))
-                        run_tile = False
+
+                if os.path.isfile(final_subtile_fp):
+                    print('Tile seems complete ({} exists)'.format(os.path.basename(final_subtile_fp)))
+                    run_tile = False
+                elif os.path.isfile(finfile):
+                    print('Tile seems complete ({} exists)'.format(os.path.basename(finfile)))
+                    run_tile = False
 
                 if not args.make_10m_only:
-                    if os.path.isfile(os.path.join(tile_dstdir,'{}_10000_2m.mat'.format(tile))):
-                        print('Tile seems complete ({}_10000_2m.mat exists)'.format(tile))
-                        run_tile = False
-                
                     ## clean up subtiles with only 10m version
                     dstfps_10m = glob.glob(os.path.join(tile_dstdir,'{}_*10m.mat'.format(tile)))
                     for dstfp_10m in dstfps_10m:
@@ -199,7 +204,7 @@ def main():
                 i+=1
                 if args.pbs:
                     job_name = 'bst_{}'.format(tile)
-                    cmd = r'qsub -N {1} -v p1={2},p2={3},p3={4},p4={5},p5={6},p6={7},p7={8},p8={9},p9={10},p10={11} {0}'.format(
+                    cmd = r'qsub -N {1} -v p1={2},p2={3},p3={4},p4={5},p5={6},p6={7},p7={8},p8={9},p9={10},p10={11},p11={12} {0}'.format(
                         qsubpath,
                         job_name,
                         scriptdir,  #p1
@@ -212,6 +217,7 @@ def main():
                         args.water_tile_dir,  #p8
                         ref_dem,  #p9
                         make2m_arg,  #p10
+                        finfile,  #p11
                     )
                     print(cmd)
                     if not args.dryrun:
@@ -219,7 +225,7 @@ def main():
 
                 ## else run matlab
                 else:
-                    cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); {2}('{3}','{4}','{5}','{6}','landTile','{7}','refDemFile','{8}','make2m',{9}); exit" """.format(
+                    cmd = """try; matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); {2}('{3}','{4}','{5}','{6}','landTile','{7}','refDemFile','{8}','make2m',{9}); catch e; disp(getReport(e)); exit(1); end; exit(0);" """.format(
                         scriptdir,
                         args.lib_path,
                         matlab_script,

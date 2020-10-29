@@ -91,7 +91,7 @@ def main():
                 for quad in quads:
                     tasks.append(Task(tile, quad))
             else:
-                tasks.append(Task(tile, ''))
+                tasks.append(Task(tile, 'null'))
 
 
     print("{} tasks found".format(len(tasks)))
@@ -123,25 +123,28 @@ def main():
                 if not os.path.isfile(tile_def_abs):
                     parser.error("tile def file does not exit: {}".format(tile_def_abs))
 
-            if task.st == '':
+            if task.st == 'null':
                 dstfn = "{}_{}m.mat".format(task.t,args.res)
             else:
                 dstfn = "{}_{}_{}m.mat".format(task.t,task.st,args.res)
             dstfp = os.path.join(srcdir, task.t, dstfn)
             sem = os.path.join(srcdir, task.t, dstfn.replace('.mat','_empty.txt'))
+            finfile = os.path.join(srcdir, task.t, dstfn.replace('.mat','.fin'))
             subtile_dir = os.path.join(srcdir,task.t,'subtiles')
 
             if os.path.isfile(dstfp):
                 print('Output exists, skipping {}'.format(dstfn))
             elif os.path.isfile(sem):
                 print('N array was empty on last run, skipping {}'.format(dstfn))
+            elif os.path.isfile(finfile):
+                print('finfile exists, skipping {}'.format(dstfn))
 
             else:
                 ## if pbs, submit to scheduler
                 i+=1
                 if args.pbs:
                     job_name = 'mst_{}'.format(task.t)
-                    cmd = r'qsub -N {1} -v p1={2},p2={3},p3={4},p4={5},p5={6},p6={7},p7={8},p8={9},p9={10} {0}'.format(
+                    cmd = r'qsub -N {1} -v p1={2},p2={3},p3={4},p4={5},p5={6},p6={7},p7={8},p8={9},p9={10},p10={11} {0}'.format(
                         qsubpath,
                         job_name,
                         scriptdir,
@@ -153,6 +156,7 @@ def main():
                         task.t,
                         tile_def,
                         task.st,
+                        finfile,
                     )
                     print(cmd)
                     if not args.dryrun:
@@ -161,7 +165,7 @@ def main():
                 ## else run matlab
                 else:
                     if task.st == '':
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{6}','{7}'); projstr=getTileProjection('{7}'); {2}('{3}',{4},'{5}','projection',projstr,'extent',[x0,x1,y0,y1]); exit" """.format(
+                        cmd = """try; matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{6}','{7}'); projstr=getTileProjection('{7}'); {2}('{3}',{4},'{5}','projection',projstr,'extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,
@@ -169,10 +173,10 @@ def main():
                             args.res,
                             dstfp,
                             task.t,
-                            tile_def
+                            tile_def,
                         )
                     else:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{7}','{8}','quadrant','{6}'); projstr=getTileProjection('{8}'); {2}('{3}',{4},'{5}','projection',projstr,'quadrant','{6}','extent',[x0,x1,y0,y1]); exit" """.format(
+                        cmd = """try; matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{7}','{8}','quadrant','{6}'); projstr=getTileProjection('{8}'); {2}('{3}',{4},'{5}','projection',projstr,'quadrant','{6}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,
@@ -181,7 +185,7 @@ def main():
                             dstfp,
                             task.st,
                             task.t,
-                            tile_def
+                            tile_def,
                         )
                     print("{}, {}".format(i, cmd))
                     if not args.dryrun:

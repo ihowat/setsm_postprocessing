@@ -26,15 +26,22 @@ echo "var1: ${p1}"
 echo "var2: ${p2}"
 echo "var3: ${p3}"
 echo "var4: ${p4}"
-echo "var4: ${p5}"
-echo "var5: ${p6}"
-echo "var6: ${p7}"
-echo "var7: ${p8}"
-echo "var8: ${p9}"
-echo "var9: ${p10}"
+echo "var5: ${p5}"
+echo "var6: ${p6}"
+echo "var7: ${p7}"
+echo "var8: ${p8}"
+echo "var9: ${p9}"
+echo "var10: ${p10}"
+echo "var11: ${p11}"
 echo
 
-echo matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}','${p5}','${p6}','${p7}','landTile','${p8}','refDemFile','${p9}','make2m',${p10}); exit"
-time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}','${p5}','${p6}','${p7}','landTile','${p8}','refDemFile','${p9}','make2m',${p10}); exit"
+echo matlab -nojvm -nodisplay -nosplash -r "try; addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}','${p5}','${p6}','${p7}','landTile','${p8}','refDemFile','${p9}','make2m',${p10}); catch e; disp(getReport(e)); exit(1); end; exit(0);"
+time matlab -nojvm -nodisplay -nosplash -r "try; addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}','${p5}','${p6}','${p7}','landTile','${p8}','refDemFile','${p9}','make2m',${p10}); catch e; disp(getReport(e)); exit(1); end; exit(0);"
+status=$?
 
 echo "Done"
+
+# create finfile if matlab command exited without error
+if (( status == 0 )); then
+    touch "${p11}"
+fi
