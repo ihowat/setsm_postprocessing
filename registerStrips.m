@@ -1,4 +1,4 @@
-function registerStrips(demdir,gcp,sensor)
+function registerStrips(demdir,gcp_file,sensor)
 % REGISTERSTRIPS register DEM strip data to ground control point cloud
 %
 % registerStrips(demdir,gcp,sensor) where demdir is the dem directory path
@@ -9,9 +9,25 @@ function registerStrips(demdir,gcp,sensor)
 % Ian Howat, Ohio State University
 % Version 1: 27-Sep-2016 09:57:42
 
-fdem=dir([demdir,'/*_dem.tif']);
+%demdir = '/mnt/pgc/data/scratch/erik/projects/pgc_ext/kristin_poinar/SUNY_Poinar_Greenland_Glaciology_2020/qb4354_Vibeke_Glacier_SETSM_DEMs_2020oct22/dem/strips';
+%gcp_file = '/mnt/pgc/data/projects/arcticdem/ICESAT_Files/regional_csv/GLA12_14_rel634_greenland.csv';
+%sensor = 'GLA12_14_rel634';
+
+sensor = {sensor};
+
+gcp_fid = fopen(gcp_file);
+gcp_columns = textscan(gcp_fid, '%f %f %f %s %f', 'delimiter',',');
+fclose(gcp_fid);
+gcp.x = gcp_columns{1};
+gcp.y = gcp_columns{2};
+gcp.z = gcp_columns{3};
+gcp.t = gcp_columns{4};
+
+fdem=dir([demdir,'/*/*_dem.tif']);
+ddem={fdem.folder};
 fdem={fdem.name};
 fdem=fdem(:);
+ddem=ddem(:);
 
 if isempty(fdem); return; end
 
@@ -24,6 +40,7 @@ if isfield(gcp,'t'); [~,gcp.mo] = datevec(gcp.t); end
 
 % loop through DEMs
 for i=1:length(fdem)
+    demdir=ddem{i};
     
     % make outname
     outfile = [demdir,'/',strrep(fdem{i},'_dem.tif','_reg.txt')];
