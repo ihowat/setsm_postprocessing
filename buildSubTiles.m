@@ -240,9 +240,9 @@ subN=numel(subx0);
 %% check for existing subtiles
 % make a cellstr of resolved subtile filenames
 if make2mFlag
-    subTileFiles=dir([outDir,'/*_',num2str(res),'2m.mat']);
+    subTileFiles=dir([outDir,'/*_2m.mat']);
 else
-    subTileFiles=dir([outDir,'/*_',num2str(res),'10m.mat']);
+    subTileFiles=dir([outDir,'/*_10m.mat']);
 end
 
 if ~isempty(subTileFiles)
