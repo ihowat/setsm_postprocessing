@@ -10,8 +10,7 @@ end
 res=2;
 %dbase_in =[homeDir,'/data4/REMA/polarDEMdatabase_',num2str(res),'m.mat'];
 dbase_in='';
-%dbase_out='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/EarthDEMdatabase4_2m_v4_20201012_regions_01_to_12.mat';
-dbase_out='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/EarthDEMdatabase4_2m_v4_20201012_regions_13_to_23.mat';
+dbase_out='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/EarthDEMdatabase4_2m_v4_20201105_lower.mat';
 
 reproject_list = strrep(dbase_out, '.mat', '_reproject_list.txt');
 if isfile(reproject_list) && ~isfile([reproject_list,'.bak'])
@@ -41,34 +40,39 @@ regionDirs=[
 %    dir('/mnt/pgc/data/elev/dem/setsm/REMA/region/rema_*/strips_v4/2m*'),
 %    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_*/strips_v4/2m*'),
 
+%    dir('/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_*/strips_v4/2m_utm*'),
 %    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_01_southwest_canada/strips_v4/2m*'),
 %    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_02_southeast_canada/strips_v4/2m*'),
-%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_03_conus/strips_v4/2m*'),
-%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_04_great_lakes/strips_v4/2m*'),
-%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_05_mexico_and_caribbean/strips_v4/2m*'),
-%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_06_andes/strips_v4/2m*'),
-%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_07_northern_south_america/strips_v4/2m*'),
-%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_08_southern_south_america/strips_v4/2m*'),
 %    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_09_europe/strips_v4/2m*'),
-%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_10_west_africa/strips_v4/2m*'),
-%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_11_east_africa/strips_v4/2m*'),
-%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_12_southern_africa/strips_v4/2m*'),
+%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_14_southern_russia/strips_v4/2m*'),
+%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_18_korea_and_japan/strips_v4/2m*'),
+%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_23_pacific/strips_v4/2m*'),
 
+    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_03_conus/strips_v4/2m*'),
+    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_04_great_lakes/strips_v4/2m*'),
+    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_05_mexico_and_caribbean/strips_v4/2m*'),
+    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_06_andes/strips_v4/2m*'),
+    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_07_northern_south_america/strips_v4/2m*'),
+    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_08_southern_south_america/strips_v4/2m*'),
+    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_10_west_africa/strips_v4/2m*'),
+    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_11_east_africa/strips_v4/2m*'),
+    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_12_southern_africa/strips_v4/2m*'),
     dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_13_middle_east/strips_v4/2m*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_14_southern_russia/strips_v4/2m*'),
     dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_15_belarus/strips_v4/2m*'),
     dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_16_hma/strips_v4/2m*'),
     dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_17_china/strips_v4/2m*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_18_korea_and_japan/strips_v4/2m*'),
     dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_19_india/strips_v4/2m*'),
     dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_20_se_asia/strips_v4/2m*'),
     dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_21_madagascar/strips_v4/2m*'),
     dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_22_australia/strips_v4/2m*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_23_pacific/strips_v4/2m*'),
 ];
 regionDirs=regionDirs([regionDirs.isdir]);
 regionDirs=cellfun(@(regionDir, regionName) [regionDir,'/',regionName], {regionDirs.folder}, {regionDirs.name},...
     'UniformOutput',false);
+
+%matches = regexp(regionDirs, '.*/2m_utm\d{2}[ns]$');
+matches = regexp(regionDirs, '.*/2m_psn$');
+regionDirs = regionDirs(cellfun('isempty', matches));
 
 
 if exist('dbase_in', 'var') && ~isempty(dbase_in)
@@ -86,9 +90,8 @@ if exist('dbase_in', 'var') && ~isempty(dbase_in)
     fprintf('Loading database to be appended to: %s\n', dbase_in);
     fprintf('Output database will be: %s\n', dbase_out);
     out0=matfile(dbase_in);
-    [stripDirs0,~,~] = cellfun(@fileparts, out0.fileName, 'UniformOutput', false);
-    [~,stripDnames0,~] = cellfun(@fileparts, stripDirs0, 'UniformOutput', false);
-    stripDnames0 = unique(stripDnames0);
+    [stripDirs0,~,~] = cellfun(@fileparts, out0.fileName, 'UniformOutput',false);
+    stripDirs0_nover = cellfun(@(x) regexprep(x,'_v\d{6}$',''), stripDirs0, 'UniformOutput',false);
 else
     fprintf('Creating new database: %s\n', dbase_out);
 end
@@ -143,34 +146,43 @@ for i=1:length(regionDirs)
         end
 
 
-        % check for duplicate strips
+%        % check for duplicate strips
+%        [~,stripDnames,~] = cellfun(@fileparts, stripDirs, 'UniformOutput', false);
+%        test_dup_stripids=stripDnames;
+%        k=1;
+%        for k=1:length(test_dup_stripids)
+%            stripid = test_dup_stripids{k};
+%            stripid_parts = strsplit(test_dup_stripids{k}, '_');
+%            strip_verkey = stripid_parts(end);
+%            strip_verkey = strip_verkey{1};
+%            if length(strip_verkey) == 7 && strcmp(strip_verkey(1), 'v') && ~isnan(str2double(strip_verkey(2:7)))
+%                stripid = strrep(stripid, ['_',strip_verkey], '');
+%                test_dup_stripids{k} = stripid;
+%            end
+%        end
+%        [~, uniqueIdx] = unique(test_dup_stripids);
+%        test_dup_stripids(uniqueIdx) = [];
+%        if length(test_dup_stripids) > 0
+%            fprintf('\nERROR: Multiple strips exist matching strip ID:\n')
+%            test_dup_stripids
+%            fprintf('Exiting early -- Nothing was written to database\n')
+%            return
+%        end
+
+        % keep only the highest '_vXXYYZZ' setsm version of duplicate strips
         [~,stripDnames,~] = cellfun(@fileparts, stripDirs, 'UniformOutput', false);
-        test_dup_stripids=stripDnames;
-        k=1;
-        for k=1:length(test_dup_stripids)
-            stripid = test_dup_stripids{k};
-            stripid_parts = strsplit(test_dup_stripids{k}, '_');
-            strip_verkey = stripid_parts(end);
-            strip_verkey = strip_verkey{1};
-            if length(strip_verkey) == 7 && strcmp(strip_verkey(1), 'v') && ~isnan(str2double(strip_verkey(2:7)))
-                stripid = strrep(stripid, ['_',strip_verkey], '');
-                test_dup_stripids{k} = stripid;
-            end
-        end
-        [~, uniqueIdx] = unique(test_dup_stripids);
-        test_dup_stripids(uniqueIdx) = [];
-        if length(test_dup_stripids) > 0
-            fprintf('\nERROR: Multiple strips exist matching strip ID:\n')
-            test_dup_stripids
-            fprintf('Exiting early -- Nothing was written to database\n')
-            return
-        end
+        [stripDnames, I] = sort(stripDnames);
+        stripDirs = stripDirs(I);
+        stripDnames_nover = cellfun(@(x) regexprep(x,'_v\d{6}$',''), stripDnames, 'UniformOutput',false);
+        [~,IA] = unique(stripDnames_nover, 'last');
+        stripDirs = stripDirs(IA);
 
 
         % difference strips with database to be appended to
         if exist('out0','var')
-            [~,IA] = intersect(stripDirs, stripDirs0);
-            stripDirs(IA) = [];
+            stripDirs_nover = cellfun(@(x) regexprep(x,'_v\d{6}$',''), stripDirs, 'UniformOutput',false);
+            Lia = ismember(stripDirs_nover, stripDirs0_nover);
+            stripDirs(Lia) = [];
             if isempty(stripDirs)
                 fprintf('No new strips to add\n')
                 continue
