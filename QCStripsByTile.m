@@ -121,7 +121,14 @@ end
 meta.sigma(meta.sigma > 1) = NaN;
 meta.avg_rmse(meta.avg_rmse == 0) = NaN;
 
+%skip=true
 for i=startfrom:length(tiles.I)
+%    if strcmp(tiles.I{i}, '28_46')
+%        skip=false
+%    end
+%    if skip
+%        continue
+%    end
     fprintf('\n')
     fprintf('Working tile %d of %d: %s \n',i,length(tiles.I),tiles.I{i});
     tile = structfun(@(x) ( x(i) ), tiles, 'UniformOutput', false);
