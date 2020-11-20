@@ -27,7 +27,7 @@ land.y = y1:-dx:y0;
 land.z = false(length(land.y),length(land.x));
 
 if ~isfolder(waterTileDir)
-    fprintf('waterTileDir does not exist: %s\n', waterTileDir)
+    fprintf('Error: waterTileDir does not exist: %s\n', waterTileDir)
     fprintf('Assuming all area is land, please fix!\n')
     land.z = true(length(land.y),length(land.x));
     return

@@ -27,7 +27,7 @@ ice.y = y1:-dx:y0;
 ice.z = false(length(ice.y),length(ice.x));
 
 if ~isfolder(iceTileDir)
-    fprintf('getTileIceMask does not exist: %s\n', iceTileDir)
+    fprintf('Error: iceTileDir does not exist: %s\n', iceTileDir)
     fprintf('Assuming all area is not ice, please fix!\n')
     return
 end
