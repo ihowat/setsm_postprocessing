@@ -56,6 +56,9 @@ def main():
     parser.add_argument("--lib-path", default=matlab_scripts,
                         help="path to referenced Matlab functions (default={})".format(matlab_scripts))
 
+    parser.add_argument('--require-finfiles', action='store_true', default=False,
+            help="let existence of finfiles dictate reruns")
+
     parser.add_argument("--pbs", action='store_true', default=False,
             help="submit tasks to PBS")
     parser.add_argument("--rerun", action='store_true', default=False,
@@ -180,7 +183,7 @@ def main():
             elif args.rerun:
                 print('Verifying tile {} before rerun'.format(tile))
 
-                if os.path.isfile(final_subtile_fp):
+                if os.path.isfile(final_subtile_fp) and not args.require_finfiles:
                     print('Tile seems complete ({} exists)'.format(os.path.basename(final_subtile_fp)))
                     run_tile = False
                 elif os.path.isfile(finfile):

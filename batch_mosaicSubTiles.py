@@ -39,8 +39,14 @@ def main():
     parser.add_argument('--quads', action='store_true', default=False,
             help="build into quad subtiles")
 
-    parser.add_argument('--bypass-bst-finfile-req', action='store_true', default=False,
-            help="allow mosaicking tiles that do not have the proper finfile from the buildSubTiles process")
+    parser.add_argument('--require-bst-finfiles', action='store_true', default=False,
+            help="require BST finfiles exist before mosaicking tiles")
+    parser.add_argument('--relax-bst-finfile-req', action='store_true', default=False,
+            help="allow mosaicking tiles with no BST finfile if 10,000-th subtile exists")
+    parser.add_argument('--require-mst-finfiles', action='store_true', default=False,
+            help="let existence of MST finfiles dictate reruns")
+    parser.add_argument('--require-finfiles', action='store_true', default=False,
+            help="let existence of BST and MST finfiles dictate reruns")
 
     parser.add_argument("--pbs", action='store_true', default=False,
             help="submit tasks to PBS")
@@ -84,6 +90,10 @@ def main():
         qsubpath = os.path.abspath(args.qsubscript)
     if not os.path.isfile(qsubpath):
         parser.error("qsub script path is not valid: %s" %qsubpath)
+
+    if args.require_finfiles:
+        args.require_bst_finfiles = True
+        args.require_bst_finfiles = True
 
     tasks = []
 
@@ -139,15 +149,17 @@ def main():
             removing_existing_output = False
 
             mst_finfile = finfile
-            bst_finfile = os.path.join(subtile_dir, '{}_10000_{}m.fin'.format(task.t, args.res))
+            bst_final_subtile_fp = os.path.join(subtile_dir, '{}_10000_{}m.mat'.format(task.t, args.res))
+            bst_finfile = bst_final_subtile_fp.replace('.mat', '.fin')
             bst_finfile_2m = os.path.join(subtile_dir, '{}_10000_2m.fin'.format(task.t))
 
-            if not (os.path.isfile(bst_finfile) or os.path.isfile(bst_finfile_2m)):
-                if args.bypass_bst_finfile_req:
-                    print('warning: BST finfile ({}) does not exist for tile {}'.format(bst_finfile, dstfn))
+            if args.require_bst_finfiles and not any([os.path.isfile(f) for f in [bst_finfile, bst_finfile_2m]]):
+                if args.relax_bst_finfile_req and os.path.isfile(bst_final_subtile_fp):
+                    print('WARNING: BST finfile ({}) does not exist for tile {}, but 10,000-th subtile exists so will run'.format(bst_finfile, dstfn))
                 else:
                     print('BST finfile ({}) does not exist, skipping {}'.format(bst_finfile, dstfn))
-                    print('  (provide --bypass-bst-finfile-req argument to mosaic this tile anyways)')
+                    if os.path.isfile(bst_final_subtile_fp):
+                        print('  (but 10,000-th subtile exists; can provide --relax-bst-finfile-req argument to mosaic this tile anyways)')
                     run_tile = False
             else:
                 for bst_finfile_temp in list({bst_finfile, bst_finfile_2m}):
@@ -167,7 +179,7 @@ def main():
                     for dstfp_old in dstfps_old:
                         os.remove(dstfp_old)
 
-            if os.path.isfile(dstfp):
+            if os.path.isfile(dstfp) and not args.require_mst_finfiles:
                 print('Output exists, skipping {}'.format(dstfn))
                 run_tile = False
             elif os.path.isfile(finfile):
