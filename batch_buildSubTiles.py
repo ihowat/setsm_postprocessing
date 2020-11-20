@@ -165,11 +165,14 @@ def main():
                     os.makedirs(tile_dstdir)
             dstfps = glob.glob(os.path.join(tile_dstdir,'{}_*m.mat'.format(tile)))
 
+            final_subtile_fp_10m = os.path.join(tile_dstdir,'{}_10000_10m.mat'.format(tile))
+            final_subtile_fp_2m = os.path.join(tile_dstdir,'{}_10000_2m.mat'.format(tile))
             if args.make_10m_only:
-                final_subtile_fp = os.path.join(tile_dstdir,'{}_10000_10m.mat'.format(tile))
+                final_subtile_fp = final_subtile_fp_10m
             else:
-                final_subtile_fp = os.path.join(tile_dstdir,'{}_10000_2m.mat'.format(tile))
+                final_subtile_fp = final_subtile_fp_2m
             finfile = final_subtile_fp.replace('.mat', '.fin')
+            finfile_2m = final_subtile_fp_2m.replace('.mat', '.fin')
 
             run_tile = True
             if args.sort_fix or args.rerun_without_cleanup:
@@ -182,6 +185,9 @@ def main():
                     run_tile = False
                 elif os.path.isfile(finfile):
                     print('Tile seems complete ({} exists)'.format(os.path.basename(finfile)))
+                    run_tile = False
+                elif os.path.isfile(finfile_2m):
+                    print('Tile seems complete (2m finfile {} exists)'.format(os.path.basename(finfile_2m)))
                     run_tile = False
 
                 if not args.make_10m_only:
