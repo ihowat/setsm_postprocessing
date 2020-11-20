@@ -9,8 +9,8 @@ end
 
 res=2;
 %dbase_in =[homeDir,'/data4/REMA/polarDEMdatabase_',num2str(res),'m.mat'];
-dbase_in='';
-dbase_out='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/EarthDEMdatabase4_2m_v4_20201105_lower.mat';
+dbase_in='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/EarthDEMdatabase4_2m_v4_20201107_combined.mat';
+dbase_out='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/EarthDEMdatabase4_2m_v4_20201118.mat';
 
 reproject_list = strrep(dbase_out, '.mat', '_reproject_list.txt');
 if isfile(reproject_list) && ~isfile([reproject_list,'.bak'])
@@ -40,13 +40,13 @@ regionDirs=[
 %    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_*/strips_v4/2m*'),
 %    dir('/mnt/pgc/data/elev/dem/setsm/REMA/region/rema_*/strips_v4/2m*'),
 
-%    dir('/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_*/strips_v4/2m_utm*'),
-%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_01_southwest_canada/strips_v4/2m*'),
-%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_02_southeast_canada/strips_v4/2m*'),
-%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_09_europe/strips_v4/2m*'),
-%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_14_southern_russia/strips_v4/2m*'),
-%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_18_korea_and_japan/strips_v4/2m*'),
-%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_23_pacific/strips_v4/2m*'),
+    dir('/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_*/strips_v4/2m_utm*'),
+    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_01_southwest_canada/strips_v4/2m*'),
+    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_02_southeast_canada/strips_v4/2m*'),
+    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_09_europe/strips_v4/2m*'),
+    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_14_southern_russia/strips_v4/2m*'),
+    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_18_korea_and_japan/strips_v4/2m*'),
+    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_23_pacific/strips_v4/2m*'),
 
     dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_03_conus/strips_v4/2m*'),
     dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_04_great_lakes/strips_v4/2m*'),
@@ -54,6 +54,7 @@ regionDirs=[
     dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_06_andes/strips_v4/2m*'),
     dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_07_northern_south_america/strips_v4/2m*'),
     dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_08_southern_south_america/strips_v4/2m*'),
+
     dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_10_west_africa/strips_v4/2m*'),
     dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_11_east_africa/strips_v4/2m*'),
     dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_12_southern_africa/strips_v4/2m*'),
