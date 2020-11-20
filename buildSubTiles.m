@@ -110,6 +110,9 @@ fprintf('Building subsets for tile %s in %s\n',tileName,outDir);
 %if meta is filename, load it
 if ischar(meta)
     meta=load(meta);
+    % remove possible duplicate strip records
+    [~, in] = unique(meta.fileName);
+    meta = structfun(@(x) x(in), meta,'uniformoutput',0);
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
