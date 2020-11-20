@@ -63,6 +63,8 @@ for i=1:length(tileRow)
          waterFlag=true;
     end
 
+    fprintf("Including water tile %s\n", waterTileName);
+
     land0 = readGeotiff(waterTileName,'map_subset',[x0 x1 y0 y1]);
     
     if includeIceFlag && exist(iceTileName,'file')
