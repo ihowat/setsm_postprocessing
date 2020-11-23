@@ -386,7 +386,7 @@ for n=nstrt:subN
             z(:,:,j) = ztmp;
             mttmp(BW) = false;
             mt(:,:,j) = mttmp;
-            clear BW ztmp  mttmp
+            clear BW ztmp mttmp
         end
     end
     
@@ -772,6 +772,7 @@ fileNames = strrep(fileNames,'_10m.tif','.tif');
 nn = find(~cellfun( @isempty, qc.x));
 for j=1:length(nn)
     ztmp = z(:,:,nn(j));
+    mttmp = mt(:,:,nn(j));
     BW = false(size(ztmp));
     for k=1:length(qc.x{nn(j)})
         BW = BW | roipoly(x,y,ztmp,qc.x{nn(j)}{k},...
@@ -779,7 +780,9 @@ for j=1:length(nn)
     end
     ztmp(BW) = NaN;
     z(:,:,nn(j)) = ztmp;
-    clear BW ztmp
+    mttmp(BW) = NaN;
+    mt(:,:,nn(j)) = mttmp;
+    clear BW ztmp mttmp
 end
 
 % merge segmentsfrom same strips
