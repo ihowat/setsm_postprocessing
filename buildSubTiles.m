@@ -22,6 +22,8 @@ function buildSubTiles(tileName,outDir,tileDefs,meta,varargin)
 % - robust stripid matching for 2m call
 % - added qc to 2m
 % - added make2m inarg
+% - added filter flag imnarg
+% -  apply roipoly to mt
 
 % buildSubTiles build mosaics from strips in subtiles of 100x100km tiles
 %
@@ -45,6 +47,13 @@ minStripOverlap = 0.1; % minimum frac strip overlap of subtile
 projection = ''; % projection string for tile scheme
 
 % Parse varargins
+filterFlag = true; % apply pairwise differece filter
+n = find(strcmpi(varargin,'filter'));
+if ~isempty(n)
+    filterFlag  = varargin{n+1};
+end
+fprintf('Apply pairwise difference filter = %d\n',filterFlag)
+
 make2mFlag=false; % make 2m version or not
 n = find(strcmpi(varargin,'make2m'));
 if ~isempty(n)
@@ -63,15 +72,6 @@ if ~isempty(n)
     refDemFile = varargin{n+1};
     refDemFileFlag = true;
     fprintf('refDemFile = %s\n',refDemFile)
-end
-
-timeRangeFlag = false;
-n = find(strcmpi(varargin,'timeRange'));
-if ~isempty(n)
-    timeRange = varargin{n+1};
-    timeRangeFlag = true;
-    fprintf('timeRange = %s to %s\n',datestr(timeRange(1)),...
-        datestr(timeRange(2)))
 end
 
 n = find(strcmpi(varargin,'minStripOverlap'));
@@ -313,16 +313,6 @@ for n=nstrt:subN
     % if qc data exists, filter out 5's
     if qcFlag
         ind = ind(meta.qc.flag(ind) ~= 5);
-    end
-    
-    %if date range supplied, crop to date range s
-    if timeRangeFlag
-        % get date from filename
-        [~,name] =  cellfun(@fileparts,meta.fileName(ind),...
-            'uniformoutput',0);
-        t=cellfun(@(x) datenum(x(6:13),'yyyymmdd'),name)';
-        
-        ind(t < timeRange(1) | t > timeRange(2)) = [];
     end
     
     % check for maximum #'s of overlaps
