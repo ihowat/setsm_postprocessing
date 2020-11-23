@@ -376,6 +376,7 @@ for n=nstrt:subN
         nn = find(meta.qc.flag(ind) == 3);
         for j=nn
             ztmp = z(:,:,j);
+            mttmp = mt(:,:,j);
             BW = false(size(ztmp));
             for k=1:length(meta.qc.x{ind(j)})
                 BW = BW | roipoly(x,y,ztmp,meta.qc.x{ind(j)}{k},...
@@ -383,7 +384,9 @@ for n=nstrt:subN
             end
             ztmp(BW) = NaN;
             z(:,:,j) = ztmp;
-            clear BW ztmp
+            mttmp(BW) = false;
+            mt(:,:,j) = mttmp;
+            clear BW ztmp  mttmp
         end
     end
     
