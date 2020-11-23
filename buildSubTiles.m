@@ -641,7 +641,11 @@ for n=nstrt:subN
     end
     
     %% apply a pixel-by-pixel filter to remove outliers
-    fa = pairwiseDifferenceFilter(za,'mask',land,'minmad',2);
+    if filterFlag
+        fa = pairwiseDifferenceFilter(za,'mask',land,'minmad',2);
+    else
+        fa = true(size(za));
+    end
     
     % apply filter and get medians
     za(~fa) = NaN;
