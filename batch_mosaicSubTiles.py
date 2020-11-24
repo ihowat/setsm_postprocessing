@@ -174,10 +174,11 @@ def main():
             if removing_existing_output:
                 dstfps_old_pattern = dstfp.replace('.mat', '*')
                 dstfps_old = glob.glob(dstfps_old_pattern)
-                if dstfps_old and not args.dryrun:
-                    print('Removing old MST results matching {}'.format(dstfps_old_pattern))
-                    for dstfp_old in dstfps_old:
-                        os.remove(dstfp_old)
+                if dstfps_old:
+                    print('{}Removing old MST results matching {}'.format('(dryrun) ' if args.dryrun else '', dstfps_old_pattern))
+                    if not args.dryrun:
+                        for dstfp_old in dstfps_old:
+                            os.remove(dstfp_old)
 
             if os.path.isfile(dstfp) and not args.require_mst_finfiles:
                 print('Output exists, skipping {}'.format(dstfn))
