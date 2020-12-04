@@ -1,6 +1,8 @@
 function initializeMosaic(project,tileName,outDir)
 
-%tileName='45_06';
+% set to true to remove the subdirectory of subtile .mat files after
+% completion:
+removeSubtileFlag=true;
 
 % Set Paths and filenames
 if strcmpi(project,'rema')
@@ -16,14 +18,12 @@ if strcmpi(project,'rema')
         %qcFile = '/Users/ihowat/rema_strip_v4_qc.mat';
         qcFile = '';
     else
-        tileDefFile = '/home/howat.4/rema2/rema_tile_definitions.mat';
-        stripDatabaseFile = '/fs/project/howat.4/REMA/metadata_rema_active/rema_strips.shp';
-        stripsDirectory='/fs/project/howat.4/REMA';
-        refDemFile='/fs/project/howat.4/REMA/TanDEM-X_Antarctica_90m/TanDEM_Antarctica_Mosaic.tif';
-      %  subTileDir = ['/fs/project/howat.4/howat.4/rema_mosaic/',tileName];
-    %  subTileDir = ['/fs/project/howat.4/howat.4/rema_mosaic8/',tileName];
-       % qcFile = '/fs/project/howat.4/REMA/rema_strip_v4_qc.mat';
-         qcFile = '';
+        tileDefFile = '/fs/byo/howat-data4/REMA/rema_tile_definitions.mat';
+        stripDatabaseFile = '/fs/byo/howat-data4/REMA/metadata_rema_active/rema_strips.shp';
+        stripsDirectory='/fs/byo/howat-data4/REMA';
+        refDemFile='/fs/byo/howat-data4/REMA/TanDEM-X_Antarctica_90m/TanDEM_Antarctica_Mosaic.tif';
+        qcFile = ['/fs/byo/howat-data4/REMA/rema_strip_automosaic_qc/rema_strip_automosaic_qc_',tileName,'.mat'];
+        tileParamListFile='/fs/byo/howat-data4/REMA/tileParamList.txt';
     end
     
 elseif strcmpi(project,'arcticdem')
@@ -65,8 +65,33 @@ tileInd = strcmp(tileDefs.I,tileName);
 tileDefs = structfun( @(x) x(tileInd), tileDefs,'uniformoutput',0);
 
 % get tile boundaries with buffer for making land mask and strip search
+% get tile boundaries with buffer for making land mask and strip search
 res=10; % ouput mosaic resolution in meters
 buffer=100; % size of tile/subtile boundary buffer in meters
+minStripOverlap=0.1;
+filterFlag= true;
+
+if exist(tileParamListFile,'file')
+    [~,tileParams]=system(['grep ',tileName,' ',tileParamListFile]);
+    paramReadFailFlag=true;
+    if ~isempty(isempty(tileParams))
+        tileParams=strtrim(tileParams);
+        tileParams=strrep(tileParams,'_',' ');
+        tileParams=str2num(tileParams);
+        
+        if length(tileParams) == 4
+            buffer=tileParams(3);
+            minStripOverlap=tileParams(4);
+            paramReadFailFlag=false;
+        end
+    end
+    
+    if  paramReadFailFlag == true
+        fprintf('Could not find %s in %s, using defaults\n',...
+            tileName,tileParamListFile)
+    end
+    
+end
 
 x0=tileDefs.x0-buffer;
 y0=tileDefs.y0-buffer;
@@ -126,17 +151,20 @@ if exist(qcFile,'file')
     meta.qc.x(IB) = qc.x(IA);
     meta.qc.y(IB) = qc.y(IA);
     
+else
+    fprintf('no qc file found\n')
 end
 
 %% Build and mosaic subtiles
 buildSubTiles(tileName,subTileDir,tileDefs,meta,'landTile',landTile,...
-    'refDemFile',refDemFile,'buffer',buffer)
+    'refDemFile',refDemFile,'buffer',buffer,'minStripOverlap',...
+    minStripOverlap,'filter',filterFlag)
 
 call_mosaicSubTiles(subTileDir,10,projection);
 
-%rmdir(subTileDir, 's')
-
-
+if removeSubtileFlag
+    rmdir(subTileDir, 's')
+end
 
 
 

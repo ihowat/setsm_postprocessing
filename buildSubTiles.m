@@ -22,6 +22,8 @@ function buildSubTiles(tileName,outDir,tileDefs,meta,varargin)
 % - robust stripid matching for 2m call
 % - added qc to 2m
 % - added make2m inarg
+% - added filter flag imnarg
+% -  apply roipoly to mt
 
 % buildSubTiles build mosaics from strips in subtiles of 100x100km tiles
 %
@@ -45,6 +47,13 @@ minStripOverlap = 0.1; % minimum frac strip overlap of subtile
 projection = ''; % projection string for tile scheme
 
 % Parse varargins
+filterFlag = true; % apply pairwise differece filter
+n = find(strcmpi(varargin,'filter'));
+if ~isempty(n)
+    filterFlag  = varargin{n+1};
+end
+fprintf('Apply pairwise difference filter = %d\n',filterFlag)
+
 make2mFlag=false; % make 2m version or not
 n = find(strcmpi(varargin,'make2m'));
 if ~isempty(n)
@@ -63,15 +72,6 @@ if ~isempty(n)
     refDemFile = varargin{n+1};
     refDemFileFlag = true;
     fprintf('refDemFile = %s\n',refDemFile)
-end
-
-timeRangeFlag = false;
-n = find(strcmpi(varargin,'timeRange'));
-if ~isempty(n)
-    timeRange = varargin{n+1};
-    timeRangeFlag = true;
-    fprintf('timeRange = %s to %s\n',datestr(timeRange(1)),...
-        datestr(timeRange(2)))
 end
 
 n = find(strcmpi(varargin,'minStripOverlap'));
@@ -318,16 +318,6 @@ for n=nstrt:subN
         ind = ind(meta.qc.flag(ind) ~= 5);
     end
     
-    %if date range supplied, crop to date range s
-    if timeRangeFlag
-        % get date from filename
-        [~,name] =  cellfun(@fileparts,meta.fileName(ind),...
-            'uniformoutput',0);
-        t=cellfun(@(x) datenum(x(6:13),'yyyymmdd'),name)';
-        
-        ind(t < timeRange(1) | t > timeRange(2)) = [];
-    end
-    
     % check for maximum #'s of overlaps
     if length(ind) > maxNumberOfStrips
         
@@ -389,6 +379,7 @@ for n=nstrt:subN
         nn = find(meta.qc.flag(ind) == 3);
         for j=nn
             ztmp = z(:,:,j);
+            mttmp = mt(:,:,j);
             BW = false(size(ztmp));
             for k=1:length(meta.qc.x{ind(j)})
                 BW = BW | roipoly(x,y,ztmp,meta.qc.x{ind(j)}{k},...
@@ -396,7 +387,9 @@ for n=nstrt:subN
             end
             ztmp(BW) = NaN;
             z(:,:,j) = ztmp;
-            clear BW ztmp
+            mttmp(BW) = false;
+            mt(:,:,j) = mttmp;
+            clear BW ztmp mttmp
         end
     end
     
@@ -651,7 +644,11 @@ for n=nstrt:subN
     end
     
     %% apply a pixel-by-pixel filter to remove outliers
-    fa = pairwiseDifferenceFilter(za,'mask',land,'minmad',2);
+    if filterFlag
+        fa = pairwiseDifferenceFilter(za,'mask',land,'minmad',2);
+    else
+        fa = true(size(za));
+    end
     
     % apply filter and get medians
     za(~fa) = NaN;
@@ -778,6 +775,7 @@ fileNames = strrep(fileNames,'_10m.tif','.tif');
 nn = find(~cellfun( @isempty, qc.x));
 for j=1:length(nn)
     ztmp = z(:,:,nn(j));
+    mttmp = mt(:,:,nn(j));
     BW = false(size(ztmp));
     for k=1:length(qc.x{nn(j)})
         BW = BW | roipoly(x,y,ztmp,qc.x{nn(j)}{k},...
@@ -785,7 +783,9 @@ for j=1:length(nn)
     end
     ztmp(BW) = NaN;
     z(:,:,nn(j)) = ztmp;
-    clear BW ztmp
+    mttmp(BW) = NaN;
+    mt(:,:,nn(j)) = mttmp;
+    clear BW ztmp mttmp
 end
 
 % merge segmentsfrom same strips
