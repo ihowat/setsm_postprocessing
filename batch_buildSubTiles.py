@@ -56,6 +56,9 @@ def main():
     parser.add_argument("--lib-path", default=matlab_scripts,
                         help="path to referenced Matlab functions (default={})".format(matlab_scripts))
 
+    parser.add_argument('--require-finfiles', action='store_true', default=False,
+            help="let existence of finfiles dictate reruns")
+
     parser.add_argument("--pbs", action='store_true', default=False,
             help="submit tasks to PBS")
     parser.add_argument("--rerun", action='store_true', default=False,
@@ -165,11 +168,14 @@ def main():
                     os.makedirs(tile_dstdir)
             dstfps = glob.glob(os.path.join(tile_dstdir,'{}_*m.mat'.format(tile)))
 
+            final_subtile_fp_10m = os.path.join(tile_dstdir,'{}_10000_10m.mat'.format(tile))
+            final_subtile_fp_2m = os.path.join(tile_dstdir,'{}_10000_2m.mat'.format(tile))
             if args.make_10m_only:
-                final_subtile_fp = os.path.join(tile_dstdir,'{}_10000_10m.mat'.format(tile))
+                final_subtile_fp = final_subtile_fp_10m
             else:
-                final_subtile_fp = os.path.join(tile_dstdir,'{}_10000_2m.mat'.format(tile))
+                final_subtile_fp = final_subtile_fp_2m
             finfile = final_subtile_fp.replace('.mat', '.fin')
+            finfile_2m = final_subtile_fp_2m.replace('.mat', '.fin')
 
             run_tile = True
             if args.sort_fix or args.rerun_without_cleanup:
@@ -177,11 +183,14 @@ def main():
             elif args.rerun:
                 print('Verifying tile {} before rerun'.format(tile))
 
-                if os.path.isfile(final_subtile_fp):
+                if os.path.isfile(final_subtile_fp) and not args.require_finfiles:
                     print('Tile seems complete ({} exists)'.format(os.path.basename(final_subtile_fp)))
                     run_tile = False
                 elif os.path.isfile(finfile):
                     print('Tile seems complete ({} exists)'.format(os.path.basename(finfile)))
+                    run_tile = False
+                elif os.path.isfile(finfile_2m):
+                    print('Tile seems complete (2m finfile {} exists)'.format(os.path.basename(finfile_2m)))
                     run_tile = False
 
                 if not args.make_10m_only:
