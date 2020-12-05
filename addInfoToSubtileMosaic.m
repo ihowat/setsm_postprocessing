@@ -84,31 +84,41 @@ for filen=1:NsubTileFiles
         continue
     end
     
-  
-    % open matfile to load coordinate vectors withoutloading arrays
-    m=matfile(subTileFiles{filen});
-  
     % load subtile into structure - iif 2m, need to switch to 10m filename
     % since no filename list in 2m version.
-    zsub=load(strrep(subTileFiles{filen},'_2m.mat','_10m.mat'),'fileNames','dZ');
-
-    zsub.fileNames = zsub.fileNames(~isnan(zsub.dZ));
-
-    if isempty(zsub.fileNames)
+    if any(ismember(mvars,'fileNames'))
+        
+        zsub=load(strrep(subTileFiles{filen},'_2m.mat','_10m.mat'),'fileNames','dZ');
+        zsub.fileNames = zsub.fileNames(~isnan(zsub.dZ));
+    
+        if isempty(zsub.fileNames)
                 fprintf('no filenames returned, skipping\n')
                 continue
-    end
+        end
     
-    [~,stripid] =  cellfun(@fileparts,zsub.fileNames,'uniformoutput',0);
-    if dx == 2
-       stripid= strrep(stripid,'_10m','');
+        [~,stripid] =  cellfun(@fileparts,zsub.fileNames,'uniformoutput',0);
+        if dx == 2
+            stripid= strrep(stripid,'_10m','');
+        end
+        % stripid =  cellfun(@(x) x(1:47),stripid,'uniformoutput',0);
+       
+    elseif any(ismember(mvars,'stripIDs'))
+        
+        zsub=load(subTileFiles{filen},'stripIDs');
+
+        if isempty(zsub.stripIds)
+            fprintf('no stripIds returned, skipping\n')
+            continue
+        end
+       
+        stripid=zsub.stripIDs;
+   else
+        error('neither stripIDs or fileNames vars in %s',subTileFiles{filen})
     end
-   % stripid =  cellfun(@(x) x(1:47),stripid,'uniformoutput',0);
        
     stripList=unique([stripList,stripid]);
 
 end
-
 
 save(outName,'-append','stripList')
 
