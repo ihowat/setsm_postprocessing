@@ -44,10 +44,14 @@ fprintf(fid,'ArcticDEM Mosaic Tile Metadata \n');
 fprintf(fid,'Creation Date: %s\n',fileAtts.date);
 fprintf(fid,'Version: %s\n',tileVersion);
 fprintf(fid,'\n');
-fprintf(fid,'ICESat N points: %d\n',m.icesat_dz_N);
-fprintf(fid,'ICESat median offset: %.2f\n',m.icesat_dz_med);
-fprintf(fid,'ICESat median absolute deviation: %.2f\n',m.icesat_dz_mad);
-fprintf(fid,'\n');
+
+if isfield(m,'icesat_dz_N')
+    fprintf(fid,'ICESat N points: %d\n',m.icesat_dz_N);
+    fprintf(fid,'ICESat median offset: %.2f\n',m.icesat_dz_med);
+    fprintf(fid,'ICESat median absolute deviation: %.2f\n',m.icesat_dz_mad);
+    fprintf(fid,'\n');
+end
+
 fprintf(fid,'List of strips used in mosaic:\n');
 i=1;
 for i=1:length(strip.name)
