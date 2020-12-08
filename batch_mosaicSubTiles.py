@@ -224,8 +224,8 @@ def main():
 
                 ## else run matlab
                 else:
-                    if task.st == '':
-                        cmd = """try; matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{6}','{7}'); projstr=getTileProjection('{7}'); {2}('{3}',{4},'{5}','projection',projstr,'extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);" """.format(
+                    if task.st == 'null':
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{6}','{7}'); projstr=getTileProjection('{7}'); {2}('{3}',{4},'{5}','projection',projstr,'extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,
@@ -236,7 +236,7 @@ def main():
                             tile_def,
                         )
                     else:
-                        cmd = """try; matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{7}','{8}','quadrant','{6}'); projstr=getTileProjection('{8}'); {2}('{3}',{4},'{5}','projection',projstr,'quadrant','{6}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);" """.format(
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{7}','{8}','quadrant','{6}'); projstr=getTileProjection('{8}'); {2}('{3}',{4},'{5}','projection',projstr,'quadrant','{6}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,
