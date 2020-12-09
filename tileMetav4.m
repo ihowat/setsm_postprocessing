@@ -46,6 +46,7 @@ fprintf('writing meta\n')
 %% Write File
 fid=fopen(outfile,'w');
 fprintf(fid,'%s Mosaic Tile Metadata \n',project);
+fprintf(fid, 'Tile: %s\n', strrep(fileAtts.name,'.mat',''));
 fprintf(fid,'Creation Date: %s\n',fileAtts.date);
 fprintf(fid,'Version: %s\n',tileVersion);
 fprintf(fid,'\n');
