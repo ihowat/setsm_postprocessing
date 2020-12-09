@@ -11,6 +11,16 @@ project_choices = [
     'earthdem',
 ]
 
+epsg_projstr_dict = {
+    3413: 'polar stereo north',
+    3031: 'polar stereo south',
+}
+project_epsg_dict = {
+    'arcticdem': 3413,
+    'earthdem': None,
+    'rema': 3031,
+}
+
 tileDefFile_utm_north = 'PGC_UTM_Mosaic_Tiles_North.mat'
 tileDefFile_utm_south = 'PGC_UTM_Mosaic_Tiles_South.mat'
 tileDefFile_utm_options = "{} or {}".format(tileDefFile_utm_north, tileDefFile_utm_south)
@@ -37,14 +47,17 @@ def main():
                         help="path to referenced Matlab functions (default={}".format(matlab_scripts))
     parser.add_argument("--project", default=None, choices=project_choices,
                         help="sets the default value of project-specific arguments")
+    parser.add_argument("--epsg", type=int, default=None, choices=list(epsg_projstr_dict.keys()),
+                        help="output mosaic tile projection EPSG code (default is {})".format(
+                            ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_epsg_dict.items()])
+                        ))
     parser.add_argument("--tile-def", default=None,
                         help="mosaic tile definition mat file (default is {})".format(
                             ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_tileDefFile_dict.items()])
                         ))
     parser.add_argument("--version", default=None,
                         help="mosaic version (default is {})".format(
-                            ', '.join(["{} if --project={}".format(val, dom) for dom, val in
-                                       project_version_dict.items()])
+                            ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_version_dict.items()])
                         ))
     parser.add_argument('--quads', action='store_true', default=False,
             help="build into quad subtiles")
@@ -72,12 +85,16 @@ def main():
     matlab_script = 'mosaicSubTiles'
 
     ## Set default arguments by project setting
-    if args.project is None and True in [arg is None for arg in [args.tile_def]]:
+    if args.project is None and True in [arg is None for arg in [args.epsg, args.tile_def, args.version]]:
         parser.error("--project arg must be provided if one of the following arguments is not provided: {}".format(
-            ' '.join(["--tile-def"])
+            ' '.join(["--epsg", "--tile-def", "--version"])
         ))
+    if args.epsg is None:
+        args.epsg = project_epsg_dict[args.project]
     if args.tile_def is None:
         args.tile_def = project_tileDefFile_dict[args.project]
+    if args.version is None:
+        args.version = project_version_dict[args.project]
 
     ## Verify path arguments
     if not os.path.isdir(srcdir):
@@ -85,8 +102,9 @@ def main():
     if not os.path.isdir(args.lib_path):
         parser.error("--lib-path does not exist: {}".format(args.lib_path))
     if args.project == 'earthdem':
-        pass
+        projection_string = None
     else:
+        projection_string = epsg_projstr_dict[args.epsg]
         tile_def_abs = os.path.join(scriptdir, args.tile_def)
         if not os.path.isfile(tile_def_abs):
             parser.error("--tile-def file does not exit: {}".format(tile_def_abs))
@@ -123,15 +141,19 @@ def main():
 
             tile = task.t
 
+            tile_projstr = projection_string
             tile_def = args.tile_def
 
-            if tile_def == tileDefFile_utm_options:
+            if tile_projstr is None or tile_def == tileDefFile_utm_options:
                 assert args.project == 'earthdem'
 
                 utm_tilename_parts = tile.split('_')
                 utm_tilename_prefix = utm_tilename_parts[0]
                 if not utm_tilename_prefix.startswith('utm'):
                     parser.error("Expected only UTM tile names (e.g. 'utm10n_01_01'), but got '{}'".format(tile))
+
+                if tile_projstr is None:
+                    tile_projstr = utm_tilename_prefix
 
                 if tile_def == tileDefFile_utm_options:
                     if utm_tilename_prefix.endswith('n'):
@@ -213,7 +235,7 @@ def main():
                 i+=1
                 if args.pbs:
                     job_name = 'mst_{}'.format(task.t)
-                    cmd = r'qsub -N {1} -v p1={2},p2={3},p3={4},p4={5},p5={6},p6={7},p7={8},p8={9},p9={10},p10={11},p11={12} {0}'.format(
+                    cmd = r'qsub -N {1} -v p1={2},p2={3},p3={4},p4={5},p5={6},p6={7},p7={8},p8={9},p9={10},p10={11},p11={12},p12={13} {0}'.format(
                         qsubpath,
                         job_name,
                         scriptdir,
@@ -226,7 +248,8 @@ def main():
                         tile_def,
                         task.st,
                         finfile,
-                        project_version_dict[args.project],
+                        tile_projstr,
+                        args.version,
                     )
                     print(cmd)
                     if not args.dryrun:
@@ -234,8 +257,8 @@ def main():
 
                 ## else run matlab
                 else:
-                    if task.st == 'null':
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{6}','{7}'); projstr=getTileProjection('{7}'); {2}('{3}',{4},'{5}','projection',projstr,'version','{8}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);" """.format(
+                    if task.st == '':
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{6}','{7}'); {2}('{3}',{4},'{5}','projection','{8}','version','{9}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,
@@ -244,10 +267,11 @@ def main():
                             dstfp,
                             task.t,
                             tile_def,
-                            project_version_dict[args.project],
+                            tile_projstr,
+                            args.version,
                         )
                     else:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{7}','{8}','quadrant','{6}'); projstr=getTileProjection('{8}'); {2}('{3}',{4},'{5}','projection',projstr,'quadrant','{6}','version','{9}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);" """.format(
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{7}','{8}','quadrant','{6}'); {2}('{3}',{4},'{5}','projection','{9}','version','{10}','quadrant','{6}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,
@@ -257,7 +281,8 @@ def main():
                             task.st,
                             task.t,
                             tile_def,
-                            project_version_dict[args.project],
+                            tile_projstr,
+                            args.version,
                         )
                     print("{}, {}".format(i, cmd))
                     if not args.dryrun:
