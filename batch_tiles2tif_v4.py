@@ -15,6 +15,8 @@ def main():
     parser.add_argument("res", choices=RESOLUTIONS, help="resolution ({})".format(','.join(RESOLUTIONS)))
     parser.add_argument("region", choices=REGIONS, help="region ({})".format(','.join(REGIONS)))
 
+    parser.add_argument("--meta-only", action='store_true', default=False,
+                        help="build meta files only")
     parser.add_argument("--rerun", action='store_true', default=False,
             help="run script even if target dem already exists")
     parser.add_argument("--lib-path", default=matlab_scripts,
@@ -43,6 +45,7 @@ def main():
     if not os.path.isdir(dstdir):
         parser.error("dstdir does not exist: {}".format(dstdir))
 
+    # TODO: add earthdem projection handling
     if args.region == 'arctic':
         projstr = 'polar stereo north'
     elif args.region == 'antarctic':
@@ -68,13 +71,14 @@ def main():
                     i+=1
                     if args.pbs:
                         job_name = 't2t_{}'.format(tq)
-                        cmd = r'qsub -N {} -v p1={},p2={},p3="{}",p4={} {}'.format(
+                        cmd = r'qsub -N {} -v p1={},p2={},p3="{}",p4={},p5={} {}'.format(
                             job_name,
                             scriptdir,
                             matfile,
                             projstr,
                             args.lib_path,
-                            qsubpath
+                            'true' if args.meta_only else 'false',
+                            qsubpath,
                         )
                         print cmd
                         if not args.dryrun:
@@ -82,12 +86,19 @@ def main():
 
                     ## else run matlab
                     else:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); writeTileToTifv4('{2}','{3}'); tileMetav4('{2}'); exit" """.format(
-                            scriptdir,
-                            args.lib_path,
-                            matfile,
-                            projstr
-                        )
+                        if args.meta_only:
+                            cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); tileMetav4('{2}'); exit" """.format(
+                                scriptdir,
+                                args.lib_path,
+                                matfile,
+                            )
+                        else:
+                            cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); writeTileToTifv4('{2}','{3}'); tileMetav4('{2}'); exit" """.format(
+                                scriptdir,
+                                args.lib_path,
+                                matfile,
+                                projstr
+                            )
                         print "{}, {}".format(i, cmd)
                         if not args.dryrun:
                             subprocess.call(cmd, shell=True)
