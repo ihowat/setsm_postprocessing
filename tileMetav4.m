@@ -19,7 +19,7 @@ end
 
 % make outname
 outfile=strrep(f,'.mat','_meta.txt');
-
+varlist = who(m);
 fileAtts= dir(m.Properties.Source);
 
 % test if exists, skip if does
@@ -33,14 +33,19 @@ strip.name=unique(m.stripList);
 strip.name=strip.name(:);
 
 %% Get tile version
-tileVersion='4.0';
-if ~isempty(whos(m,'version')); tileVersion=m.version; end
+tileVersion='Unspecified';
+project = 'Unspecified';
+if ~isempty(whos(m,'version'))
+    pv=strsplit(m.version,'|');
+    tileVersion=pv{2};
+    project=pv{1};
+end
 
 fprintf('writing meta\n')
 
 %% Write File
 fid=fopen(outfile,'w');
-fprintf(fid,'ArcticDEM Mosaic Tile Metadata \n');
+fprintf(fid,'%s Mosaic Tile Metadata \n',project);
 fprintf(fid,'Creation Date: %s\n',fileAtts.date);
 fprintf(fid,'Version: %s\n',tileVersion);
 fprintf(fid,'\n');
@@ -51,6 +56,13 @@ if isfield(m,'icesat_dz_N')
     fprintf(fid,'ICESat median absolute deviation: %.2f\n',m.icesat_dz_mad);
     fprintf(fid,'\n');
 end
+
+fprintf(fid,'Adjacent Tile Blend Status \n');
+fprintf(fid,'Right edge merged: %s\n', mat2str(any(strcmp(varlist,'mergedRight'))));
+fprintf(fid,'Left edge merged: %s\n', mat2str(any(strcmp(varlist,'mergedLeft'))));
+fprintf(fid,'Top edge merged: %s\n', mat2str(any(strcmp(varlist,'mergedTop'))));
+fprintf(fid,'Bottom edge merged: %s\n', mat2str(any(strcmp(varlist,'mergedBottom'))));
+fprintf(fid,'\n');
 
 fprintf(fid,'List of strips used in mosaic:\n');
 i=1;
