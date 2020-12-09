@@ -28,10 +28,12 @@ if ~isempty(n)
     quadrant = varargin{n+1};
 end
 
-projection = 'polar stereo north';
+projection = '';
 n = find(strcmpi('projection',varargin));
 if ~isempty(n)
-   projection = varargin{n+1};
+    projection = varargin{n+1};
+else
+    error("'projection' argument must be provided");
 end
 
 n = find(strcmpi('extent',varargin));
@@ -63,8 +65,8 @@ else
     subTileNum = cellfun(@(x) str2num(x{3}),subTileName);
 end
 
-% Get tile projection information, esp. from UTM tile name
-[tileProjName,projection] = getProjName(subTileName{1}{1},projection);
+%% Get tile projection information, esp. from UTM tile name
+%[tileProjName,projection] = getProjName(subTileName{1}{1},projection);
 
 % sort subtilefiles by ascending subtile number order
 [subTileNum,n] = sort(subTileNum);
