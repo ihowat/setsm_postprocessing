@@ -57,8 +57,7 @@ def main():
                         ))
     parser.add_argument("--version", default=None,
                         help="mosaic version (default is {})".format(
-                            ', '.join(["{} if --project={}".format(val, dom) for dom, val in
-                                       project_version_dict.items()])
+                            ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_version_dict.items()])
                         ))
     parser.add_argument('--quads', action='store_true', default=False,
             help="build into quad subtiles")
@@ -86,14 +85,16 @@ def main():
     matlab_script = 'mosaicSubTiles'
 
     ## Set default arguments by project setting
-    if args.project is None and True in [arg is None for arg in [args.epsg, args.tile_def]]:
+    if args.project is None and True in [arg is None for arg in [args.epsg, args.tile_def, args.version]]:
         parser.error("--project arg must be provided if one of the following arguments is not provided: {}".format(
-            ' '.join(["--epsg --tile-def"])
+            ' '.join(["--epsg", "--tile-def", "--version"])
         ))
     if args.epsg is None:
         args.epsg = project_epsg_dict[args.project]
     if args.tile_def is None:
         args.tile_def = project_tileDefFile_dict[args.project]
+    if args.version is None:
+        args.version = project_version_dict[args.project]
 
     ## Verify path arguments
     if not os.path.isdir(srcdir):
@@ -248,7 +249,7 @@ def main():
                         task.st,
                         finfile,
                         tile_projstr,
-                        project_version_dict[args.project],
+                        args.version,
                     )
                     print(cmd)
                     if not args.dryrun:
@@ -267,7 +268,7 @@ def main():
                             task.t,
                             tile_def,
                             tile_projstr,
-                            project_version_dict[args.project],
+                            args.version,
                         )
                     else:
                         cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{7}','{8}','quadrant','{6}'); {2}('{3}',{4},'{5}','projection','{9}','version','{10}','quadrant','{6}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);" """.format(
@@ -281,7 +282,7 @@ def main():
                             task.t,
                             tile_def,
                             tile_projstr,
-                            project_version_dict[args.project],
+                            args.version,
                         )
                     print("{}, {}".format(i, cmd))
                     if not args.dryrun:
