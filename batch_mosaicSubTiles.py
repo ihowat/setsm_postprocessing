@@ -20,9 +20,9 @@ project_tileDefFile_dict = {
     'earthdem': tileDefFile_utm_options,
 }
 project_version_dict = {
-    'arcticdem': '4.1',
-    'rema': '2.0',
-    'earthdem': '1.0',
+    'arcticdem': 'ArcticDEM|4.1',
+    'rema': 'REMA|2.0',
+    'earthdem': 'EarthDEM|1.0',
 }
 
 def main():

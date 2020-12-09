@@ -19,7 +19,15 @@ echo $p1
 echo $p2
 echo $p3
 echo $p4
+echo $p5
 
-cmd="addpath('${p1}'); addpath('${p4}'); writeTileToTifv4('${p2}','${p3}'); tileMetav4('${p2}'); exit"
+if [ "${p9}" == 'false' ]; then
+    echo "Building tifs and meta files"
+    cmd="addpath('${p1}'); addpath('${p4}'); writeTileToTifv4('${p2}','${p3}'); tileMetav4('${p2}'); exit"
+
+else
+    echo "Building meta files only"
+    cmd="addpath('${p1}'); addpath('${p4}'); tileMetav4('${p2}'); exit"
+
 echo $cmd
 time matlab -nojvm -nodisplay -nosplash -r "${cmd}"
