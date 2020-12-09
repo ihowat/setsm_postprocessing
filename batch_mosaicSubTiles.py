@@ -257,7 +257,7 @@ def main():
 
                 ## else run matlab
                 else:
-                    if task.st == '':
+                    if task.st == 'null':
                         cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{6}','{7}'); {2}('{3}',{4},'{5}','projection','{8}','version','{9}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);" """.format(
                             scriptdir,
                             args.lib_path,
