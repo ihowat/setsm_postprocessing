@@ -19,6 +19,11 @@ project_tileDefFile_dict = {
     'rema': 'PGC_Imagery_Mosaic_Tiles_Antarctic.mat',
     'earthdem': tileDefFile_utm_options,
 }
+project_version_dict = {
+    'arcticdem': '4.1',
+    'rema': '2.0',
+    'earthdem': '1.0',
+}
 
 def main():
 
@@ -35,6 +40,11 @@ def main():
     parser.add_argument("--tile-def", default=None,
                         help="mosaic tile definition mat file (default is {})".format(
                             ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_tileDefFile_dict.items()])
+                        ))
+    parser.add_argument("--version", default=None,
+                        help="mosaic version (default is {})".format(
+                            ', '.join(["{} if --project={}".format(val, dom) for dom, val in
+                                       project_version_dict.items()])
                         ))
     parser.add_argument('--quads', action='store_true', default=False,
             help="build into quad subtiles")
@@ -105,7 +115,6 @@ def main():
                     tasks.append(Task(tile, quad))
             else:
                 tasks.append(Task(tile, 'null'))
-
 
     print("{} tasks found".format(len(tasks)))
 
@@ -204,7 +213,7 @@ def main():
                 i+=1
                 if args.pbs:
                     job_name = 'mst_{}'.format(task.t)
-                    cmd = r'qsub -N {1} -v p1={2},p2={3},p3={4},p4={5},p5={6},p6={7},p7={8},p8={9},p9={10},p10={11} {0}'.format(
+                    cmd = r'qsub -N {1} -v p1={2},p2={3},p3={4},p4={5},p5={6},p6={7},p7={8},p8={9},p9={10},p10={11},p11={12} {0}'.format(
                         qsubpath,
                         job_name,
                         scriptdir,
@@ -217,6 +226,7 @@ def main():
                         tile_def,
                         task.st,
                         finfile,
+                        project_version_dict[args.project],
                     )
                     print(cmd)
                     if not args.dryrun:
@@ -225,7 +235,7 @@ def main():
                 ## else run matlab
                 else:
                     if task.st == 'null':
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{6}','{7}'); projstr=getTileProjection('{7}'); {2}('{3}',{4},'{5}','projection',projstr,'extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);" """.format(
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{6}','{7}'); projstr=getTileProjection('{7}'); {2}('{3}',{4},'{5}','projection',projstr,'version','{8}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,
@@ -234,9 +244,10 @@ def main():
                             dstfp,
                             task.t,
                             tile_def,
+                            project_version_dict[args.project],
                         )
                     else:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{7}','{8}','quadrant','{6}'); projstr=getTileProjection('{8}'); {2}('{3}',{4},'{5}','projection',projstr,'quadrant','{6}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);" """.format(
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{7}','{8}','quadrant','{6}'); projstr=getTileProjection('{8}'); {2}('{3}',{4},'{5}','projection',projstr,'quadrant','{6}','version','{9}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,
@@ -246,6 +257,7 @@ def main():
                             task.st,
                             task.t,
                             tile_def,
+                            project_version_dict[args.project],
                         )
                     print("{}, {}".format(i, cmd))
                     if not args.dryrun:

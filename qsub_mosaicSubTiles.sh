@@ -31,6 +31,7 @@ echo "var7: ${p7}"
 echo "var8: ${p8}"
 echo "var9: ${p9}"
 echo "var10: ${p10}"
+echo "var11: ${p11}"
 
 echo
 
@@ -38,15 +39,15 @@ echo
 if [ "${p9}" == 'null' ]; then
     echo "Quad arg not present. Running full tile"
 
-    echo matlab -nojvm -nodisplay -nosplash -r "try; addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}'); projstr=getTileProjection('${p8}'); disp(x0); ${p3}('${p4}',${p5},'${p6}','projection',projstr,'extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);"
-    time matlab -nojvm -nodisplay -nosplash -r "try; addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}'); projstr=getTileProjection('${p8}'); disp(x0); ${p3}('${p4}',${p5},'${p6}','projection',projstr,'extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);"
+    echo matlab -nojvm -nodisplay -nosplash -r "try; addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}'); projstr=getTileProjection('${p8}'); disp(x0); ${p3}('${p4}',${p5},'${p6}','projection',projstr,'version','${p11}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);"
+    time matlab -nojvm -nodisplay -nosplash -r "try; addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}'); projstr=getTileProjection('${p8}'); disp(x0); ${p3}('${p4}',${p5},'${p6}','projection',projstr,'version','${p11}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);"
     status=$?
 
 else
     echo "Running quadrant ${p9}"
 
-    echo matlab -nojvm -nodisplay -nosplash -r "try; addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}','quadrant','${p9}'); projstr=getTileProjection('${p8}'); ${p3}('${p4}',${p5},'${p6}','projection',projstr,'quadrant','${p9}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);"
-    time matlab -nojvm -nodisplay -nosplash -r "try; addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}','quadrant','${p9}'); projstr=getTileProjection('${p8}'); ${p3}('${p4}',${p5},'${p6}','projection',projstr,'quadrant','${p9}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);"
+    echo matlab -nojvm -nodisplay -nosplash -r "try; addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}','quadrant','${p9}'); projstr=getTileProjection('${p8}'); ${p3}('${p4}',${p5},'${p6}','projection',projstr,'quadrant','${p9}','version','${p11}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);"
+    time matlab -nojvm -nodisplay -nosplash -r "try; addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}','quadrant','${p9}'); projstr=getTileProjection('${p8}'); ${p3}('${p4}',${p5},'${p6}','projection',projstr,'quadrant','${p9}','version','${p11}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);"
     status=$?
 
 fi
