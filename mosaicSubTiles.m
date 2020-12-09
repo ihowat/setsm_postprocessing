@@ -28,6 +28,12 @@ if ~isempty(n)
     quadrant = varargin{n+1};
 end
 
+n = find(strcmpi('version',varargin));
+if ~isempty(n)
+    version = varargin{n+1};
+    fprintf('Version: %s\n', version)
+end
+
 projection = '';
 n = find(strcmpi('projection',varargin));
 if ~isempty(n)
@@ -506,7 +512,11 @@ end
 
 %% Write Output
 % save matfile outputs
-save(outName,'x','y','z','N','Nmt','z_mad','tmax','tmin','-v7.3')
+if exist('version','var')
+    save(outName,'x','y','z','N','Nmt','z_mad','tmax','tmin','version','-v7.3')
+else
+    save(outName,'x','y','z','N','Nmt','z_mad','tmax','tmin','-v7.3')
+end
 
 % write tiff files
 z(isnan(z)) = -9999;
@@ -535,6 +545,16 @@ writeGeotiff(outNameTif,x,y,tmax,2,0,projection)
 
 outNameTif = strrep(outName,'.mat','_tmin.tif');
 writeGeotiff(outNameTif,x,y,tmin,2,0,projection)
+
+% Build mosaic centent list and write meta.txt
+fprintf('Building meta.txt\n')
+if exist('quadrant','var')
+    addInfoToSubtileMosaic(subTileDir,dx,outName,quadrant);
+else
+    addInfoToSubtileMosaic(subTileDir,dx,outName);
+end
+
+tileMetav4(outName)
 
 
 function dZ = getOffsets(subTileFiles,subTileNum,buff,outName)
