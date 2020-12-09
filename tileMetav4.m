@@ -65,7 +65,7 @@ fprintf(fid,'Top edge merged: %s\n', mat2str(any(strcmp(varlist,'mergedTop'))));
 fprintf(fid,'Bottom edge merged: %s\n', mat2str(any(strcmp(varlist,'mergedBottom'))));
 fprintf(fid,'\n');
 
-fprintf(fid,'List of strips used in mosaic:\n');
+fprintf(fid,'List of DEMs used in mosaic:\n');
 i=1;
 for i=1:length(strip.name)
     fprintf(fid,'%s\n',...
