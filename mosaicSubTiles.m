@@ -528,22 +528,22 @@ if ismac
     gdalpath = '/Library/Frameworks/GDAL.framework/Versions/Current/Programs/';
 end
 system([gdalpath ,'gdaldem hillshade -z 4 -compute_edges  -co TILED=YES -co BIGTIFF=IF_SAFER -co COMPRESS=LZW ',...
-   outNameTif,' ',strrep(outNameTif,'_dem.tif','_dem_shade.tif')]);
+   outNameTif,' ',strrep(outNameTif,'_dem.tif','_browse.tif')]);
 
-outNameTif = strrep(outName,'.mat','_N.tif');
+outNameTif = strrep(outName,'.mat','_count.tif');
 writeGeotiff(outNameTif,x,y,N,1,0,projection)
 
-outNameTif = strrep(outName,'.mat','_Nmt.tif');
+outNameTif = strrep(outName,'.mat','_countmt.tif');
 writeGeotiff(outNameTif,x,y,Nmt,1,0,projection)
 
 z_mad(isnan(z_mad)) = -9999;
 outNameTif = strrep(outName,'.mat','_mad.tif');
 writeGeotiff(outNameTif,x,y,z_mad,4,-9999,projection)
 
-outNameTif = strrep(outName,'.mat','_tmax.tif');
+outNameTif = strrep(outName,'.mat','_maxdate.tif');
 writeGeotiff(outNameTif,x,y,tmax,2,0,projection)
 
-outNameTif = strrep(outName,'.mat','_tmin.tif');
+outNameTif = strrep(outName,'.mat','_mindate.tif');
 writeGeotiff(outNameTif,x,y,tmin,2,0,projection)
 
 % Build mosaic centent list and write meta.txt
