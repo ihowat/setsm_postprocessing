@@ -30,9 +30,9 @@ project_tileDefFile_dict = {
     'earthdem': tileDefFile_utm_options,
 }
 project_version_dict = {
-    'arcticdem': '4.1',
-    'rema': '2.0',
-    'earthdem': '1.0',
+    'arcticdem': 'ArcticDEM|4.1',
+    'rema': 'REMA|2.0',
+    'earthdem': 'EarthDEM|1.0',
 }
 
 def main():
@@ -257,7 +257,7 @@ def main():
 
                 ## else run matlab
                 else:
-                    if task.st == '':
+                    if task.st == 'null':
                         cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); [x0,x1,y0,y1]=getTileExtents('{6}','{7}'); {2}('{3}',{4},'{5}','projection','{8}','version','{9}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);" """.format(
                             scriptdir,
                             args.lib_path,
