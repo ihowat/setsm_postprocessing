@@ -12,6 +12,12 @@ if ~exist(outName,'file')
     return
 end
 
+variableInfo = who('-file', outName);
+if ismember('stripList', variableInfo)
+    fprintf('File %s already contains stripList var, returning\n',outName)
+    return
+end
+
 if nargin == 4
     quadrant = varargin{4};
 end
