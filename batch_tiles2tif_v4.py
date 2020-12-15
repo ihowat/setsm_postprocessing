@@ -72,12 +72,16 @@ def main():
             for q in quadnames:
                 tq = "{}_{}".format(tile,q)
                 dstfp = os.path.join(dstdir,tile,'{}_{}m_dem.tif'.format(tq, args.res))
+                metafp = os.path.join(dstdir,tile,'{}_{}m_meta.txt'.format(tq, args.res))
                 matfile = os.path.join(dstdir,tile,'{}_{}m.mat'.format(tq, args.res))
                 if not os.path.isfile(matfile):
                     print("Tile {} {}m mat file does not exist: {}".format(tq,args.res,matfile))
 
-                elif os.path.isfile(dstfp) and not args.rerun:
+                elif os.path.isfile(dstfp) and not args.rerun and not args.meta_only:
                     print('{} exists, skipping'.format(dstfp))
+                
+                elif os.path.isfile(metafp) and not args.rerun and args.meta_only:
+                    print('{} exists, skipping'.format(metafp))
 
                 else:
                     ## if pbs, submit to scheduler
