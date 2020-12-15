@@ -2,7 +2,7 @@ import os, string, sys, argparse, glob, subprocess
 matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing4'
 quadnames = ('1_1','1_2','2_1','2_2')
 RESOLUTIONS = ['2','10']
-REGIONS = ['arctic','antarctic']
+REGIONS = ['arctic','antarctic','earthdem']
 default_qsub = 'qsub_tiles2tif_v4.sh'
 
 #### TODO add projstring to passed args
@@ -45,26 +45,39 @@ def main():
     if not os.path.isdir(dstdir):
         parser.error("dstdir does not exist: {}".format(dstdir))
 
-    # TODO: add earthdem projection handling
     if args.region == 'arctic':
         projstr = 'polar stereo north'
     elif args.region == 'antarctic':
         projstr = 'polar stereo south'
+    elif args.region == 'earthdem':
+        projstr = None
 
     i=0
     if len(tiles) > 0:
 
         for tile in tiles:
 
+            tile_projstr = projstr
+
+            if tile_projstr is None:
+                assert args.region == 'earthdem'
+
+                utm_tilename_parts = tile.split('_')
+                utm_tilename_prefix = utm_tilename_parts[0]
+                if not utm_tilename_prefix.startswith('utm'):
+                    parser.error("Expected only UTM tile names (e.g. 'utm10n_01_01'), but got '{}'".format(tile))
+
+                tile_projstr = utm_tilename_prefix
+
             for q in quadnames:
                 tq = "{}_{}".format(tile,q)
                 dstfp = os.path.join(dstdir,tile,'{}_{}m_dem.tif'.format(tq, args.res))
                 matfile = os.path.join(dstdir,tile,'{}_{}m.mat'.format(tq, args.res))
                 if not os.path.isfile(matfile):
-                    print "Tile {} {}m mat file does not exist: {}".format(tq,args.res,matfile)
+                    print("Tile {} {}m mat file does not exist: {}".format(tq,args.res,matfile))
 
                 elif os.path.isfile(dstfp) and not args.rerun:
-                    print '{} exists, skipping'.format(dstfp)
+                    print('{} exists, skipping'.format(dstfp))
 
                 else:
                     ## if pbs, submit to scheduler
@@ -75,12 +88,12 @@ def main():
                             job_name,
                             scriptdir,
                             matfile,
-                            projstr,
+                            tile_projstr,
                             args.lib_path,
                             'true' if args.meta_only else 'false',
                             qsubpath,
                         )
-                        print cmd
+                        print(cmd)
                         if not args.dryrun:
                             subprocess.call(cmd, shell=True)
 
@@ -97,9 +110,9 @@ def main():
                                 scriptdir,
                                 args.lib_path,
                                 matfile,
-                                projstr
+                                tile_projstr,
                             )
-                        print "{}, {}".format(i, cmd)
+                        print("{}, {}".format(i, cmd))
                         if not args.dryrun:
                             subprocess.call(cmd, shell=True)
 
