@@ -37,31 +37,44 @@ def main():
     if not os.path.isdir(dstdir):
         parser.error("dstdir does not exist: {}".format(dstdir))
 
-    # Test tiles exist
-    existing_tiles = []
+    # Test tiles exist and grou pinto mosaic groups
+    mosaic_groups = {}
     for t in tiles:
+        np = t.split('_')
+        if len(np) == 2:
+            mos = 'None'
+            tnum = t
+        elif len(np) == 3:
+            mos = np[0]
+            tnum = '_'.join(np[1:2])
+        else:
+            print("Tile name does not match a known pattern: {}".format(t))
+            sys.exit(-1)
+            
         for q in quadnames:
             tq = "{}_{}".format(t,q)
             filename = "{}/{}/{}_2m.mat".format(dstdir,t,tq)
             if not os.path.isfile(filename):
                 print "Tile {} 2m mat file does not exist: {}".format(tq,filename)
             else:
-                existing_tiles.append(tq)
+                if not mos in mosaic_groups:
+                    mosaic_groups[mos] = []
+                mosaic_groups[mos].append(tq)
 
-    #  group tiles by dimension
+    # group tiles by dimension
     groups = {}
-    for quad in existing_tiles:
-        row = quad[0:2]+'_'+quad[6:7]
-        col = quad[3:5]+'_'+quad[8:9]
-
-        if args.dimension == 'row':
-            key = row
-        else:
-            key = col
-
-        if key not in groups:
-            groups[key] = [quad]
-        else:
+    for mos in mosaic_groups:
+        existing_tiles = mosaic_groups[mos]
+        for quad in existing_tiles:
+            np = quad.split('_')
+            o = 0 if mos == 'None' else 1
+            row = '_'.join([np[0+o],np[2+o]])
+            col = '_'.join([np[1+o],np[3+o]])
+            temp_key = row if args.dimension == 'row' else col
+            key = '_'.join([mos,temp_key])
+    
+            if key not in groups:
+                groups[key] = []
             groups[key].append(quad)
 
     i=0
@@ -82,7 +95,7 @@ def main():
                 ## if pbs, submit to scheduler
                 i+=1
                 if args.pbs:
-                    job_name = 'merge_{}'.format(key)
+                    job_name = 'tbm_{}'.format(key)
                     cmd = r'qsub -N {} -v p1={},p2={},p3="{}",p4={} {}'.format(
                         job_name,
                         scriptdir,
