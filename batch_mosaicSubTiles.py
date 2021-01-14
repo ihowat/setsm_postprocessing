@@ -165,7 +165,7 @@ def main():
 
                 tile_def_abs = os.path.join(scriptdir, tile_def)
                 if not os.path.isfile(tile_def_abs):
-                    parser.error("tile def file does not exit: {}".format(tile_def_abs))
+                    parser.error("tile def file does not exist: {}".format(tile_def_abs))
 
             if task.st == 'null':
                 dstfn = "{}_{}m.mat".format(task.t,args.res)
@@ -235,7 +235,7 @@ def main():
                 i+=1
                 if args.pbs:
                     job_name = 'mst_{}'.format(task.t)
-                    cmd = r"""qsub -N {1} -v p1={2},p2={3},p3={4},p4={5},p5={6},p6={7},p7={8},p8={9},p9={10},p10={11},p11={12},p12='{13}' {0}""".format(
+                    cmd = r"""qsub -N {1} -v p1={2},p2={3},p3={4},p4={5},p5={6},p6={7},p7={8},p8={9},p9={10},p10={11},p11='{12}',p12='{13}' {0}""".format(
                         qsubpath,
                         job_name,
                         scriptdir,
