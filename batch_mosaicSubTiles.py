@@ -1,6 +1,6 @@
 import os, string, sys, argparse, glob, subprocess
 from collections import namedtuple
-matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing4'
+matlab_scripts = '/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4'
 quads = ['1_1','1_2','2_1','2_2']
 
 Task = namedtuple('Task', 't st')
@@ -26,7 +26,8 @@ tileDefFile_utm_south = 'PGC_UTM_Mosaic_Tiles_South.mat'
 tileDefFile_utm_options = "{} or {}".format(tileDefFile_utm_north, tileDefFile_utm_south)
 project_tileDefFile_dict = {
     'arcticdem': 'PGC_Imagery_Mosaic_Tiles_Arctic.mat',
-    'rema': 'PGC_Imagery_Mosaic_Tiles_Antarctic.mat',
+    # 'rema': 'PGC_Imagery_Mosaic_Tiles_Antarctic.mat',
+    'rema': 'rema_tile_definitions.mat',
     'earthdem': tileDefFile_utm_options,
 }
 project_version_dict = {
