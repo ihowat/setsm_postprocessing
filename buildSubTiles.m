@@ -780,7 +780,7 @@ for j=1:length(nn)
     end
     ztmp(BW) = NaN;
     z(:,:,nn(j)) = ztmp;
-    mttmp(BW) = NaN;
+    mttmp(BW) = false;
     mt(:,:,nn(j)) = mttmp;
     clear BW ztmp mttmp
 end
