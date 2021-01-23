@@ -29,7 +29,7 @@ if exist(outfile,'file')
 end
     
 %% Read and format strip info
-if isfield(m,'stripList')
+if ~isempty(whos(m,'stripList'))
     strip.name=unique(m.stripList);
     strip.name=strip.name(:);
 else
@@ -55,7 +55,7 @@ fprintf(fid,'Creation Date: %s\n',fileAtts.date);
 fprintf(fid,'Version: %s\n',tileVersion);
 fprintf(fid,'\n');
 
-if isfield(m,'icesat_dz_N')
+if ~isempty(whos(m,'icesat_dz_N'))
     fprintf(fid,'ICESat N points: %d\n',m.icesat_dz_N);
     fprintf(fid,'ICESat median offset: %.2f\n',m.icesat_dz_med);
     fprintf(fid,'ICESat median absolute deviation: %.2f\n',m.icesat_dz_mad);
@@ -70,14 +70,14 @@ fprintf(fid,'Bottom edge merged: %s\n', mat2str(any(strcmp(varlist,'mergedBottom
 fprintf(fid,'\n');
 
 fprintf(fid,'List of DEMs used in mosaic:\n');
-if isfield(m,'stripList')
+if ~isempty(whos(m,'stripList'))
     i=1;
     for i=1:length(strip.name)
         fprintf(fid,'%s\n',...
             strip.name{i});
     end
 else
-    fprintf(fid,'No component data found\n')
+    fprintf(fid,'No component data found\n');
 end
 
 fclose(fid);
