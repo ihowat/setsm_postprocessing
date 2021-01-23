@@ -29,8 +29,12 @@ if exist(outfile,'file')
 end
     
 %% Read and format strip info
-strip.name=unique(m.stripList);
-strip.name=strip.name(:);
+if isfield(m,'stripList')
+    strip.name=unique(m.stripList);
+    strip.name=strip.name(:);
+else
+    fprintf('WARNING stripList variable not found in matfile\n')
+end
 
 %% Get tile version
 tileVersion='Unspecified';
@@ -66,10 +70,15 @@ fprintf(fid,'Bottom edge merged: %s\n', mat2str(any(strcmp(varlist,'mergedBottom
 fprintf(fid,'\n');
 
 fprintf(fid,'List of DEMs used in mosaic:\n');
-i=1;
-for i=1:length(strip.name)
-    fprintf(fid,'%s\n',...
-        strip.name{i}); 
+if isfield(m,'stripList')
+    i=1;
+    for i=1:length(strip.name)
+        fprintf(fid,'%s\n',...
+            strip.name{i});
+    end
+else
+    fprintf(fid,'No component data found\n')
 end
+
 fclose(fid);
     
