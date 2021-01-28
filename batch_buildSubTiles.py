@@ -37,10 +37,10 @@ project_tileDefFile_dict = {
 }
 
 project_databaseFile_dict = {
-    'arcticdem': 'ArcticDEMdatabase4_2m_v4_20201218.mat',
-    # 'rema': 'REMAdatabase4_2m_v4_20200806.mat',
-    'rema': 'rema_strips_v13e.shp',
-    'earthdem': 'EarthDEMdatabase4_2m_v4_20210101.mat',
+    'arcticdem': '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/ArcticDEMdatabase4_2m_v4_20201218.mat',
+    # 'rema': '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/REMAdatabase4_2m_v4_20200806.mat',
+    'rema': '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/rema_strips_v13e.shp',
+    'earthdem': '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/EarthDEMdatabase4_2m_v4_20210101.mat',
 }
 project_waterTileDir_dict = {
     'arcticdem': '/mnt/pgc/data/projects/arcticdem/watermasks/global_surface_water/tiled_watermasks/',
@@ -178,10 +178,10 @@ def main():
         if args.ref_dem is not None and not os.path.isfile(args.ref_dem):
             parser.error("--ref-dem does not exist: {}".format(args.ref_dem))
         projection_string = epsg_projstr_dict[args.epsg]
-        tile_def_abs = os.path.join(scriptdir, args.tile_def)
+        tile_def_abs = os.path.abspath(args.tile_def if os.path.isfile(args.tile_def) else os.path.join(scriptdir, args.tile_def))
         if not os.path.isfile(tile_def_abs):
             parser.error("--tile-def file does not exit: {}".format(tile_def_abs))
-    strip_db_abs = os.path.join(scriptdir, args.strip_db)
+    strip_db_abs = os.path.abspath(args.strip_db if os.path.isfile(args.strip_db) else os.path.join(scriptdir, args.strip_db))
     if not os.path.isfile(strip_db_abs):
         parser.error("--strip-db does not exist: {}".format(strip_db_abs))
     if args.water_tile_dir != '' and not os.path.isdir(args.water_tile_dir):
