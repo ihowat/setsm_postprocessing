@@ -1,8 +1,24 @@
-function tileMetav4(f)
+function tileMetav4(f,varargin)
 % tileMeta: write meta file for ArcticDEM mosaic tile
 %
 %   tileMeta(f) where f is either the filename or matfile handle of the
 %   tile matfile.
+
+project='Unspecified';
+tileVersion='Unspecified';
+
+% Parse varargins
+n = find(strcmpi(varargin,'project'));
+if ~isempty(n)
+    project = varargin{n+1};
+    fprintf('project = %s\n',project)
+end
+
+n = find(strcmpi(varargin,'tileVersion'));
+if ~isempty(n)
+    tileVersion = varargin{n+1};
+    fprintf('tileVersion = %s\n',tileVersion)
+end
 
 %% first test if input arg is either a valid filename or mat file handle
 if isstr(f) % it's a string, might be a filename
@@ -37,12 +53,14 @@ else
 end
 
 %% Get tile version
-tileVersion='Unspecified';
-project = 'Unspecified';
 if ~isempty(whos(m,'version'))
     pv=strsplit(m.version,'|');
-    tileVersion=pv{2};
-    project=pv{1};
+    if length(pv) == 2
+        project=pv{1};
+        tileVersion=pv{2};
+    elseif length(pv) == 1
+        tileVersion=pv{1};
+    end
 end
 
 fprintf('writing meta\n')
