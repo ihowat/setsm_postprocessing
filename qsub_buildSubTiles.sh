@@ -45,20 +45,46 @@ echo
 module load gdal/2.1.3
 module load matlab/2019a
 
-cmd="${cmd//|COMMA|/,}"
-echo "CMD: ${cmd}"
+task_cmd="${task_cmd//|COMMA|/,}"
+echo "Task CMD: ${task_cmd}"
 echo
 
+job_logfile="/home/${USER}/${PBS_JOBNAME}.o$(echo "$PBS_JOBID" | cut -d'.' -f1)"
+echo "job logfile: ${job_logfile}"
 echo "finfile: ${finfile}"
 echo
 
-echo "$cmd"
-time eval "$cmd"
-status=$?
+echo "$task_cmd"
+time eval "$task_cmd"
+task_return_code=$?
 
-echo "Done"
+echo
+
+echo "Task return code: ${task_return_code}"
+if [ ! -f "$job_logfile" ]; then
+    log_error=''
+    echo "WARNING! Job logfile does not exist: ${job_logfile}"
+    echo "Cannot check job logfile for potential errmsgs from task"
+else
+    log_error=$(grep -i -m1 'error' "$job_logfile")
+    if [ -n "$log_error" ]; then
+        echo "Found errmsg in job logfile (${job_logfile}):"
+        echo "$log_error"
+    else
+        echo "Found no errmsg in job logfile (${job_logfile})"
+    fi
+fi
+echo
 
 # create finfile if matlab command exited without error
-if (( status == 0 )); then
-    touch "${finfile}"
+if (( task_return_code == 0 )) && [ -z "$log_error" ]; then
+    echo "Considering run successful due to [task return code of zero] AND [no errmsgs found in job logfile]"
+    echo "Creating finfile: ${finfile}"
+    touch "$finfile"
+else
+    echo "Considering run unsuccessful due to either [non-zero task return code] OR [errmsgs found in job logfile]"
+    echo "Will not create finfile"
 fi
+
+echo
+echo "Done"

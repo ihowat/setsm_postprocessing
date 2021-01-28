@@ -58,6 +58,13 @@ echo "var10: ${p10}"
 echo "var11: ${p11}"
 echo "var12: ${p12}"
 
+dstfile="$p6"
+finfile="$p10"
+echo "dstfile: var6: ${dstfile}"
+echo "finfile: var10: ${finfile}"
+job_logfile="/home/${USER}/${PBS_JOBNAME}.o$(echo "$PBS_JOBID" | cut -d'.' -f1)"
+echo "job logfile: ${job_logfile}"
+
 echo
 
 # Check if quad arg is present
@@ -66,20 +73,48 @@ if [ "${p9}" == 'null' ]; then
 
     echo matlab -nojvm -nodisplay -nosplash -r "try; addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}'); disp(x0); ${p3}('${p4}',${p5},'${p6}','projection','${p11}','version','${p12}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);"
     time matlab -nojvm -nodisplay -nosplash -r "try; addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}'); disp(x0); ${p3}('${p4}',${p5},'${p6}','projection','${p11}','version','${p12}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);"
-    status=$?
+    task_return_code=$?
 
 else
     echo "Running quadrant ${p9}"
 
     echo matlab -nojvm -nodisplay -nosplash -r "try; addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}','quadrant','${p9}'); ${p3}('${p4}',${p5},'${p6}','projection','${p11}','version','${p12}','quadrant','${p9}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);"
     time matlab -nojvm -nodisplay -nosplash -r "try; addpath('${p1}'); addpath('${p2}'); [x0,x1,y0,y1]=getTileExtents('${p7}','${p8}','quadrant','${p9}'); ${p3}('${p4}',${p5},'${p6}','projection','${p11}','version','${p12}','quadrant','${p9}','extent',[x0,x1,y0,y1]); catch e; disp(getReport(e)); exit(1); end; exit(0);"
-    status=$?
+    task_return_code=$?
 
 fi
 
-echo "Done"
+echo
+
+echo "Task return code: ${task_return_code}"
+if [ ! -f "$job_logfile" ]; then
+    log_error=''
+    echo "WARNING! Job logfile does not exist: ${job_logfile}"
+    echo "Cannot check job logfile for potential errmsgs from task"
+else
+    log_error=$(grep -i -m1 'error' "$job_logfile")
+    if [ -n "$log_error" ]; then
+        echo "Found errmsg in job logfile (${job_logfile}):"
+        echo "$log_error"
+    else
+        echo "Found no errmsg in job logfile (${job_logfile})"
+    fi
+fi
+echo
 
 # create finfile if matlab command exited without error
-if (( status == 0 )); then
-    touch "${p10}"
+if (( task_return_code == 0 )) && [ -z "$log_error" ]; then
+    echo "Considering run successful due to [task return code of zero] AND [no errmsgs found in job logfile]"
+    echo "Creating finfile: ${finfile}"
+    touch "$finfile"
+else
+    echo "Considering run unsuccessful due to either [non-zero task return code] OR [errmsgs found in job logfile]"
+    echo "Will not create finfile"
+#    if [ -f "$dstfile" ]; then
+#        echo "Removing dstfile: ${dstfile}"
+#        rm "$dstfile"
+#    fi
 fi
+
+echo
+echo "Done"

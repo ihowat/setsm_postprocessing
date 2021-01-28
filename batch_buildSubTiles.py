@@ -322,7 +322,7 @@ def main():
                 i+=1
                 if args.pbs:
                     job_name = 'bst_{}'.format(tile)
-                    cmd = r"""qsub -N {1} -v cmd="{2}",finfile="{3}" {0}""".format(
+                    cmd = r"""qsub -N {1} -v task_cmd="{2}",finfile="{3}" {0}""".format(
                         qsubpath,
                         job_name,
                         matlab_cmd.replace(',', '|COMMA|'),
