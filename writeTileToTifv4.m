@@ -131,7 +131,7 @@ if contains('tmax',flds)
     end
 end
     
-    % Minimum date
+% Minimum date
 if contains('tmin',flds)
     fprintf('Writing tmin\n')
     outNameTif = strrep(tilef,'.mat','_mindate.tif');

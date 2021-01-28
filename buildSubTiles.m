@@ -132,16 +132,18 @@ end
 
 meta.fileName = strrep(meta.fileName, '_meta.txt', '_dem_10m.tif');
 
-if isfield(meta,'avg_rmse')
-    % this is from an old version of the meta files that used 0 in mean
-    error('avg_rmse field in meta structure, needs to be updated')
-elseif isfield(meta,'scene_alignment')
-    % need to rm zeros (first scene) and nans (unused redundant scenes),
-    % strips w/ 1 scene will be NaN
-    meta.scene_alignment_meanrmse = cellfun(@(x)...
-        mean(x.rmse(x.rmse~=0 & ~isnan(x.rmse))), meta.scene_alignment);
-elseif ~isfield(meta,'scene_alignment_meanrmse')
-    error('missing scene alignment field in meta structure')
+if ~isfield(meta,'scene_alignment_meanrmse')
+    if isfield(meta,'avg_rmse')
+        % this is from an old version of the meta files that used 0 in mean
+        error('avg_rmse field in meta structure, needs to be updated')
+    elseif isfield(meta,'scene_alignment')
+        % need to rm zeros (first scene) and nans (unused redundant scenes),
+        % strips w/ 1 scene will be NaN
+        meta.scene_alignment_meanrmse = cellfun(@(x)...
+            mean(x.rmse(x.rmse~=0 & ~isnan(x.rmse))), meta.scene_alignment);
+    else
+        error('missing scene alignment field in meta structure')
+    end
 end
 
 if ~isfield(meta,'A')
@@ -175,18 +177,35 @@ else
     tileName_in_tileDef = tileName;
 end
 
-% Get tile projection information, esp. from UTM tile name
-if isempty(projection) && isfield(tileDefs,'projstr')
-    projection = tileDefs.projstr;
-end
-[tileProjName,projection] = getProjName(tileName,projection);
-if isempty(projection)
-    error("'projection' must be provided by either varargin or as field in tile definition structure");
-end
-
 % trim strip database to only strips with a projection matching the tile
 if isfield(meta,'strip_projection_name')
-    in = strcmp(meta.strip_projection_name, tileProjName);
+    if isempty(projection)
+        error("'projection' argument must be provided when strip dbase has 'strip_projection_name' field");
+    end
+
+    tileProjName = '';
+    if startsWith(tileName,'utm')
+        tileName_parts = strsplit(tileName,'_');
+        tileProjName = tileName_parts{1};
+    end
+
+    if strcmpi(projection, 'polar stereo north')
+        tileProjName = 'psn';
+    elseif strcmpi(projection, 'polar stereo south')
+        tileProjName = 'pss';
+    elseif startsWith(projection,'utm', 'IgnoreCase',true)
+        if ~startsWith(tileProjName, projection, 'IgnoreCase',true)
+            error("'projection' argument (%s) and tileName (%s) prefix (%s) do not match", ...
+                projection, tileName, tileProjName);
+        end
+    else
+        error("No matching tileProjName for 'projection' argument: '%s'", tileProjName);
+    end
+
+    in = strcmpi(meta.strip_projection_name, tileProjName);
+    if ~any(in)
+        error("no matches between tileProjName='%s' and strip dbase 'strip_projection_name' field", tileProjName);
+    end
     meta = structfun(@(x) x(in), meta,'uniformoutput',0);
 end
 
@@ -783,7 +802,7 @@ for j=1:length(nn)
     end
     ztmp(BW) = NaN;
     z(:,:,nn(j)) = ztmp;
-    mttmp(BW) = NaN;
+    mttmp(BW) = false;
     mt(:,:,nn(j)) = mttmp;
     clear BW ztmp mttmp
 end

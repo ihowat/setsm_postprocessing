@@ -113,7 +113,7 @@ for filen=1:NsubTileFiles
         zsub=load(subTileFiles{filen},'stripIDs');
 
         if isempty(zsub.stripIDs)
-            fprintf('no stripIds returned, skipping\n')
+            fprintf('no stripIDs returned, skipping\n')
             continue
         end
        
