@@ -79,16 +79,16 @@ def main():
 
     i=0
     if len(groups) > 0:
-        keys = groups.keys()
+        keys = list(groups.keys())
         keys.sort()
 
         for key in keys:
 
-            print "Submitting tile group from {} {}".format(args.dimension,key)
+            print("Submitting tile group from {} {}".format(args.dimension,key))
             quads = groups[key]
 
             if len(quads) < 2:
-                print "Tile group {} has only 1 member: {}. Skipping".format(key, quads)
+                print("Tile group {} has only 1 member: {}. Skipping".format(key, quads))
             else:
                 tile_str = ";".join(quads)
 
@@ -104,7 +104,7 @@ def main():
                         args.lib_path,
                         qsubpath
                     )
-                    print cmd
+                    print(cmd)
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)
 
@@ -116,7 +116,7 @@ def main():
                         dstdir,
                         tile_str.replace(";","','")
                     )
-                    print "{}, {}".format(i, cmd)
+                    print("{}, {}".format(i, cmd))
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)
 
