@@ -7,28 +7,62 @@ project_choices = [
     'earthdem',
 ]
 
+epsg_projstr_dict = {
+    3413: 'polar stereo north',
+    3031: 'polar stereo south',
+}
+project_epsg_dict = {
+    'arcticdem': 3413,
+    'earthdem': None,
+    'rema': 3031,
+}
+
 earthdem_tileprefix_key = '<tileprefix>'
 earthdem_ref_dem_template = '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_UTM_90m/TDX_UTM_Mosaic_{}_90m.tif'.format(earthdem_tileprefix_key)
+
+project_refDemFile_dict = {
+    'arcticdem': None,
+    'earthdem': earthdem_ref_dem_template,
+    'rema': '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_Antarctica_90m/TanDEM_Antarctica_Mosaic.tif',
+}
 
 tileDefFile_utm_north = 'PGC_UTM_Mosaic_Tiles_North.mat'
 tileDefFile_utm_south = 'PGC_UTM_Mosaic_Tiles_South.mat'
 tileDefFile_utm_options = "{} or {}".format(tileDefFile_utm_north, tileDefFile_utm_south)
 project_tileDefFile_dict = {
     'arcticdem': 'PGC_Imagery_Mosaic_Tiles_Arctic.mat',
-    'rema': 'PGC_Imagery_Mosaic_Tiles_Antarctic.mat',
+    # 'rema': 'PGC_Imagery_Mosaic_Tiles_Antarctic.mat',
+    'rema': 'rema_tile_definitions.mat',
     'earthdem': tileDefFile_utm_options,
 }
 
 project_databaseFile_dict = {
-    'arcticdem': 'arcticDEMdatabase4_2m_v4_20200806.mat',
-    'rema': 'REMAdatabase4_2m_v4_20200806.mat',
-    'earthdem': 'EarthDEMdatabase4_2m_v4_20201012_combined_fixed.mat',
+    'arcticdem': 'ArcticDEMdatabase4_2m_v4_20201218.mat',
+    # 'rema': 'REMAdatabase4_2m_v4_20200806.mat',
+    'rema': 'rema_strips_v13e.shp',
+    'earthdem': 'EarthDEMdatabase4_2m_v4_20210101.mat',
 }
-waterTileDir_dict = {
+project_waterTileDir_dict = {
     'arcticdem': '/mnt/pgc/data/projects/arcticdem/watermasks/global_surface_water/tiled_watermasks/',
-    'rema':      '/mnt/pgc/data/projects/rema/watermasks/global_surface_water/tiled_watermasks/',
+    'rema':      '',
     'earthdem':  '/mnt/pgc/data/projects/earthdem/watermasks/global_surface_water/tiled_watermasks/',
 }
+project_stripsDirectory_dict = {
+    'arcticdem': '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region',
+    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/region',
+    'earthdem':  '/mnt/pgc/data/elev/dem/setsm/EarthDEM/region',
+}
+project_tileqcDir_dict = {
+    'arcticdem': '',
+    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_qc_v13e',
+    'earthdem':  '',
+}
+project_tileParamList_dict = {
+    'arcticdem': '',
+    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tileParamList_v13e.txt',
+    'earthdem':  '',
+}
+
 
 def main():
 
@@ -37,10 +71,15 @@ def main():
     parser.add_argument("dstdir", help="target directory (tile subfolders will be created)")
     parser.add_argument("tiles", help="list of mosaic tiles, comma delimited")
 
-    parser.add_argument("--ref-dem", default=None, help="reference DEM (required for ArcticDEM & REMA, automatically selected "
-                        "for EarthDEM by file path template {})".format(earthdem_ref_dem_template))
     parser.add_argument("--project", default=None, choices=project_choices,
                         help="sets the default value of project-specific arguments")
+    parser.add_argument("--ref-dem", default=None, help="reference DEM (default is {})".format(
+                            ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_refDemFile_dict.items()])
+                        ))
+    parser.add_argument("--epsg", type=int, default=None, choices=list(epsg_projstr_dict.keys()),
+                        help="output mosaic tile projection EPSG code (default is {})".format(
+                            ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_epsg_dict.items()])
+                        ))
     parser.add_argument("--tile-def", default=None,
                         help="mosaic tile definition mat file (default is {})".format(
                             ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_tileDefFile_dict.items()])
@@ -51,7 +90,11 @@ def main():
                         ))
     parser.add_argument("--water-tile-dir", default=None,
                         help="directory of water tifs (default is {})".format(
-                            ', '.join(["{} if --project={}".format(val, dom) for dom, val in waterTileDir_dict.items()])
+                            ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_waterTileDir_dict.items()])
+                        ))
+    parser.add_argument("--tileqc-dir", default=None,
+                        help="directory of tile qc mat files (default is {})".format(
+                            ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_tileqcDir_dict.items()])
                         ))
     parser.add_argument("--lib-path", default=matlab_scripts,
                         help="path to referenced Matlab functions (default={})".format(matlab_scripts))
@@ -87,34 +130,59 @@ def main():
     make2m_arg = 'false' if args.make_10m_only else 'true'
 
     ## Set default arguments by project setting
-    if args.project is None and True in [arg is None for arg in [args.tile_def, args.strip_db, args.water_tile_dir]]:
+    if args.project is None and True in [arg is None for arg in
+            [args.ref_dem, args.epsg, args.tile_def, args.strip_db, args.water_tile_dir]]:
         parser.error("--project arg must be provided if one of the following arguments is not provided: {}".format(
-            ' '.join(["--tile-def", "--strip-db", "--water-tile-dir"])
+            ' '.join(["--ref-dem", "--epsg", "--tile-def", "--strip-db", "--water-tile-dir"])
         ))
-    if args.ref_dem is None and args.project != 'earthdem':
-        parser.error("--ref-dem argument must be provided if not --project=earthdem")
+    if args.epsg is None:
+        args.epsg = project_epsg_dict[args.project]
+    if args.ref_dem is None:
+        args.ref_dem = project_refDemFile_dict[args.project]
+        if args.ref_dem is None:
+            parser.error("--ref-dem argument must be provided if --project={}".format(args.project))
     if args.tile_def is None:
         args.tile_def = project_tileDefFile_dict[args.project]
     if args.strip_db is None:
         args.strip_db = project_databaseFile_dict[args.project]
     if args.water_tile_dir is None:
-        args.water_tile_dir = waterTileDir_dict[args.project]
+        args.water_tile_dir = project_waterTileDir_dict[args.project]
+    if args.project is not None:
+        if args.tileqc_dir is None:
+            args.tileqc_dir = project_tileqcDir_dict[args.project]
+        strips_dir = project_stripsDirectory_dict[args.project]
+        tileparam_file = project_tileParamList_dict[args.project]
+    else:
+        args.tileqc_dir = ''
+        strips_dir = ''
+        tileparam_file = ''
+
+    ## Convert argument paths to absolute paths
+    if args.water_tile_dir != '':
+        args.water_tile_dir = os.path.abspath(args.water_tile_dir)
+    if strips_dir != '':
+        strips_dir = os.path.abspath(strips_dir)
+    if args.tileqc_dir != '':
+        args.tileqc_dir = os.path.abspath(args.tileqc_dir)
+    if tileparam_file != '':
+        tileparam_file = os.path.abspath(tileparam_file)
 
     ## Verify path arguments
     if not os.path.isdir(dstdir):
         parser.error("srcdir does not exist: {}".format(dstdir))
-    if args.ref_dem is not None and not os.path.isfile(args.ref_dem):
-        parser.error("--ref-dem does not exist: {}".format(args.ref_dem))
     if args.project == 'earthdem':
-        pass
+        projection_string = None
     else:
+        if args.ref_dem is not None and not os.path.isfile(args.ref_dem):
+            parser.error("--ref-dem does not exist: {}".format(args.ref_dem))
+        projection_string = epsg_projstr_dict[args.epsg]
         tile_def_abs = os.path.join(scriptdir, args.tile_def)
         if not os.path.isfile(tile_def_abs):
             parser.error("--tile-def file does not exit: {}".format(tile_def_abs))
     strip_db_abs = os.path.join(scriptdir, args.strip_db)
     if not os.path.isfile(strip_db_abs):
         parser.error("--strip-db does not exist: {}".format(strip_db_abs))
-    if not os.path.isdir(args.water_tile_dir):
+    if args.water_tile_dir != '' and not os.path.isdir(args.water_tile_dir):
         parser.error("--water-tile-dir does not exist: {}".format(args.water_tile_dir))
     if not os.path.isdir(args.lib_path):
         parser.error("--lib-path does not exist: {}".format(args.lib_path))
@@ -136,9 +204,10 @@ def main():
         for tile in tiles:
 
             ref_dem = args.ref_dem
+            tile_projstr = projection_string
             tile_def = args.tile_def
 
-            if ref_dem is None or tile_def == tileDefFile_utm_options:
+            if ref_dem == earthdem_ref_dem_template or tile_projstr is None or tile_def == tileDefFile_utm_options:
                 assert args.project == 'earthdem'
 
                 utm_tilename_parts = tile.split('_')
@@ -146,7 +215,10 @@ def main():
                 if not utm_tilename_prefix.startswith('utm'):
                     parser.error("Expected only UTM tile names (e.g. 'utm10n_01_01'), but got '{}'".format(tile))
 
-                if ref_dem is None:
+                if tile_projstr is None:
+                    tile_projstr = utm_tilename_prefix
+
+                if ref_dem == earthdem_ref_dem_template:
                     ref_dem = earthdem_ref_dem_template.replace(earthdem_tileprefix_key, utm_tilename_prefix)
 
                 if tile_def == tileDefFile_utm_options:
@@ -207,26 +279,47 @@ def main():
             elif len(dstfps) > 0:
                 print('{} subtiles exists, skipping'.format(tile))
                 run_tile = False
+
+            matlab_cmd = "matlab -nojvm -nodisplay -nosplash -r \\\"try; " \
+                "addpath('{0}'); addpath('{1}'); " \
+                "[meta,landtile] = initializeMosaic('','{3}',''," \
+                    "'projection','{10}','tileDefFile','{5}'," \
+                    "'stripDatabaseFile','{6}','stripsDirectory','{11}'," \
+                    "'waterTileDir','{7}','refDemFile','{8}'," \
+                    "'tileqcDir','{12}','tileParamListFile','{13}'," \
+                    "'returnMetaOnly',true); " \
+                "{2}('{3}','{4}','{5}',meta," \
+                    "'landTile',landtile," \
+                    "'refDemFile','{8}'," \
+                    "'make2m',{9}," \
+                    "'projection','{10}'); " \
+                "catch e; disp(getReport(e)); exit(1); end; exit(0);\\\"".format(
+                scriptdir,
+                args.lib_path,
+                matlab_script,
+                tile,
+                tile_dstdir,
+                tile_def,
+                args.strip_db,
+                args.water_tile_dir,
+                ref_dem,
+                make2m_arg,
+                tile_projstr,
+                strips_dir,
+                args.tileqc_dir,
+                tileparam_file,
+            )
             
             if run_tile:
                 ## if pbs, submit to scheduler
                 i+=1
                 if args.pbs:
                     job_name = 'bst_{}'.format(tile)
-                    cmd = r"""qsub -N {1} -v p1={2},p2={3},p3={4},p4={5},p5={6},p6={7},p7={8},p8={9},p9={10},p10={11},p11={12} {0}""".format(
+                    cmd = r"""qsub -N {1} -v cmd="{2}",finfile="{3}" {0}""".format(
                         qsubpath,
                         job_name,
-                        scriptdir,  #p1
-                        args.lib_path,  #p2
-                        matlab_script, #p3
-                        tile,  #p4
-                        tile_dstdir, #p5
-                        tile_def,  #p6
-                        args.strip_db,  #p7
-                        args.water_tile_dir,  #p8
-                        ref_dem,  #p9
-                        make2m_arg,  #p10
-                        finfile,  #p11
+                        matlab_cmd.replace(',', '|COMMA|'),
+                        finfile,
                     )
                     print(cmd)
                     if not args.dryrun:
@@ -234,21 +327,9 @@ def main():
 
                 ## else run matlab
                 else:
-                    cmd = """try; matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); {2}('{3}','{4}','{5}','{6}','landTile','{7}','refDemFile','{8}','make2m',{9}); catch e; disp(getReport(e)); exit(1); end; exit(0);" """.format(
-                        scriptdir,
-                        args.lib_path,
-                        matlab_script,
-                        tile,
-                        tile_dstdir,
-                        tile_def,
-                        args.strip_db,
-                        args.water_tile_dir,
-                        ref_dem,
-                        make2m_arg,
-                    )
-                    print("{}, {}".format(i, cmd))
+                    print("{}, {}".format(i, matlab_cmd))
                     if not args.dryrun:
-                        subprocess.call(cmd, shell=True)
+                        subprocess.call(matlab_cmd, shell=True)
 
 
 if __name__ == '__main__':
