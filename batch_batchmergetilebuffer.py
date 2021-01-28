@@ -44,6 +44,20 @@ def main():
         else:
             existing_tiles.append(t)
 
+        dstfps_old_pattern = [
+            "{0}/{1}/{1}*2m*.tif".format(dstdir,t),
+            "{0}/{1}/{1}*2m*meta.txt".format(dstdir,t)
+        ]
+        dstfps_old = [fp for pat in dstfps_old_pattern for fp in glob.glob(pat)]
+        if dstfps_old:
+            if not os.path.isfile(filename):
+                print("ERROR! Tile mat file does not exist, but other MST results exist matching {}".format(dstfps_old_pattern))
+                continue
+            print("{}Removing old MST results matching {}".format('(dryrun) ' if args.dryrun else '', dstfps_old_pattern))
+            if not args.dryrun:
+                for dstfp_old in dstfps_old:
+                    os.remove(dstfp_old)
+
     #  group tiles by dimension
     groups = {}
     for tile in existing_tiles:
