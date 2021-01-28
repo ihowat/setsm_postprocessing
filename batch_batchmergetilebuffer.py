@@ -40,7 +40,7 @@ def main():
     for t in tiles:
         filename = "{0}/{1}/{1}_2m_reg_dem.mat".format(dstdir,t)
         if not os.path.isfile(filename):
-            print "Tile {} 2m dem does not exist: {}".format(t,filename)
+            print("Tile {} 2m dem does not exist: {}".format(t,filename))
         else:
             existing_tiles.append(t)
 
