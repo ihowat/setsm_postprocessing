@@ -67,9 +67,10 @@ def main():
             help="do not require BST finfiles exist before mosaicking tiles")
     parser.add_argument('--relax-bst-finfile-req', action='store_true', default=False,
             help="allow mosaicking tiles with no BST finfile if 10,000-th subtile exists")
-    parser.add_argument('--require-mst-finfiles', action='store_true', default=False,
-            help="let existence of MST finfiles dictate reruns")
-
+    # parser.add_argument('--require-mst-finfiles', action='store_true', default=False,
+    #         help="let existence of MST finfiles dictate reruns")
+    parser.add_argument('--bypass-mst-finfile-req', action='store_true', default=False,
+            help="upon rerun, deem tiles complete when MST results exist even though MST finfile does not exist")
     parser.add_argument("--pbs", action='store_true', default=False,
             help="submit tasks to PBS")
     parser.add_argument("--qsubscript",
@@ -123,7 +124,7 @@ def main():
 
     tasks = []
     error_messages = []
-    check_subtile_dir = []
+    supertile_num_nodata_dict = dict()
 
     i=0
     if len(tiles) > 0:
@@ -136,6 +137,7 @@ def main():
                 tasks.append(Task(tile, 'null'))
 
     print("{} tasks found".format(len(tasks)))
+    num_tiles_to_run = 0
 
     if len(tasks) > 0:
         for task in tasks:
@@ -177,7 +179,7 @@ def main():
             subtile_dir = os.path.join(srcdir,task.t,'subtiles')
 
             if not os.path.isdir(subtile_dir):
-                message = 'ERROR! Subtile directory ({}) does not exist, skipping {}'.format(subtile_dir, dstfn)
+                message = "ERROR! Subtile directory ({}) does not exist, skipping {}".format(subtile_dir, dstfn)
                 print(message)
                 error_messages.append(message)
                 continue
@@ -192,46 +194,69 @@ def main():
 
             if (not args.bypass_bst_finfile_req) and (not any([os.path.isfile(f) for f in [bst_finfile, bst_finfile_2m]])):
                 if args.relax_bst_finfile_req and os.path.isfile(bst_final_subtile_fp):
-                    print('WARNING: BST finfile ({}) does not exist for tile {}, but 10,000-th subtile exists so will run'.format(bst_finfile, dstfn))
+                    message = "WARNING! BST finfile ({}) does not exist for tile {}, but 10,000-th subtile exists so may run".format(bst_finfile, dstfn)
+                    print(message)
                 else:
-                    print('BST finfile ({}) does not exist, skipping {}'.format(bst_finfile, dstfn))
+                    message = "ERROR! BST finfile ({}) does not exist, skipping {}".format(bst_finfile, dstfn)
+                    print(message)
+                    error_messages.append(message)
                     if os.path.isfile(bst_final_subtile_fp):
-                        print('  (but 10,000-th subtile exists; can provide --relax-bst-finfile-req argument to mosaic this tile anyways)')
+                        message = "  (but 10,000-th subtile exists; can provide --relax-bst-finfile-req argument to run this tile anyways)"
+                        print(message)
+                        error_messages.append(message)
                     run_tile = False
             else:
                 for bst_finfile_temp in list({bst_finfile, bst_finfile_2m, bst_final_subtile_fp}):
                     if os.path.isfile(bst_finfile_temp):
+                        message = None
                         if os.path.isfile(mst_finfile) and (os.path.getmtime(bst_finfile_temp) > os.path.getmtime(mst_finfile)):
-                            print('BST finfile ({}) is newer than MST finfile ({})'.format(bst_finfile_temp, mst_finfile))
+                            message = "BST finfile ({}) is newer than MST finfile ({}), so existing results will be removed".format(bst_finfile_temp, mst_finfile)
                             removing_existing_output = True
                         elif os.path.isfile(dstfp) and (os.path.getmtime(bst_finfile_temp) > os.path.getmtime(dstfp)):
-                            print('BST finfile ({}) is newer than MST output ({})'.format(bst_finfile_temp, dstfp))
+                            message = "BST finfile ({}) is newer than MST output ({}), so existing results will be removed".format(bst_finfile_temp, dstfp)
                             removing_existing_output = True
+                        if message is not None:
+                            print(message)
+                            error_messages.append(message)
+
+            # if os.path.isfile(dstfp) and args.require_mst_finfiles:
+            if os.path.isfile(dstfp) and not args.bypass_mst_finfile_req:
+                if not os.path.isfile(finfile):
+                    message = "WARNING! MST finfile ({}) does not exist, so existing results will be removed".format(finfile)
+                    print(message)
+                    error_messages.append(message)
+                    removing_existing_output = True
 
             if removing_existing_output:
                 dstfps_old_pattern = dstfp.replace('.mat', '*')
                 dstfps_old = glob.glob(dstfps_old_pattern)
                 if dstfps_old:
-                    print('{}Removing old MST results matching {}'.format('(dryrun) ' if args.dryrun else '', dstfps_old_pattern))
+                    print("{}Removing old MST results matching {}".format('(dryrun) ' if args.dryrun else '', dstfps_old_pattern))
                     if not args.dryrun:
                         for dstfp_old in dstfps_old:
                             os.remove(dstfp_old)
+                run_tile = True
 
-            if os.path.isfile(dstfp) and not args.require_mst_finfiles:
-                print('Output exists, skipping {}'.format(dstfn))
-                run_tile = False
-            elif os.path.isfile(finfile):
-                if not os.path.isfile(dstfp):
-                    message = "WARNING! MST finfile exists ({}) but expected output does not exist ({}) for tile {}".format(
-                        finfile, dstfp, dstfn
-                    )
-                    print(message)
-                    error_messages.append(message)
-                    check_subtile_dir.append(subtile_dir)
-                print('finfile exists, skipping {}'.format(dstfn))
-                run_tile = False
+            else:
+                # if os.path.isfile(dstfp) and not args.require_mst_finfiles:
+                if os.path.isfile(dstfp) and args.bypass_mst_finfile_req:
+                    print("Output exists, skipping {}".format(dstfn))
+                    run_tile = False
+                elif os.path.isfile(finfile):
+                    print("finfile exists, skipping {}".format(dstfn))
+                    run_tile = False
+                    if not os.path.isfile(dstfp):
+                        message = "WARNING! MST finfile exists ({}) but expected output does not exist ({}) for tile {}".format(
+                            finfile, dstfp, dstfn
+                        )
+                        # print(message)
+                        if task.t not in supertile_num_nodata_dict:
+                            supertile_num_nodata_dict[task.t] = 0
+                        supertile_num_nodata_dict[task.t] += 1
 
             if run_tile:
+                num_tiles_to_run += 1
+
                 ## if pbs, submit to scheduler
                 i+=1
                 if args.pbs:
@@ -289,21 +314,34 @@ def main():
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)
 
-    print('-----')
-    print('The following tiles should be investigated and potentially rerun with BST and/or MST')
-    print('-----')
-    for message in error_messages:
-        print(message)
-    print('-----')
-    print('The preceding tiles should be investigated and potentially rerun with BST and/or MST')
-    check_subtile_dir = list(set(check_subtile_dir))
-    print('Checking those {} super-tiles for existence of subtile results...'.format(len(check_subtile_dir)))
-    print('-----')
-    for subtile_dir in check_subtile_dir:
-        tilename = os.path.basename(os.path.dirname(subtile_dir))
-        if not glob.glob(os.path.join(subtile_dir, '{}_*{}m.mat'.format(tilename, args.res))):
-            print("ERROR! No {}m results exist in subtile directory for tile {}: {}".format(args.res, tilename, subtile_dir))
-    print('-----')
+    if error_messages:
+        print('----')
+        print("The following error messages were received")
+        print('----')
+        for errmsg in error_messages:
+            print(errmsg)
+        print('----')
+
+    inspect_tiles = []
+    for tile, num_nodata in supertile_num_nodata_dict.items():
+        if (args.quads and num_nodata == 4) or (not args.quads and num_nodata > 0):
+            inspect_tiles.append(tile)
+
+    if inspect_tiles:
+        print('-----')
+        print("{} tiles have all MST finfiles but no output mosaic results!".format(len(inspect_tiles)))
+        print("Please investigate why these tiles produce no results!!")
+        print(','.join(inspect_tiles))
+        print('-----')
+        print("Checking those {} super-tiles for existence of subtile results...".format(len(inspect_tiles)))
+        for tile in inspect_tiles:
+            subtile_dir = os.path.join(srcdir,tile,'subtiles')
+            if not glob.glob(os.path.join(subtile_dir, '{}_*{}m.mat'.format(tile, args.res))):
+                print("ERROR! No {}m results exist in subtile directory for tile {}: {}".format(args.res, tile, subtile_dir))
+        print('-----')
+
+    print("Running {} {}tiles".format(num_tiles_to_run, 'quad-' if args.quads else ''))
+
     print("Done")
 
 

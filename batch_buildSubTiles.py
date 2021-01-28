@@ -99,8 +99,10 @@ def main():
     parser.add_argument("--lib-path", default=matlab_scripts,
                         help="path to referenced Matlab functions (default={})".format(matlab_scripts))
 
-    parser.add_argument('--require-finfiles', action='store_true', default=False,
-            help="let existence of finfiles dictate reruns")
+    # parser.add_argument('--require-finfiles', action='store_true', default=False,
+    #         help="let existence of finfiles dictate reruns")
+    parser.add_argument('--bypass-finfile-req', action='store_true', default=False,
+            help="upon rerun, deem tiles complete when the 10,000-th subtile exists even though finfile does not exist")
 
     parser.add_argument("--pbs", action='store_true', default=False,
             help="submit tasks to PBS")
@@ -198,6 +200,8 @@ def main():
     if not os.path.isfile(qsubpath):
         parser.error("qsub script path is not valid: %s" %qsubpath)
 
+    num_tiles_to_run = 0
+
     i=0
     if len(tiles) > 0:
 
@@ -255,7 +259,8 @@ def main():
             elif args.rerun:
                 print('Verifying tile {} before rerun'.format(tile))
 
-                if os.path.isfile(final_subtile_fp) and not args.require_finfiles:
+                # if os.path.isfile(final_subtile_fp) and not args.require_finfiles:
+                if os.path.isfile(final_subtile_fp) and args.bypass_finfile_req:
                     print('Tile seems complete ({} exists)'.format(os.path.basename(final_subtile_fp)))
                     run_tile = False
                 elif os.path.isfile(finfile):
@@ -280,37 +285,39 @@ def main():
                 print('{} subtiles exists, skipping'.format(tile))
                 run_tile = False
 
-            matlab_cmd = "matlab -nojvm -nodisplay -nosplash -r \\\"try; " \
-                "addpath('{0}'); addpath('{1}'); " \
-                "[meta,landtile] = initializeMosaic('','{3}',''," \
-                    "'projection','{10}','tileDefFile','{5}'," \
-                    "'stripDatabaseFile','{6}','stripsDirectory','{11}'," \
-                    "'waterTileDir','{7}','refDemFile','{8}'," \
-                    "'tileqcDir','{12}','tileParamListFile','{13}'," \
-                    "'returnMetaOnly',true); " \
-                "{2}('{3}','{4}','{5}',meta," \
-                    "'landTile',landtile," \
-                    "'refDemFile','{8}'," \
-                    "'make2m',{9}," \
-                    "'projection','{10}'); " \
-                "catch e; disp(getReport(e)); exit(1); end; exit(0);\\\"".format(
-                scriptdir,
-                args.lib_path,
-                matlab_script,
-                tile,
-                tile_dstdir,
-                tile_def,
-                args.strip_db,
-                args.water_tile_dir,
-                ref_dem,
-                make2m_arg,
-                tile_projstr,
-                strips_dir,
-                args.tileqc_dir,
-                tileparam_file,
-            )
-            
             if run_tile:
+                num_tiles_to_run += 1
+
+                matlab_cmd = "matlab -nojvm -nodisplay -nosplash -r \\\"try; " \
+                    "addpath('{0}'); addpath('{1}'); " \
+                    "[meta,landtile] = initializeMosaic('','{3}',''," \
+                        "'projection','{10}','tileDefFile','{5}'," \
+                        "'stripDatabaseFile','{6}','stripsDirectory','{11}'," \
+                        "'waterTileDir','{7}','refDemFile','{8}'," \
+                        "'tileqcDir','{12}','tileParamListFile','{13}'," \
+                        "'returnMetaOnly',true); " \
+                    "{2}('{3}','{4}','{5}',meta," \
+                        "'landTile',landtile," \
+                        "'refDemFile','{8}'," \
+                        "'make2m',{9}," \
+                        "'projection','{10}'); " \
+                    "catch e; disp(getReport(e)); exit(1); end; exit(0);\\\"".format(
+                    scriptdir,
+                    args.lib_path,
+                    matlab_script,
+                    tile,
+                    tile_dstdir,
+                    tile_def,
+                    args.strip_db,
+                    args.water_tile_dir,
+                    ref_dem,
+                    make2m_arg,
+                    tile_projstr,
+                    strips_dir,
+                    args.tileqc_dir,
+                    tileparam_file,
+                )
+
                 ## if pbs, submit to scheduler
                 i+=1
                 if args.pbs:
@@ -330,6 +337,10 @@ def main():
                     print("{}, {}".format(i, matlab_cmd))
                     if not args.dryrun:
                         subprocess.call(matlab_cmd, shell=True)
+
+    print("Running {} tiles".format(num_tiles_to_run))
+
+    print("Done")
 
 
 if __name__ == '__main__':
