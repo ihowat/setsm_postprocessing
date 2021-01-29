@@ -40,9 +40,23 @@ def main():
     for t in tiles:
         filename = "{0}/{1}/{1}_2m_reg_dem.mat".format(dstdir,t)
         if not os.path.isfile(filename):
-            print "Tile {} 2m dem does not exist: {}".format(t,filename)
+            print("Tile {} 2m dem does not exist: {}".format(t,filename))
         else:
             existing_tiles.append(t)
+
+        dstfps_old_pattern = [
+            "{0}/{1}/{1}*2m*.tif".format(dstdir,t),
+            "{0}/{1}/{1}*2m*meta.txt".format(dstdir,t)
+        ]
+        dstfps_old = [fp for pat in dstfps_old_pattern for fp in glob.glob(pat)]
+        if dstfps_old:
+            if not os.path.isfile(filename):
+                print("ERROR! Tile mat file does not exist, but other MST results exist matching {}".format(dstfps_old_pattern))
+                continue
+            print("{}Removing old MST results matching {}".format('(dryrun) ' if args.dryrun else '', dstfps_old_pattern))
+            if not args.dryrun:
+                for dstfp_old in dstfps_old:
+                    os.remove(dstfp_old)
 
     #  group tiles by dimension
     groups = {}
@@ -62,16 +76,16 @@ def main():
         
     i=0
     if len(groups) > 0:
-        keys = groups.keys()
+        keys = list(groups.keys())
         keys.sort()
         
         for key in keys:
             
-            print "Submitting tile group from {} {}".format(args.dimension,key)
+            print("Submitting tile group from {} {}".format(args.dimension,key))
             tiles = groups[key]
             
             if len(tiles) < 2:
-                print "Tile group {} has only 1 member: {}. Skipping".format(key, tiles)
+                print("Tile group {} has only 1 member: {}. Skipping".format(key, tiles))
             else:
                 tile_str = ";".join(tiles)
                     
@@ -87,7 +101,7 @@ def main():
                         args.lib_path,
                         qsubpath
                     )
-                    print cmd
+                    print(cmd)
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)
                 
@@ -99,7 +113,7 @@ def main():
                         dstdir,
                         tile_str.replace(";","','")
                     )
-                    print "{}, {}".format(i, cmd)
+                    print("{}, {}".format(i, cmd))
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)
 

@@ -74,16 +74,39 @@ def main():
                 dstfp = os.path.join(dstdir,tile,'{}_{}m_dem.tif'.format(tq, args.res))
                 metafp = os.path.join(dstdir,tile,'{}_{}m_meta.txt'.format(tq, args.res))
                 matfile = os.path.join(dstdir,tile,'{}_{}m.mat'.format(tq, args.res))
+
+                run_tile = True
+
                 if not os.path.isfile(matfile):
                     print("Tile {} {}m mat file does not exist: {}".format(tq,args.res,matfile))
+                    run_tile = False
 
-                elif os.path.isfile(dstfp) and not args.rerun and not args.meta_only:
-                    print('{} exists, skipping'.format(dstfp))
+                elif not args.meta_only and os.path.isfile(dstfp):
+                    if args.rerun:
+                        dstfps_old_pattern = [
+                            matfile.replace('.mat', '*.tif'),
+                            metafp
+                        ]
+                        dstfps_old = [fp for pat in dstfps_old_pattern for fp in glob.glob(pat)]
+                        if dstfps_old:
+                            print("{}Removing existing tif tile results matching {}".format('(dryrun) ' if args.dryrun else '', dstfps_old_pattern))
+                            if not args.dryrun:
+                                for dstfp_old in dstfps_old:
+                                    os.remove(dstfp_old)
+                    else:
+                        print('{} exists, skipping'.format(dstfp))
+                        run_tile = False
                 
-                elif os.path.isfile(metafp) and not args.rerun and args.meta_only:
-                    print('{} exists, skipping'.format(metafp))
+                elif args.meta_only and os.path.isfile(metafp):
+                    if args.rerun:
+                        print('Removing existing meta file: {}'.format(metafp))
+                        if not args.dryrun:
+                            os.remove(metafp)
+                    else:
+                        print('{} exists, skipping'.format(metafp))
+                        run_tile = False
 
-                else:
+                if run_tile:
                     ## if pbs, submit to scheduler
                     i+=1
                     if args.pbs:
