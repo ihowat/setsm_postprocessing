@@ -1,5 +1,11 @@
 import os, string, sys, argparse, glob, subprocess
-matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing3'
+
+SCRIPT_FILE = os.path.abspath(os.path.realpath(__file__))
+SCRIPT_FNAME = os.path.basename(SCRIPT_FILE)
+SCRIPT_NAME, SCRIPT_EXT = os.path.splitext(SCRIPT_FNAME)
+SCRIPT_DIR = os.path.dirname(SCRIPT_FILE)
+
+matlab_scripts = os.path.join(SCRIPT_DIR, '../setsm_postprocessing3')
 
 #### TODO add projstring to passed args
 def main():
@@ -25,7 +31,7 @@ def main():
     
     tiles = args.tiles.split(',')
     dstdir = os.path.abspath(args.dstdir)
-    scriptdir = os.path.dirname(sys.argv[0])
+    scriptdir = SCRIPT_DIR
 
     ## Verify qsubscript
     if args.qsubscript is None:
