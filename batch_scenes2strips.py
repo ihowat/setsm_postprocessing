@@ -63,7 +63,7 @@ def main():
             ## if output does not exist, add to task list
             dst_dems = glob.glob(os.path.join(dstdir,'*'+stripid+'_seg*_dem.tif'))
             if len(dst_dems) > 0:
-                print '{} output files exist, skipping'.format(stripid)
+                print('{} output files exist, skipping'.format(stripid))
             
             else:
                 if args.rema2a:
@@ -87,7 +87,7 @@ def main():
                         dstdir,
                         qsubpath
                     )
-                    print cmd
+                    print(cmd)
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)
                 
@@ -102,7 +102,7 @@ def main():
                         args.res,
                         dstdir
                     )
-                    print "{}, {}".format(i, cmd)
+                    print("{}, {}".format(i, cmd))
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)
                                                     

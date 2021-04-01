@@ -56,11 +56,11 @@ def main():
             dstfp2 = os.path.join(dstdir,tile,'{}_5m_dem.tif'.format(tile))
             matfile = os.path.join(dstdir,tile,'{}_2m_dem.mat'.format(tile))
             if not os.path.isfile(matfile):
-                print 'source matfile does not exist: {}'.format(matfile)
+                print('source matfile does not exist: {}'.format(matfile))
                 
             else:
                 if (os.path.isfile(dstfp) or os.path.isfile(dstfp2)) and not args.rerun:
-                    print '{} exists, skipping'.format(dstfp)
+                    print('{} exists, skipping'.format(dstfp))
 
                 else:
                     ## if pbs, submit to scheduler
@@ -76,7 +76,7 @@ def main():
                             2,
                             qsubpath
                         )
-                        print cmd
+                        print(cmd)
                         if not args.dryrun:
                             subprocess.call(cmd, shell=True)
                     
@@ -89,7 +89,7 @@ def main():
                             2,
                             projstr
                         )
-                        print "{}, {}".format(i, cmd)
+                        print("{}, {}".format(i, cmd))
                         if not args.dryrun:
                             subprocess.call(cmd, shell=True)
 

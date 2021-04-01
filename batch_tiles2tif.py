@@ -58,11 +58,11 @@ def main():
             ## reg_dem matfile will be substituted in the matlab script if exists
             matfile = os.path.join(dstdir,tile,'{}_{}m_dem.mat'.format(tile, args.res))
             if not os.path.isfile(matfile):
-                print 'source matfile does not exist: {}'.format(matfile)
+                print('source matfile does not exist: {}'.format(matfile))
 
             else:
                 if (os.path.isfile(dstfp) or os.path.isfile(dstfp2)) and not args.rerun:
-                    print '{} or {} exists, skipping'.format(dstfp, dstfp2)
+                    print('{} or {} exists, skipping'.format(dstfp, dstfp2))
 
                 else:
                     ## if pbs, submit to scheduler
@@ -78,7 +78,7 @@ def main():
                             args.res,
                             qsubpath
                         )
-                        print cmd
+                        print(cmd)
                         if not args.dryrun:
                             subprocess.call(cmd, shell=True)
 
@@ -91,7 +91,7 @@ def main():
                             args.res,
                             projstr
                         )
-                        print "{}, {}".format(i, cmd)
+                        print("{}, {}".format(i, cmd))
                         if not args.dryrun:
                             subprocess.call(cmd, shell=True)
 

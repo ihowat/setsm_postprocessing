@@ -70,7 +70,7 @@ def main():
                     args.water_tile_dir,  #p5
                     args.gcp_file,  #p6
                 )
-                print cmd
+                print(cmd)
                 if not args.dryrun:
                     subprocess.call(cmd, shell=True)
 
@@ -85,7 +85,7 @@ def main():
                     args.gcp_file,
                 )
 
-                print "{}, {}".format(i, cmd)
+                print("{}, {}".format(i, cmd))
                 if not args.dryrun:
                     subprocess.call(cmd, shell=True)
 

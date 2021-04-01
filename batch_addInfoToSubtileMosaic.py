@@ -77,7 +77,7 @@ def main():
                     dstfp,
                     task.st
                 )
-                print cmd
+                print(cmd)
                 if not args.dryrun:
                     subprocess.call(cmd, shell=True)
 
@@ -102,7 +102,7 @@ def main():
                         dstfp,
                         task.st,
                     )
-                print "{}, {}".format(i, cmd)
+                print("{}, {}".format(i, cmd))
                 if not args.dryrun:
                     subprocess.call(cmd, shell=True)
 

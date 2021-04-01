@@ -56,7 +56,7 @@ def main():
                     args.lib_path,
                     qsubpath
                 )
-                print cmd
+                print(cmd)
                 if not args.dryrun:
                     subprocess.call(cmd, shell=True)
             
@@ -68,7 +68,7 @@ def main():
                     matlab_script,
                     tiledir,
                 )
-                print "{}, {}".format(i, cmd)
+                print("{}, {}".format(i, cmd))
                 if not args.dryrun:
                     subprocess.call(cmd, shell=True)
 
