@@ -1,5 +1,11 @@
 import os, string, sys, argparse, glob, subprocess
-matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing4'
+
+SCRIPT_FILE = os.path.abspath(os.path.realpath(__file__))
+SCRIPT_FNAME = os.path.basename(SCRIPT_FILE)
+SCRIPT_NAME, SCRIPT_EXT = os.path.splitext(SCRIPT_FNAME)
+SCRIPT_DIR = os.path.dirname(SCRIPT_FILE)
+
+matlab_scripts = os.path.join(SCRIPT_DIR, '../setsm_postprocessing4')
 
 waterTileDir = '/mnt/pgc/data/scratch/claire/pgc/arcticdem/coastline/global_surface_water/tiles_v2/'
 gcpFile = '/mnt/pgc/data/scratch/claire/pgc/arcticdem/gcp/icesat/mat/GLA14_rel634.mat'
@@ -33,7 +39,7 @@ def main():
 
     tiles = args.tiles.split(',')
     srcdir = os.path.abspath(args.srcdir)
-    scriptdir = os.path.abspath(os.path.dirname(sys.argv[0]))
+    scriptdir = SCRIPT_DIR
 
     ## Verify qsubscript
     if args.qsubscript is None:
@@ -70,7 +76,7 @@ def main():
                     args.water_tile_dir,  #p5
                     args.gcp_file,  #p6
                 )
-                print cmd
+                print(cmd)
                 if not args.dryrun:
                     subprocess.call(cmd, shell=True)
 
@@ -85,7 +91,7 @@ def main():
                     args.gcp_file,
                 )
 
-                print "{}, {}".format(i, cmd)
+                print("{}, {}".format(i, cmd))
                 if not args.dryrun:
                     subprocess.call(cmd, shell=True)
 

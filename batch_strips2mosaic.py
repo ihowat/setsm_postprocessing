@@ -1,5 +1,11 @@
 import os, string, sys, argparse, glob, subprocess
-matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing3'
+
+SCRIPT_FILE = os.path.abspath(os.path.realpath(__file__))
+SCRIPT_FNAME = os.path.basename(SCRIPT_FILE)
+SCRIPT_NAME, SCRIPT_EXT = os.path.splitext(SCRIPT_FNAME)
+SCRIPT_DIR = os.path.dirname(SCRIPT_FILE)
+
+matlab_scripts = os.path.join(SCRIPT_DIR, '../setsm_postprocessing3')
 
 
 def main():
@@ -29,7 +35,7 @@ def main():
 
     tiles = args.tiles.split(',')
     dstdir = os.path.abspath(args.dstdir)
-    scriptdir = os.path.dirname(sys.argv[0])
+    scriptdir = SCRIPT_DIR
 
     ## Verify qsubscript
     if args.qsubscript is None:
@@ -76,7 +82,7 @@ def main():
                 dstfp2 = os.path.join(dstdir,tile,'{}_{}m_dem.mat'.format(tile, args.res))
 
             if (os.path.isfile(dstfp) or os.path.isfile(dstfp2)) and not args.rerun:
-                print '{} or {} exists, skipping'.format(dstfp, dstfp2)
+                print('{} or {} exists, skipping'.format(dstfp, dstfp2))
 
             else:
                 ## if pbs, submit to scheduler
@@ -106,7 +112,7 @@ def main():
                             args.lib_path,
                             qsubpath
                         )
-                    print cmd
+                    print(cmd)
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)
 
@@ -132,7 +138,7 @@ def main():
                             tile,
                             args.res
                         )
-                    print "{}, {}".format(i, cmd)
+                    print("{}, {}".format(i, cmd))
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)
 

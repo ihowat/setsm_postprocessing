@@ -4,9 +4,9 @@ addpath ../setsm_postprocessing3/
 
 udir='/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region';
 rdir=dir([udir,'/arcticdem_*']);
-outname_existing='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticDEMdatabase3_2m_unf_20200812.mat';
+outname_existing='/mnt/pgc/data/common/repos/setsm_postprocessing_pgc/arcticDEMdatabase3_2m_unf_20200812.mat';
 %outname_appended=outname_existing;
-outname_appended='/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing_pgc/arcticDEMdatabase3_2m_unf_greenland.mat';
+outname_appended='/mnt/pgc/data/common/repos/setsm_postprocessing_pgc/arcticDEMdatabase3_2m_unf_greenland.mat';
 
 %%% CHECK THIS SETTING %%%
 report_number_of_strips_to_append_but_dont_actually_append = false;

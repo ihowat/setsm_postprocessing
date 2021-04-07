@@ -1,5 +1,11 @@
 import os, string, sys, argparse, glob, subprocess
-matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing3'
+
+SCRIPT_FILE = os.path.abspath(os.path.realpath(__file__))
+SCRIPT_FNAME = os.path.basename(SCRIPT_FILE)
+SCRIPT_NAME, SCRIPT_EXT = os.path.splitext(SCRIPT_FNAME)
+SCRIPT_DIR = os.path.dirname(SCRIPT_FILE)
+
+matlab_scripts = os.path.join(SCRIPT_DIR, '../setsm_postprocessing3')
 
 def main():
     
@@ -29,7 +35,7 @@ def main():
 
     src = os.path.abspath(args.src)
     dstdir = os.path.abspath(args.dst)
-    scriptdir = os.path.dirname(sys.argv[0])
+    scriptdir = SCRIPT_DIR
 
     if args.mask8m and args.rema2a:
         parser.error('mask8m and rema2a filters are incompatible')
@@ -63,7 +69,7 @@ def main():
             ## if output does not exist, add to task list
             dst_dems = glob.glob(os.path.join(dstdir,'*'+stripid+'_seg*_dem.tif'))
             if len(dst_dems) > 0:
-                print '{} output files exist, skipping'.format(stripid)
+                print('{} output files exist, skipping'.format(stripid))
             
             else:
                 if args.rema2a:
@@ -87,7 +93,7 @@ def main():
                         dstdir,
                         qsubpath
                     )
-                    print cmd
+                    print(cmd)
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)
                 
@@ -102,7 +108,7 @@ def main():
                         args.res,
                         dstdir
                     )
-                    print "{}, {}".format(i, cmd)
+                    print("{}, {}".format(i, cmd))
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)
                                                     
