@@ -18,7 +18,7 @@ if dx == 10
     
     [x0,x1,y0,y1]=getTileExtents(tileName,tileDefFile);
     
-    mosaicSubTiles(subTileDir,10,outName,'extent',[x0,x1,y0,y1]);
+    mosaicSubTiles(subTileDir,10,outName,'projection',projection,'extent',[x0,x1,y0,y1]);
     
 else
     
