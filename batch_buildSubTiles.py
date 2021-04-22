@@ -43,10 +43,10 @@ project_tileDefFile_dict = {
 }
 
 project_databaseFile_dict = {
-    'arcticdem': '/mnt/pgc/data/common/repos/setsm_postprocessing_pgc/ArcticDEMdatabase4_2m_v4_20201218.mat',
-    # 'rema': '/mnt/pgc/data/common/repos/setsm_postprocessing_pgc/REMAdatabase4_2m_v4_20200806.mat',
-    'rema': '/mnt/pgc/data/common/repos/setsm_postprocessing_pgc/rema_strips_v13e.shp',
-    'earthdem': '/mnt/pgc/data/common/repos/setsm_postprocessing_pgc/EarthDEMdatabase4_2m_v4_20210101.mat',
+    'arcticdem': 'ArcticDEMdatabase4_2m_v4_20201218.mat',
+    # 'rema': 'REMAdatabase4_2m_v4_20200806.mat',
+    'rema': 'rema_strips_v13e.shp',
+    'earthdem': 'EarthDEMdatabase4_2m_v4_20210101_terrnva-paths.mat',
 }
 project_waterTileDir_dict = {
     'arcticdem': '/mnt/pgc/data/projects/arcticdem/watermasks/global_surface_water/tiled_watermasks/',
@@ -54,9 +54,9 @@ project_waterTileDir_dict = {
     'earthdem':  '/mnt/pgc/data/projects/earthdem/watermasks/global_surface_water/tiled_watermasks/',
 }
 project_stripsDirectory_dict = {
-    'arcticdem': '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region',
-    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/region',
-    'earthdem':  '/mnt/pgc/data/elev/dem/setsm/EarthDEM/region',
+    'arcticdem': '/mnt/pgc/terrnva_data/elev/dem/setsm/ArcticDEM/region',
+    'rema':      '/mnt/pgc/terrnva_data/elev/dem/setsm/REMA/region',
+    'earthdem':  '/mnt/pgc/terrnva_data/elev/dem/setsm/EarthDEM/region',
 }
 project_tileqcDir_dict = {
     'arcticdem': '',
