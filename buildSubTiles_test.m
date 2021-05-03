@@ -22,8 +22,6 @@ function buildSubTiles(tileName,outDir,tileDefs,meta,varargin)
 % - robust stripid matching for 2m call
 % - added qc to 2m
 % - added make2m inarg
-% - added filter flag imnarg
-% -  apply roipoly to mt
 
 % buildSubTiles build mosaics from strips in subtiles of 100x100km tiles
 %
@@ -47,13 +45,6 @@ minStripOverlap = 0.1; % minimum frac strip overlap of subtile
 projection = ''; % projection string for tile scheme
 
 % Parse varargins
-filterFlag = true; % apply pairwise differece filter
-n = find(strcmpi(varargin,'filter'));
-if ~isempty(n)
-    filterFlag  = varargin{n+1};
-end
-fprintf('Apply pairwise difference filter = %d\n',filterFlag)
-
 make2mFlag=false; % make 2m version or not
 n = find(strcmpi(varargin,'make2m'));
 if ~isempty(n)
@@ -72,6 +63,15 @@ if ~isempty(n)
     refDemFile = varargin{n+1};
     refDemFileFlag = true;
     fprintf('refDemFile = %s\n',refDemFile)
+end
+
+timeRangeFlag = false;
+n = find(strcmpi(varargin,'timeRange'));
+if ~isempty(n)
+    timeRange = varargin{n+1};
+    timeRangeFlag = true;
+    fprintf('timeRange = %s to %s\n',datestr(timeRange(1)),...
+        datestr(timeRange(2)))
 end
 
 n = find(strcmpi(varargin,'minStripOverlap'));
@@ -132,18 +132,16 @@ end
 
 meta.fileName = strrep(meta.fileName, '_meta.txt', '_dem_10m.tif');
 
-if ~isfield(meta,'scene_alignment_meanrmse')
-    if isfield(meta,'avg_rmse')
-        % this is from an old version of the meta files that used 0 in mean
-        error('avg_rmse field in meta structure, needs to be updated')
-    elseif isfield(meta,'scene_alignment')
-        % need to rm zeros (first scene) and nans (unused redundant scenes),
-        % strips w/ 1 scene will be NaN
-        meta.scene_alignment_meanrmse = cellfun(@(x)...
-            mean(x.rmse(x.rmse~=0 & ~isnan(x.rmse))), meta.scene_alignment);
-    else
-        error('missing scene alignment field in meta structure')
-    end
+if isfield(meta,'avg_rmse')
+    % this is from an old version of the meta files that used 0 in mean
+    error('avg_rmse field in meta structure, needs to be updated')
+elseif isfield(meta,'scene_alignment')
+    % need to rm zeros (first scene) and nans (unused redundant scenes),
+    % strips w/ 1 scene will be NaN
+    meta.scene_alignment_meanrmse = cellfun(@(x)...
+        mean(x.rmse(x.rmse~=0 & ~isnan(x.rmse))), meta.scene_alignment);
+elseif ~isfield(meta,'scene_alignment_meanrmse')
+    error('missing scene alignment field in meta structure')
 end
 
 if ~isfield(meta,'A')
@@ -177,35 +175,18 @@ else
     tileName_in_tileDef = tileName;
 end
 
+% Get tile projection information, esp. from UTM tile name
+if isempty(projection) && isfield(tileDefs,'projstr')
+    projection = tileDefs.projstr;
+end
+[tileProjName,projection] = getProjName(tileName,projection);
+if isempty(projection)
+    error("'projection' must be provided by either varargin or as field in tile definition structure");
+end
+
 % trim strip database to only strips with a projection matching the tile
 if isfield(meta,'strip_projection_name')
-    if isempty(projection)
-        error("'projection' argument must be provided when strip dbase has 'strip_projection_name' field");
-    end
-
-    tileProjName = '';
-    if startsWith(tileName,'utm')
-        tileName_parts = strsplit(tileName,'_');
-        tileProjName = tileName_parts{1};
-    end
-
-    if strcmpi(projection, 'polar stereo north')
-        tileProjName = 'psn';
-    elseif strcmpi(projection, 'polar stereo south')
-        tileProjName = 'pss';
-    elseif startsWith(projection,'utm', 'IgnoreCase',true)
-        if ~startsWith(tileProjName, projection, 'IgnoreCase',true)
-            error("'projection' argument (%s) and tileName (%s) prefix (%s) do not match", ...
-                projection, tileName, tileProjName);
-        end
-    else
-        error("No matching tileProjName for 'projection' argument: '%s'", tileProjName);
-    end
-
-    in = strcmpi(meta.strip_projection_name, tileProjName);
-    if ~any(in)
-        error("no matches between tileProjName='%s' and strip dbase 'strip_projection_name' field", tileProjName);
-    end
+    in = strcmp(meta.strip_projection_name, tileProjName);
     meta = structfun(@(x) x(in), meta,'uniformoutput',0);
 end
 
@@ -298,6 +279,8 @@ end
 
 %% subtile loop
 for n=nstrt:subN
+
+%    if n ~= 5904; continue; end
     
     clear  fa dX dY dZ land ice dzdt tmax tmin N Nmt t
     clear x y z offsets za za_med za_mad fileNames fileNames0
@@ -335,6 +318,16 @@ for n=nstrt:subN
     % if qc data exists, filter out 5's
     if qcFlag
         ind = ind(meta.qc.flag(ind) ~= 5);
+    end
+    
+    %if date range supplied, crop to date range s
+    if timeRangeFlag
+        % get date from filename
+        [~,name] =  cellfun(@fileparts,meta.fileName(ind),...
+            'uniformoutput',0);
+        t=cellfun(@(x) datenum(x(6:13),'yyyymmdd'),name)';
+        
+        ind(t < timeRange(1) | t > timeRange(2)) = [];
     end
     
     % check for maximum #'s of overlaps
@@ -398,7 +391,6 @@ for n=nstrt:subN
         nn = find(meta.qc.flag(ind) == 3);
         for j=nn
             ztmp = z(:,:,j);
-            mttmp = mt(:,:,j);
             BW = false(size(ztmp));
             for k=1:length(meta.qc.x{ind(j)})
                 BW = BW | roipoly(x,y,ztmp,meta.qc.x{ind(j)}{k},...
@@ -406,9 +398,7 @@ for n=nstrt:subN
             end
             ztmp(BW) = NaN;
             z(:,:,j) = ztmp;
-            mttmp(BW) = false;
-            mt(:,:,j) = mttmp;
-            clear BW ztmp mttmp
+            clear BW ztmp
         end
     end
     
@@ -477,6 +467,7 @@ for n=nstrt:subN
         %number of grid points with coverage
         c0 = any(z,3);
         c0 = sum(c0(:));
+        c1 = 0;
         
         % iteratively perform adjustment, relaxing thresholds by 10%, up to a
         % maximum of 500%  , until coverage is maximum
@@ -513,7 +504,7 @@ for n=nstrt:subN
         end
         
         % If adjustment fails, use either mean offset rmse or reference dem
-        if ~any(~isnan(dZ))
+        if ~any(~isnan(dZ)) | c1 < c0
             
             % dem sorting vector in ascending order
             nsort = [];
@@ -663,11 +654,7 @@ for n=nstrt:subN
     end
     
     %% apply a pixel-by-pixel filter to remove outliers
-    if filterFlag
-        fa = pairwiseDifferenceFilter(za,'mask',land,'minmad',2);
-    else
-        fa = true(size(za));
-    end
+    fa = pairwiseDifferenceFilter(za,'mask',land,'minmad',2);
     
     % apply filter and get medians
     za(~fa) = NaN;
@@ -794,7 +781,6 @@ fileNames = strrep(fileNames,'_10m.tif','.tif');
 nn = find(~cellfun( @isempty, qc.x));
 for j=1:length(nn)
     ztmp = z(:,:,nn(j));
-    mttmp = mt(:,:,nn(j));
     BW = false(size(ztmp));
     for k=1:length(qc.x{nn(j)})
         BW = BW | roipoly(x,y,ztmp,qc.x{nn(j)}{k},...
@@ -802,9 +788,7 @@ for j=1:length(nn)
     end
     ztmp(BW) = NaN;
     z(:,:,nn(j)) = ztmp;
-    mttmp(BW) = false;
-    mt(:,:,nn(j)) = mttmp;
-    clear BW ztmp mttmp
+    clear BW ztmp
 end
 
 % merge segmentsfrom same strips
