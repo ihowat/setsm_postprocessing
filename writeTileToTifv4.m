@@ -155,14 +155,14 @@ if exist(outNameBrowse,'file')
 else
     if dx == 2
         outNameTemp = strrep(tilef,'.mat','_temp.tif');
-        system(['gdal_translate -q -tr 10 10 -r bilinear -co bigtiff=if_safer -a_nodata -9999 ',...
+        system(['$BWPY_PREFIX gdal_translate -q -tr 10 10 -r bilinear -co bigtiff=if_safer -a_nodata -9999 ',...
             outNameDem,' ', outNameTemp]);
     elseif dx == 10
         outNameTemp = outNameDem;
     end
 
     % convert to hillshade
-    system(['gdaldem hillshade -q -z 3 -compute_edges -of GTiff -co TILED=YES -co BIGTIFF=IF_SAFER -co COMPRESS=LZW ',...
+    system(['$BWPY_PREFIX gdaldem hillshade -q -z 3 -compute_edges -of GTiff -co TILED=YES -co BIGTIFF=IF_SAFER -co COMPRESS=LZW ',...
         outNameTemp,' ', outNameBrowse]);
     
     if dx == 2

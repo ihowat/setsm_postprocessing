@@ -527,7 +527,7 @@ gdalpath =[]; %set to the path of the gdal binary if not in system path.
 if ismac
     gdalpath = '/Library/Frameworks/GDAL.framework/Versions/Current/Programs/';
 end
-system([gdalpath ,'gdaldem hillshade -z 4 -compute_edges  -co TILED=YES -co BIGTIFF=IF_SAFER -co COMPRESS=LZW ',...
+system([gdalpath ,'$BWPY_PREFIX gdaldem hillshade -z 4 -compute_edges  -co TILED=YES -co BIGTIFF=IF_SAFER -co COMPRESS=LZW ',...
    outNameTif,' ',strrep(outNameTif,'_dem.tif','_browse.tif')]);
 
 outNameTif = strrep(outName,'.mat','_count.tif');
