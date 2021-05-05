@@ -29,25 +29,25 @@ swift_site = 'bst'
 hostname = os.environ['HOSTNAME'].lower()
 if hostname.startswith('h2o'):
     system_name = 'bw'
-    pbs_preqsub_cmd = 'export NOAPRUNWARN=1'
-    qsub_addl_envvars = "CRAY_ROOTFS=SHIFTER,UDI='ubuntu:xenial'"
-    qsub_specify_outerr_paths = True
-    qsub_addl_vars = "-l nodes=1:ppn=32:xe,gres=shifter,walltime=96:00:00 -m n -q high"
+    sched_presubmit_cmd = 'export NOAPRUNWARN=1'
+    sched_addl_envvars = "CRAY_ROOTFS=SHIFTER,UDI='ubuntu:xenial'"
+    sched_specify_outerr_paths = True
+    sched_addl_vars = "-l nodes=1:ppn=32:xe,gres=shifter,walltime=96:00:00 -m n -q high"
 elif hostname.startswith('nunatak'):
     system_name = 'pgc'
-    pbs_preqsub_cmd = ''
-    qsub_addl_envvars = ''
-    # qsub_specify_outerr_paths = True
-    # qsub_addl_vars = "-l walltime=200:00:00,nodes=1:ppn=16,mem=64gb -m n -q batch"
-    qsub_specify_outerr_paths = False
-    qsub_addl_vars = "-l walltime=200:00:00,nodes=1:ppn=16,mem=64gb -m n -k oe -j oe -q batch"
+    sched_presubmit_cmd = ''
+    sched_addl_envvars = ''
+    # sched_specify_outerr_paths = True
+    # sched_addl_vars = "-l walltime=200:00:00,nodes=1:ppn=16,mem=64gb -m n -q batch"
+    sched_specify_outerr_paths = False
+    sched_addl_vars = "-l walltime=200:00:00,nodes=1:ppn=16,mem=64gb -m n -k oe -j oe -q batch"
 else:
     warnings.warn("Hostname '{}' not recognized. System-specific settings will not be applied.".format(hostname))
     system_name = ''
-    pbs_preqsub_cmd = ''
-    qsub_addl_envvars = ''
-    qsub_specify_outerr_paths = False
-    qsub_addl_vars = ''
+    sched_presubmit_cmd = ''
+    sched_addl_envvars = ''
+    sched_specify_outerr_paths = False
+    sched_addl_vars = ''
 
 
 ## Argument defaults by 'project'
@@ -184,6 +184,8 @@ def main():
 
     parser.add_argument("--pbs", action='store_true', default=False,
             help="submit tasks to PBS")
+    parser.add_argument("--slurm", action='store_true', default=False,
+            help="submit tasks to SLURM")
     parser.add_argument("--swift", action='store_true', default=False,
             help="submit tasks with Swift")
     parser.add_argument("--swift-program", default=swift_program,
@@ -275,8 +277,8 @@ def main():
         parser.error("--jobscript does not exist: {}".format(args.jobscript))
 
     ## Verify other arguments
-    if args.pbs and args.swift:
-        parser.error("--pbs and --swift are mutually exclusive")
+    if [args.pbs, args.slurm, args.swift].count(True) > 1:
+        parser.error("--pbs --slurm --swift are mutually exclusive")
     if args.rerun and args.rerun_without_cleanup:
         parser.error("--rerun and --rerun-without-cleanup are mutually exclusive")
 
@@ -463,17 +465,29 @@ def main():
     else:
         for tasknum, tile in enumerate(tiles_to_run, 1):
 
+            job_name = 'bst_{}'.format(tile)
+            job_outfile = os.path.join(pbs_logdir, tile+'.out')
+            job_errfile = os.path.join(pbs_logdir, tile+'.err')
+
             if args.pbs:
-                job_name = 'bst_{}'.format(tile)
-                job_outfile = os.path.join(pbs_logdir, tile+'.out')
-                job_errfile = os.path.join(pbs_logdir, tile+'.err')
                 cmd = r""" {}qsub -N {} -v ARG_TILENAME={}{} {} {} "{}" """.format(
-                    pbs_preqsub_cmd+' ; ' if pbs_preqsub_cmd != '' else '',
+                    sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
                     job_name,
                     tile,
-                    ','+qsub_addl_envvars if qsub_addl_envvars != '' else '',
-                    '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if qsub_specify_outerr_paths else '',
-                    qsub_addl_vars,
+                    ','+sched_addl_envvars if sched_addl_envvars != '' else '',
+                    '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
+                    sched_addl_vars,
+                    jobscript_temp,
+                )
+
+            elif args.slurm:
+                cmd = r""" {}sbatch -J {} -v ARG_TILENAME={}{} {} {} "{}" """.format(
+                    sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
+                    job_name,
+                    tile,
+                    ','+sched_addl_envvars if sched_addl_envvars != '' else '',
+                    '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
+                    sched_addl_vars,
                     jobscript_temp,
                 )
 
@@ -487,8 +501,8 @@ def main():
             if not args.dryrun:
                 subprocess.call(cmd, shell=True, cwd=(pbs_logdir if args.pbs else None))
 
-        if args.pbs:
-            print("Submitted {} tiles to PBS".format(len(tiles_to_run)))
+        if args.pbs or args.slurm:
+            print("Submitted {} tiles to scheduler".format(len(tiles_to_run)))
         else:
             print("Ran {} tiles".format(len(tiles_to_run)))
 
