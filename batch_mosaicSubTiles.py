@@ -49,7 +49,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("srcdir", help="source root dir (level above tile name dir)")
     parser.add_argument("tiles", help="list of tiles, comma delimited")
-    parser.add_argument("res", choices=['2','10'], help="resolution (2 or 10)")
+    parser.add_argument("res", type=int, choices=[2, 10], help="resolution (2 or 10)")
 
     parser.add_argument("--lib-path", default=matlab_scripts,
                         help="path to referenced Matlab functions (default={}".format(matlab_scripts))
@@ -196,8 +196,12 @@ def main():
 
             mst_finfile = finfile
             bst_final_subtile_fp = os.path.join(subtile_dir, '{}_10000_{}m.mat'.format(task.t, args.res))
-            bst_finfile = bst_final_subtile_fp.replace('.mat', '.fin')
-            bst_finfile_2m = os.path.join(subtile_dir, '{}_10000_2m.fin'.format(task.t))
+            bst_finfile_10m = "{}_10m.fin".format(subtile_dir)
+            bst_finfile_2m = "{}_2m.fin".format(subtile_dir)
+            if args.res == 10:
+                bst_finfile = bst_finfile_10m
+            elif args.res == 2:
+                bst_finfile = bst_finfile_2m
 
             if (not args.bypass_bst_finfile_req) and (not any([os.path.isfile(f) for f in [bst_finfile, bst_finfile_2m]])):
                 if args.relax_bst_finfile_req and os.path.isfile(bst_final_subtile_fp):
