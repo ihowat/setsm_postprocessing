@@ -67,6 +67,8 @@ echo "job logfile: ${job_logfile}"
 
 echo
 
+export BWPY_PREFIX=""
+
 # Check if quad arg is present
 if [ "${p9}" == 'null' ]; then
     echo "Quad arg not present. Running full tile"
