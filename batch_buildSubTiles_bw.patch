@@ -4,9 +4,9 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/batch_buildSubTiles.py b/batch_buildSubTiles.py
---- a/batch_buildSubTiles.py	(revision ab2ce68ed97b8367d19013183cf1d63ed376c4dd)
-+++ b/batch_buildSubTiles.py	(date 1620254957979)
-@@ -72,8 +72,8 @@
+--- a/batch_buildSubTiles.py	(revision f8f0a52adbf4d25df660a69335f9768ac1f008c0)
++++ b/batch_buildSubTiles.py	(date 1620933187980)
+@@ -72,42 +72,42 @@
  earthdem_tileprefix_key = '<tileprefix>'
  project_refDemFile_dict = {
      'arcticdem': None,
@@ -15,9 +15,16 @@ diff --git a/batch_buildSubTiles.py b/batch_buildSubTiles.py
 +    'earthdem': '/scratch/sciteam/GS_bazu/mosaic_data/reference_dem/TanDEM-X_UTM_90m/TDX_UTM_Mosaic_{}_90m.tif'.format(earthdem_tileprefix_key),
 +    'rema': '/scratch/sciteam/GS_bazu/mosaic_data/reference_dem/TanDEM-X_Antarctica_90m/TanDEM_Antarctica_Mosaic.tif',
  }
- 
+
  earthdem_hemisphere_key = '<hemisphere>'
-@@ -87,27 +87,27 @@
+ project_tileDefFile_dict = {
+     'arcticdem': 'PGC_Imagery_Mosaic_Tiles_Arctic.mat',
+     # 'rema': 'PGC_Imagery_Mosaic_Tiles_Antarctic.mat',
+-    'rema': 'rema_tile_definitions.mat',
++    'rema': '/scratch/sciteam/GS_bazu/mosaic_data/setsm_domain/rema/mosaic/tile_def/rema_tile_definitions.mat',
+     'earthdem': 'PGC_UTM_Mosaic_Tiles_{}.mat'.format(earthdem_hemisphere_key),
+ }
+
  project_databaseFile_dict = {
      'arcticdem': 'ArcticDEMdatabase4_2m_v4_20201218.mat',
      # 'rema': 'REMAdatabase4_2m_v4_20200806.mat',
