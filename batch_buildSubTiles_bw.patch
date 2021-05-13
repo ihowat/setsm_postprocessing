@@ -1,0 +1,55 @@
+Index: batch_buildSubTiles.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/batch_buildSubTiles.py b/batch_buildSubTiles.py
+--- a/batch_buildSubTiles.py	(revision ab2ce68ed97b8367d19013183cf1d63ed376c4dd)
++++ b/batch_buildSubTiles.py	(date 1620254957979)
+@@ -72,8 +72,8 @@
+ earthdem_tileprefix_key = '<tileprefix>'
+ project_refDemFile_dict = {
+     'arcticdem': None,
+-    'earthdem': '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_UTM_90m/TDX_UTM_Mosaic_{}_90m.tif'.format(earthdem_tileprefix_key),
+-    'rema': '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_Antarctica_90m/TanDEM_Antarctica_Mosaic.tif',
++    'earthdem': '/scratch/sciteam/GS_bazu/mosaic_data/reference_dem/TanDEM-X_UTM_90m/TDX_UTM_Mosaic_{}_90m.tif'.format(earthdem_tileprefix_key),
++    'rema': '/scratch/sciteam/GS_bazu/mosaic_data/reference_dem/TanDEM-X_Antarctica_90m/TanDEM_Antarctica_Mosaic.tif',
+ }
+ 
+ earthdem_hemisphere_key = '<hemisphere>'
+@@ -87,27 +87,27 @@
+ project_databaseFile_dict = {
+     'arcticdem': 'ArcticDEMdatabase4_2m_v4_20201218.mat',
+     # 'rema': 'REMAdatabase4_2m_v4_20200806.mat',
+-    'rema': 'rema_strips_v13e.shp',
++    'rema': '/scratch/sciteam/GS_bazu/mosaic_data/setsm_domain/rema/mosaic/strip_dbase/rema_strips_v13e.shp',
+     'earthdem': 'EarthDEMdatabase4_2m_v4_20210101_terrnva-paths.mat',
+ }
+ project_waterTileDir_dict = {
+-    'arcticdem': '/mnt/pgc/data/projects/arcticdem/watermasks/global_surface_water/tiled_watermasks/',
++    'arcticdem': '/scratch/sciteam/GS_bazu/mosaic_data/setsm_domain/arcticdem/mosaic/tiled_watermasks/',
+     'rema':      '',
+-    'earthdem':  '/mnt/pgc/data/projects/earthdem/watermasks/global_surface_water/tiled_watermasks/',
++    'earthdem':  '/scratch/sciteam/GS_bazu/mosaic_data/setsm_domain/earthdem/mosaic/tiled_watermasks/',
+ }
+ project_stripsDirectory_dict = {
+-    'arcticdem': '/mnt/pgc/terrnva_data/elev/dem/setsm/ArcticDEM/region',
+-    'rema':      '/mnt/pgc/terrnva_data/elev/dem/setsm/REMA/region',
+-    'earthdem':  '/mnt/pgc/terrnva_data/elev/dem/setsm/EarthDEM/region',
++    'arcticdem': '/scratch/sciteam/GS_bazu/mosaic_data/setsm_domain/arcticdem/region',
++    'rema':      '/scratch/sciteam/GS_bazu/mosaic_data/setsm_domain/rema/region',
++    'earthdem':  '/scratch/sciteam/GS_bazu/mosaic_data/setsm_domain/earthdem/region',
+ }
+ project_tileqcDir_dict = {
+     'arcticdem': '',
+-    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_qc_v13e',
++    'rema':      '/scratch/sciteam/GS_bazu/mosaic_data/setsm_domain/rema/mosaic/v2/tile_qc_v13e',
+     'earthdem':  '',
+ }
+ project_tileParamList_dict = {
+     'arcticdem': '',
+-    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tileParamList_v13e.txt',
++    'rema':      '/scratch/sciteam/GS_bazu/mosaic_data/setsm_domain/rema/mosaic/v2/tileParamList_v13e.txt',
+     'earthdem':  '',
+ }
+ 
