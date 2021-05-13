@@ -163,7 +163,7 @@ elif [ "$system" = 'bw' ]; then
     MATLAB_SETTINGS="-nodisplay -nodesktop -nosplash"
     GDAL_ENV="module load bwpy/2.0.2"
     export BWPY_PREFIX="bwpy-environ -- "
-    APRUN_PREFIX="aprun -b -N 1 -d 16"
+    APRUN_PREFIX="aprun -b -N 1 -d 32"
     #export CRAY_ROOTFS=SHIFTER
     #export UDI="ubuntu:xenial"
     #echo
