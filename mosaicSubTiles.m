@@ -618,7 +618,7 @@ else
                     if ~any(y0 ~= y1) && ~any(x0 ~= x1)
                         dzn = z0(:)-z1(:);
                         if sum(~isnan(dzn))/numel(dzn) > 0.1
-                            dzup(n) = nanmedian(dzn);
+                            dzup(n) = mynanmedian(dzn);
                             dzup_mad(n) = mad(dzn,1);
                         end
                     else
@@ -661,7 +661,7 @@ else
                 if ~any(y0 ~= y1) && ~any(x0 ~= x1)
                     dzn = z0(:)-z1(:);
                     if sum(~isnan(dzn))/numel(dzn) > 0.1
-                        dzrt(n) = nanmedian(dzn);
+                        dzrt(n) = mynanmedian(dzn);
                         dzrt_mad(n) = mad(dzn,1);
                     end
                 else

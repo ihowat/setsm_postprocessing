@@ -113,7 +113,7 @@ for pair_n=1:Npairs
         continue
     end
     
-    median_dz_uncoreg(pair_n) = nanmedian(p(:));
+    median_dz_uncoreg(pair_n) = mynanmedian(p(:));
     sigma_dz_uncoreg(pair_n) = nanstd(p(:));
     
     % coregister pair
@@ -131,7 +131,7 @@ for pair_n=1:Npairs
         p = z(:,:,i(pair_n)) - zj;
         p(~pairMask) = NaN;
         mean_dz_coreg(pair_n) = nanmean(p(:));
-        median_dz_coreg(pair_n) = nanmedian(p(:));
+        median_dz_coreg(pair_n) = mynanmedian(p(:));
         sigma_dz_coreg(pair_n) = nanstd(p(:));
     end
 end
