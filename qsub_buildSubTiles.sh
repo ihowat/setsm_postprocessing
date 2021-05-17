@@ -47,6 +47,7 @@ echo
 echo Working directory: $PBS_O_WORKDIR
 echo ________________________________________________________
 echo
+CORES_PER_NODE=$PBS_NUM_PPN
 
 #echo ________________________________________
 #echo
@@ -76,6 +77,7 @@ echo
 #echo Working directory: $SLURM_SUBMIT_DIR
 #echo ________________________________________________________
 #echo
+#CORES_PER_NODE=$SLURM_CPUS_ON_NODE
 set -u
 
 set +u
@@ -137,6 +139,7 @@ logfile="${logfile/<tilename>/${tileName}}"
 
 matlab_cmd="\
 addpath('${scriptdir}'); addpath('${libdir}'); \
+parpool($CORES_PER_NODE); \
 run_buildSubTiles(\
 '${tileName}','${outDir}',\
 '${projection}','${tileDefFile}',\
@@ -151,7 +154,7 @@ if [ "$system" = 'pgc' ]; then
     MATLAB_WORKING_DIR="${HOME}/matlab_working_dir"
     MATLAB_ENV="module load matlab/2019a"
     MATLAB_PROGRAM="matlab"
-    MATLAB_SETTINGS="-nojvm -nodisplay -nosplash"
+    MATLAB_SETTINGS="-nodisplay -nosplash"
     GDAL_ENV="module load gdal/2.1.3"
     export BWPY_PREFIX=""
     APRUN_PREFIX=""
