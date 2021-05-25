@@ -164,6 +164,7 @@ elif [ "$system" = 'bw' ]; then
     MATLAB_ENV=""
     MATLAB_PROGRAM="/projects/sciteam/bazu/matlab/bin/matlab"
     MATLAB_SETTINGS="-nodisplay -nodesktop -nosplash"
+    export LM_LICENSE_FILE="1711@bwlm1.ncsa.illinois.edu:1711@bwlm2.ncsa.illinois.edu"
     GDAL_ENV="module load bwpy/2.0.2"
     export BWPY_PREFIX="bwpy-environ -- "
     APRUN_PREFIX="aprun -b -N 1 -d 32"
