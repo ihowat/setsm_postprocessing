@@ -789,8 +789,8 @@ for j=1:length(nn)
     mttmp = mt(:,:,nn(j));
     BW = false(size(ztmp));
     for k=1:length(qc_x{nn(j)})
-        BW = BW | roipoly(x,y,ztmp,qc.x{nn(j)}{k},...
-            qc.y{nn(j)}{k});
+        BW = BW | roipoly(x,y,ztmp,qc_x{nn(j)}{k},...
+            qc_y{nn(j)}{k});
     end
     ztmp(BW) = NaN;
     z(:,:,nn(j)) = ztmp;
