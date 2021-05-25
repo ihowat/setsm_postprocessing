@@ -47,6 +47,7 @@ echo
 echo Working directory: $PBS_O_WORKDIR
 echo ________________________________________________________
 echo
+JOB_ID=$PBS_JOBID
 CORES_PER_NODE=$PBS_NUM_PPN
 
 #echo ________________________________________
@@ -77,6 +78,7 @@ CORES_PER_NODE=$PBS_NUM_PPN
 #echo Working directory: $SLURM_SUBMIT_DIR
 #echo ________________________________________________________
 #echo
+#JOB_ID=$SLURM_JOBID
 #CORES_PER_NODE=$SLURM_CPUS_ON_NODE
 set -u
 
@@ -137,24 +139,14 @@ fi
 finfile="${finfile/<tilename>/${tileName}}"
 logfile="${logfile/<tilename>/${tileName}}"
 
-matlab_cmd="\
-addpath('${scriptdir}'); addpath('${libdir}'); \
-parpool($CORES_PER_NODE); \
-run_buildSubTiles(\
-'${tileName}','${outDir}',\
-'${projection}','${tileDefFile}',\
-'${stripDatabaseFile}','${stripsDirectory}',\
-'${waterTileDir}','${refDemFile}',\
-'${tileqcDir}','${tileParamListFile}',\
-${make2m})"
-
 
 # System-specific settings
 if [ "$system" = 'pgc' ]; then
     MATLAB_WORKING_DIR="${HOME}/matlab_working_dir"
     MATLAB_ENV="module load matlab/2019a"
     MATLAB_PROGRAM="matlab"
-    MATLAB_SETTINGS="-nodisplay -nosplash"
+    MATLAB_SETTINGS="-nodisplay -nodesktop -nosplash"
+    MATLAB_USE_PARPOOL=true
     GDAL_ENV="module load gdal/2.1.3"
     export BWPY_PREFIX=""
     APRUN_PREFIX=""
@@ -164,6 +156,8 @@ elif [ "$system" = 'bw' ]; then
     MATLAB_ENV=""
     MATLAB_PROGRAM="/projects/sciteam/bazu/matlab/bin/matlab"
     MATLAB_SETTINGS="-nodisplay -nodesktop -nosplash"
+    MATLAB_USE_PARPOOL=false
+    export LM_LICENSE_FILE="1711@bwlm1.ncsa.illinois.edu:1711@bwlm2.ncsa.illinois.edu"
     GDAL_ENV="module load bwpy/2.0.2"
     export BWPY_PREFIX="bwpy-environ -- "
     APRUN_PREFIX="aprun -b -N 1 -d 32"
@@ -174,6 +168,30 @@ elif [ "$system" = 'bw' ]; then
     #echo "UDI=$UDI"
     #echo
 fi
+
+if [ "$MATLAB_USE_PARPOOL" = true ]; then
+    job_working_dir="${MATLAB_WORKING_DIR}/${JOB_ID}"
+    matlab_parpool_init="\
+pc = parcluster('local'); \
+pc.JobStorageLocation = '${job_working_dir}'; \
+pc.NumWorkers = ${CORES_PER_NODE}; \
+parpool(pc, ${CORES_PER_NODE});"
+else
+    job_working_dir="$MATLAB_WORKING_DIR"
+    matlab_parpool_init=""
+fi
+
+
+matlab_cmd="\
+addpath('${scriptdir}'); addpath('${libdir}'); \
+${matlab_parpool_init} \
+run_buildSubTiles(\
+'${tileName}','${outDir}',\
+'${projection}','${tileDefFile}',\
+'${stripDatabaseFile}','${stripsDirectory}',\
+'${waterTileDir}','${refDemFile}',\
+'${tileqcDir}','${tileParamListFile}',\
+${make2m})"
 
 
 task_cmd="${MATLAB_PROGRAM} ${MATLAB_SETTINGS} -r \"${matlab_cmd}\""
@@ -196,14 +214,15 @@ if [ -n "$GDAL_ENV" ]; then
 fi
 
 
-# Move to empty folder to reduce startup time
-if [ ! -d "$MATLAB_WORKING_DIR" ]; then
-    mkdir -p "$MATLAB_WORKING_DIR"
+# Move to working folder.
+# Working folder should be empty to reduce Matlab startup time.
+if [ ! -d "$job_working_dir" ]; then
+    mkdir -p "$job_working_dir"
 fi
-cd "$MATLAB_WORKING_DIR"
+cd "$job_working_dir"
 cd_status=$?
 if (( cd_status != 0 )); then
-    echo "Failed to change to Matlab working dir: ${MATLAB_WORKING_DIR}"
+    echo "Failed to change to working dir: ${job_working_dir}"
     exit 0
 fi
 

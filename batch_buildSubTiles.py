@@ -422,16 +422,16 @@ def main():
                     print("Tile seems complete (2m finfile {} exists)".format(os.path.basename(finfile_2m)))
                     run_tile = False
 
-                if not args.make_10m_only:
-                    ## Remove subtiles with only 10m version
-                    tile_outfiles_10m = glob.glob(os.path.join(tile_outdir, '{}_*10m.mat'.format(tile)))
-                    for outfile_10m in tile_outfiles_10m:
-                        outfile_2m = outfile_10m.replace('10m.mat', '2m.mat')
-                        if not os.path.isfile(outfile_2m):
-                            print("Removing 10m subtile missing 2m component: {}".format(os.path.basename(outfile_10m)))
-                            run_tile = True
-                            if not args.dryrun:
-                                os.remove(outfile_10m)
+                # if not args.make_10m_only:
+                #     ## Remove subtiles with only 10m version
+                #     tile_outfiles_10m = glob.glob(os.path.join(tile_outdir, '{}_*10m.mat'.format(tile)))
+                #     for outfile_10m in tile_outfiles_10m:
+                #         outfile_2m = outfile_10m.replace('10m.mat', '2m.mat')
+                #         if not os.path.isfile(outfile_2m):
+                #             print("Removing 10m subtile missing 2m component: {}".format(os.path.basename(outfile_10m)))
+                #             run_tile = True
+                #             if not args.dryrun:
+                #                 os.remove(outfile_10m)
 
             elif any(os.scandir(tile_outdir)) > 0:
                 print("Subtiles exist, skipping tile {}".format(tile))
