@@ -87,7 +87,14 @@ def main():
 
     args = parser.parse_args()
 
-    tiles = args.tiles.split(',')
+    if os.path.isfile(args.tiles):
+        tilelist_file = args.tiles
+        with open(tilelist_file, 'r') as tilelist_fp:
+            tiles = tilelist_fp.read().splitlines()
+    else:
+        tiles = args.tiles.split(',')
+    tiles = sorted(list(set(tiles)))
+
     srcdir = os.path.abspath(args.srcdir)
     scriptdir = SCRIPT_DIR
 
