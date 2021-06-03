@@ -264,6 +264,9 @@ if endsWith(stripDatabaseFile,'.shp', 'IgnoreCase',true)
 
     % search for overlapping strips
     n = stripSearch({S.X},{S.Y},x0,x1,y0,y1);
+    if isempty(n)
+        error("no overlapping strips")
+    end
 
     % crop structure to this tile
     S = S(n);
@@ -303,6 +306,9 @@ elseif endsWith(stripDatabaseFile,'.mat', 'IgnoreCase',true)
 
     % search for overlapping strips
     n = stripSearch(meta.x,meta.y,x0,x1,y0,y1);
+    if isempty(n)
+        error("no overlapping strips")
+    end
     meta = structfun(@(x) x(n), meta, 'uniformoutput',0);
 
     % make mean scene2strip aligment rmse field
