@@ -116,8 +116,7 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("dstdir", help="target directory (tile subfolders will be created)")
-    parser.add_argument(
-        "tiles",
+    parser.add_argument("tiles",
         help=' '.join([
             "list of mosaic tiles; either specified on command line (comma delimited),",
             "or a text file list (each tile on separate line)"

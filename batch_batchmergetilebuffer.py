@@ -13,7 +13,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("dstdir", help="target directory")
     parser.add_argument("dimension", choices=['row','column'], help="dimension on which to group tiles for merging")
-    parser.add_argument("tiles", help="list of mosaic tiles, comma delimited")
+    parser.add_argument("tiles",
+        help=' '.join([
+            "list of mosaic tiles; either specified on command line (comma delimited),",
+            "or a text file list (each tile on separate line)"
+        ])
+    )
     
     parser.add_argument("--lib-path", default=matlab_scripts,
             help="path to referenced Matlab functions (default={}".format(matlab_scripts))
@@ -25,8 +30,15 @@ def main():
             help='print actions without executing')
     
     args = parser.parse_args()
-    
-    tiles = args.tiles.split(',')
+
+    if os.path.isfile(args.tiles):
+        tilelist_file = args.tiles
+        with open(tilelist_file, 'r') as tilelist_fp:
+            tiles = tilelist_fp.read().splitlines()
+    else:
+        tiles = args.tiles.split(',')
+    tiles = sorted(list(set(tiles)))
+
     dstdir = os.path.abspath(args.dstdir)
     scriptdir = SCRIPT_DIR
 

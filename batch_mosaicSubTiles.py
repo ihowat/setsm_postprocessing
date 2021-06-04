@@ -48,7 +48,12 @@ def main():
     ## args
     parser = argparse.ArgumentParser()
     parser.add_argument("srcdir", help="source root dir (level above tile name dir)")
-    parser.add_argument("tiles", help="list of tiles, comma delimited")
+    parser.add_argument("tiles",
+        help=' '.join([
+            "list of mosaic tiles; either specified on command line (comma delimited),",
+            "or a text file list (each tile on separate line)"
+        ])
+    )
     parser.add_argument("res", type=int, choices=[2, 10], help="resolution (2 or 10)")
 
     parser.add_argument("--lib-path", default=matlab_scripts,

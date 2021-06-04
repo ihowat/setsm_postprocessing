@@ -16,7 +16,12 @@ def main():
     ## args
     parser = argparse.ArgumentParser()
     parser.add_argument("srcdir", help="source directory (dir above tile subfolders)")
-    parser.add_argument("tiles", help="list of mosaic tiles, comma delimited")
+    parser.add_argument("tiles",
+        help=' '.join([
+            "list of mosaic tiles; either specified on command line (comma delimited),",
+            "or a text file list (each tile on separate line)"
+        ])
+    )
 
 
     # parser.add_argument("region", choices=['arctic','antarctic','above'], help="region (arctic, antarctic, or above)")
@@ -37,7 +42,14 @@ def main():
 
     args = parser.parse_args()
 
-    tiles = args.tiles.split(',')
+    if os.path.isfile(args.tiles):
+        tilelist_file = args.tiles
+        with open(tilelist_file, 'r') as tilelist_fp:
+            tiles = tilelist_fp.read().splitlines()
+    else:
+        tiles = args.tiles.split(',')
+    tiles = sorted(list(set(tiles)))
+
     srcdir = os.path.abspath(args.srcdir)
     scriptdir = SCRIPT_DIR
 
