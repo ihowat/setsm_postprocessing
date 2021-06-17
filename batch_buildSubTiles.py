@@ -17,7 +17,7 @@ SCRIPT_DIR = os.path.dirname(SCRIPT_FILE)
 default_matlab_scriptdir = os.path.join(SCRIPT_DIR, '../setsm_postprocessing4')
 default_jobscript = os.path.join(SCRIPT_DIR, 'qsub_buildSubTiles.sh')
 default_tempdir = os.path.join(SCRIPT_DIR, 'temp')
-default_logdir = '../logs/'  # relative path appended to argument dstdir
+default_logdir = '../logs/[DSTDIR_FOLDER_NAME]'  # relative path appended to argument dstdir
 swift_program = os.path.abspath('/projects/sciteam/bazu/tools/swift-2/bin/swift')
 swift_rundir = '/scratch/sciteam/GS_bazu/user/{}/swiftruns'.format(os.environ['USER'])
 swift_config = os.path.join(SCRIPT_DIR, 'swift.conf')
@@ -251,6 +251,8 @@ def main():
     args.libdir = os.path.abspath(args.libdir)
     args.tempdir = os.path.abspath(args.tempdir)
     args.logdir = os.path.abspath(os.path.join(args.dstdir, args.logdir) if args.logdir.startswith('../') else args.logdir)
+    if '[DSTDIR_FOLDER_NAME]' in args.logdir:
+        args.logdir = args.logdir.replace('[DSTDIR_FOLDER_NAME]', os.path.basename(args.dstdir))
 
     ## Verify path arguments
     if not os.path.isdir(args.dstdir):
