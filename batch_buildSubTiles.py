@@ -40,7 +40,7 @@ elif hostname.startswith('nunatak'):
     # sched_specify_outerr_paths = True
     # sched_addl_vars = "-l walltime=200:00:00,nodes=1:ppn=16,mem=64gb -m n -q batch"
     sched_specify_outerr_paths = False
-    sched_addl_vars = "-l walltime=200:00:00,nodes=1:ppn=16,mem=64gb -m n -k oe -j oe -q batch"
+    sched_addl_vars = "-l walltime=200:00:00,nodes=1:ppn=16,mem=64gb -m n -k oe -j oe -q old"
 else:
     warnings.warn("Hostname '{}' not recognized. System-specific settings will not be applied.".format(hostname))
     system_name = ''

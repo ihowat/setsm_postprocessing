@@ -5,7 +5,7 @@
 ##PBS -m n
 ##PBS -k oe
 ##PBS -j oe
-##PBS -q batch
+##PBS -q old
 
 ## BW settings
 ##PBS -l nodes=1:ppn=32:xe,gres=shifter
