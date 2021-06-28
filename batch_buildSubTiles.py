@@ -306,6 +306,7 @@ def main():
     template_outdir = os.path.join(args.dstdir, tilename_key, 'subtiles')
     template_finfile = "{}_{}.fin".format(template_outdir, target_res)
     template_logfile = os.path.join(bst_logdir, tilename_key+'.log')
+    template_runscript = "{}_startmatlab_{}.sh".format(template_outdir, target_res)
     jobscript_static_args_dict = {
         'system': system_name,
         'scriptdir': SCRIPT_DIR,
@@ -322,6 +323,7 @@ def main():
         'make2m': make2m_arg,
         'finfile': template_finfile,
         'logfile': template_logfile,
+        'runscript': template_runscript,
     }
     jobscript_fname = os.path.basename(args.jobscript)
     jobscript_temp_fname = jobscript_fname.replace(

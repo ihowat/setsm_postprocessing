@@ -8,7 +8,7 @@
 ##PBS -q batch
 
 ## BW settings
-##PBS -l nodes=1:ppn=32:xe,gres=shifter
+##PBS -l nodes=1:ppn=16:xe,gres=shifter
 ##PBS -l walltime=96:00:00
 ##PBS -v CRAY_ROOTFS=SHIFTER,UDI="ubuntu:xenial"
 ##PBS -e $PBS_JOBID.err
@@ -99,6 +99,7 @@ tileParamListFile="$ARG_TILEPARAMLISTFILE"
 make2m="$ARG_MAKE2M"
 finfile="$ARG_FINFILE"
 logfile="$ARG_LOGFILE"
+runscript="$ARG_RUNSCRIPT"
 set -u
 
 if [ -z "$tileName" ]; then
@@ -138,6 +139,7 @@ fi
 
 finfile="${finfile/<tilename>/${tileName}}"
 logfile="${logfile/<tilename>/${tileName}}"
+runscript="${runscript/<tilename>/${tileName}}"
 
 
 # System-specific settings
@@ -154,13 +156,13 @@ if [ "$system" = 'pgc' ]; then
 elif [ "$system" = 'bw' ]; then
     MATLAB_WORKING_DIR="/scratch/sciteam/GS_bazu/mosaic_data/matlab_working_dir"
     MATLAB_ENV=""
-    MATLAB_PROGRAM="/projects/sciteam/bazu/matlab/bin/matlab"
+    MATLAB_PROGRAM="/projects/sciteam/bazu/matlab/R2020a/bin/matlab"
     MATLAB_SETTINGS="-nodisplay -nodesktop -nosplash"
-    MATLAB_USE_PARPOOL=false
+    MATLAB_USE_PARPOOL=true
     export LM_LICENSE_FILE="1711@bwlm1.ncsa.illinois.edu:1711@bwlm2.ncsa.illinois.edu"
     GDAL_ENV="module load bwpy/2.0.2"
     export BWPY_PREFIX="bwpy-environ -- "
-    APRUN_PREFIX="aprun -b -N 1 -d 32"
+    APRUN_PREFIX="aprun -b -N 1 -d $CORES_PER_NODE -cc none --"
     #export CRAY_ROOTFS=SHIFTER
     #export UDI="ubuntu:xenial"
     #echo
@@ -200,7 +202,18 @@ if [ -n "$(env | grep '^SWIFT_WORKER_PID=')" ]; then
     echo "In a Swift job"
 elif [ -n "$(env | grep '^PBS_JOBID=')" ]; then
     echo "In a PBS job"
-    task_cmd="${APRUN_PREFIX} ${task_cmd}"
+    hn=$( head -1 <$PBS_NODEFILE)
+    export MATLABHOST=$( printf "nid%05d" $hn )
+    mkdir -p  `dirname $runscript`
+    cat >$runscript <<EOF
+#!/bin/bash
+
+export LD_LIBRARY_PATH="/projects/sciteam/bazu/matlab/lib-GLIBC2.12"
+$task_cmd
+
+EOF
+    chmod +x $runscript
+    task_cmd="${APRUN_PREFIX} $runscript"
 else
     echo "Not in a Swift or PBS job"
 fi
