@@ -85,7 +85,7 @@ project_tileDefFile_dict = {
 }
 
 project_databaseFile_dict = {
-    'arcticdem': 'ArcticDEMdatabase4_2m_v4_20201218.mat',
+    'arcticdem': 'ArcticDEMdatabase4_2m_v4_20210610_terrnva-paths.mat',
     # 'rema': 'REMAdatabase4_2m_v4_20200806.mat',
     'rema': 'rema_strips_v13e.shp',
     'earthdem': 'EarthDEMdatabase4_2m_v4_20210101_terrnva-paths.mat',
