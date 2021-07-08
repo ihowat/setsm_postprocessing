@@ -105,9 +105,9 @@ if ~isinf(prctileThresh)
         
         dzp(diag(true(length(n),1))) = NaN;
         
-        dzp_abs_25pt = prctile(abs(dzp),prctileThresh)';
+        dzp_abs_25pt = myprctile(abs(dzp),prctileThresh)';
         
-        idx = dbscan([dzp_abs_25pt,zp],epsilon,minpts);
+        idx = mydbscan([dzp_abs_25pt,zp],epsilon,minpts);
         
         [~,minN] = min(dzp_abs_25pt);
         
@@ -134,11 +134,11 @@ else
             zp = zp - polyval(p,t(n));
         end
 
-        idx = dbscan(zp,epsilon,minpts);
+        idx = mydbscan(zp,epsilon,minpts);
         
         if ~any(idx ~= -1)
             
-            %             idx = dbscan(zp,2.*epsilon,minpts);
+            %             idx = mydbscan(zp,2.*epsilon,minpts);
             %
             %             if ~any(idx ~= -1)
             

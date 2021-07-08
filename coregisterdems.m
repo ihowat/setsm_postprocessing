@@ -55,10 +55,10 @@ while it
     
     if interpflag
         % interpolate the floating data to the reference grid
-        z2n = interp2(x2 - pn(2),y2 - pn(3),z2 - pn(1),...
+        z2n = myinterp2(x2 - pn(2),y2 - pn(3),z2 - pn(1),...
             x1,y1,'*linear');
         if exist('m2','var')
-            m2n = interp2(x2 - pn(2),y2 - pn(3),single(m2),...
+            m2n = myinterp2(x2 - pn(2),y2 - pn(3),single(m2),...
                 x1,y1,'*nearest');
             m2n(isnan(m2n)) = 0; % convert back to uint8
             m2n = logical(m2n);
@@ -89,7 +89,7 @@ while it
     
     % filter NaNs and outliers
     n = ~isnan(sx) & ~isnan(sy) & ...
-        abs(dz - nanmedian(dz(:))) <= 3*nanstd(dz(:));
+        abs(dz - mynanmedian(dz(:))) <= 3*mynanstd(dz(:));
     
     if sum(n(:)) < 10
         if verbose
@@ -179,7 +179,7 @@ while it
             fprintf('maximum horizontal offset reached, returning median vertical offset: %.3f\n',meddz)
         end
         p=[meddz;NaN;NaN]; perr=[meddz_err;NaN;NaN]; d0=d00;
-        z2out = interp2(x2,y2,z2 - meddz,...
+        z2out = myinterp2(x2,y2,z2 - meddz,...
             x1,y1,'*linear');
         break
     end
