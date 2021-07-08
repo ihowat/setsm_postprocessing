@@ -19,8 +19,8 @@ end
 tileNum = strsplit(tileName_in_tileDef,'_');
 tileCol = str2num(tileNum{1});
 tileRow = str2num(tileNum{2});
-tileCol = [tileCol;tileCol  ;tileCol  ;tileCol+1; tileCol-1; tileCol+1; tileCol+1; tileCol-1; tileCol-1];
-tileRow = [tileRow;tileRow+1;tileRow-1;tileRow  ; tileRow  ; tileRow+1; tileRow-1; tileRow-1; tileRow+1];
+tileGroupCol = [tileCol;tileCol  ;tileCol  ;tileCol+1; tileCol-1; tileCol+1; tileCol+1; tileCol-1; tileCol-1];
+tileGroupRow = [tileRow;tileRow+1;tileRow-1;tileRow  ; tileRow  ; tileRow+1; tileRow-1; tileRow-1; tileRow+1];
 
 land.x = x0:dx:x1;
 land.y = y1:-dx:y0;
@@ -39,25 +39,29 @@ if any(strcmpi(varargin,'includeIce'))
 end
 %%
 i=1;
-for i=1:length(tileRow)
+for i=1:length(tileGroupRow)
     
     waterFlag=false;
     
     % get this tile
-    waterTileName=[waterTileDir,'/',tilePrefix,sprintf('%02d',tileCol(i)),'_',...
-        sprintf('%02d',tileRow(i)),'_land.tif'];
+    waterTileName=[waterTileDir,'/',tilePrefix,sprintf('%02d',tileGroupCol(i)),'_',...
+        sprintf('%02d',tileGroupRow(i)),'_land.tif'];
     
  
-        iceTileName=[waterTileDir,'/',tilePrefix,sprintf('%02d',tileCol(i)),'_',...
-            sprintf('%02d',tileRow(i)),'_ice.tif'];
+        iceTileName=[waterTileDir,'/',tilePrefix,sprintf('%02d',tileGroupCol(i)),'_',...
+            sprintf('%02d',tileGroupRow(i)),'_ice.tif'];
     
     if ~exist(waterTileName,'file')
         
-        waterTileName=[waterTileDir,'/',tilePrefix,sprintf('%02d',tileCol(i)),'_',...
-            sprintf('%02d',tileRow(i)),'_water.tif'];
+        waterTileName=[waterTileDir,'/',tilePrefix,sprintf('%02d',tileGroupCol(i)),'_',...
+            sprintf('%02d',tileGroupRow(i)),'_water.tif'];
        
         if ~exist(waterTileName,'file')
-            continue
+            if tileGroupRow(i) == tileRow && tileGroupCol(i) == tileCol
+                error('Water tile file does not exist: %s', waterTileName)
+            else
+                continue
+            end
         end
         
          waterFlag=true;

@@ -307,7 +307,7 @@ elseif endsWith(stripDatabaseFile,'.mat', 'IgnoreCase',true)
     % search for overlapping strips
     n = stripSearch(meta.x,meta.y,x0,x1,y0,y1);
     if isempty(n)
-        error("no overlapping strips")
+        error("No strips overlap tile: %s", tileName)
     end
     meta = structfun(@(x) x(n), meta, 'uniformoutput',0);
 
