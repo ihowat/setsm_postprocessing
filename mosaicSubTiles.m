@@ -579,7 +579,7 @@ else
     dzrt_mad = nan(NsubTileFiles-1,1);
     N=nan(NsubTileFiles,1);
     
-    for n = 1:NsubTileFiles-1
+    parfor n = 1:NsubTileFiles-1
         
         fprintf('subtile %d of %d ',n,NsubTileFiles-1)
         
