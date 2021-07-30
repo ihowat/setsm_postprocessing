@@ -157,7 +157,19 @@ tilePoly = polyshape([x0 x0 x1 x1]',[y0 y1 y1 y0]');
 x = x0:dx:x1;
 y = y1:-dx:y0;
 
+% setup dataqueue
+globalz = nan(length(y),length(x),'single');
+globalN = zeros(length(y),length(x),'uint8');
+globalNmt = zeros(length(y),length(x),'uint8');
+globalz_mad = globalz;
+globaltmax = zeros(length(y),length(x),'uint16');
+globaltmin = zeros(length(y),length(x),'uint16');
+globalNn = 0;
+q = parallel.pool.DataQueue;
+li = q.afterEach(@(lz) mergemosaic(lz));
+
 % build tile output arrays
+spmd
 z = nan(length(y),length(x),'single');
 N = zeros(length(y),length(x),'uint8');
 Nmt = zeros(length(y),length(x),'uint8');
@@ -172,7 +184,17 @@ subtile_n=1;
 
 % initialize count of pixels with data in mosaic for error checking
 Nn=0;
-for filen=1:NsubTileFiles
+rem = mod(NsubTileFiles, numlabs);
+lN = fix(NsubTileFiles/numlabs);
+if(labindex <= rem)
+    start = (labindex-1) * (lN+1)+1;
+    stop = start + lN;
+else
+    start = (labindex-1) * lN + rem+1;
+    stop = start + lN-1;
+end
+
+for filen=start:stop
     
     % first only add subtiles with adjustements
     if isnan(dZ(filen))
@@ -288,7 +310,7 @@ for filen=1:NsubTileFiles
         
     end
     
-    % place the belended substile into the tile
+    % place the blended substile into the tile
     z(row0:row1,col0:col1) = zsub.za_med;
     
     % place N grid into the tile just within the tile borders
@@ -318,7 +340,21 @@ for filen=1:NsubTileFiles
     % update count of subtiles added to mosaic
     subtile_n= subtile_n+1;
     
+end % for filen=1:NsubTileFiles
+send(q, {z, N, Nmt, z_mad, tmax, tmin});
+end %spmd
+
+while q.QueueLength > 0
+    pause(0.1);
 end
+delete(li);
+z = globalz;
+z_mad = globalz_mad;
+N = globalN;
+Nmt = globalNmt;
+tmax = globaltmax;
+tmin = globaltmin;
+Nn = globalNn;
 
 %% Add dems with nan dZ's
 
@@ -355,7 +391,7 @@ while ~isempty(nf)
     
     filen = nf(count);
     
-    fprintf('%d remainging subtiles, attempting to add: %s\n',length(nf),subTileFiles{nf(count)})
+    fprintf('%d remaining subtiles, attempting to add: %s\n',length(nf),subTileFiles{nf(count)})
     
     % get list of variables within this subtile mat file
     mvars  = who('-file',subTileFiles{filen});
@@ -477,7 +513,7 @@ while ~isempty(nf)
         
     end
     
-    % place the belended substile into the tile
+    % place the blended substile into the tile
     z(row0:row1,col0:col1) = zsub.za_med;
     
     % place N grid into the tile just within the tile borders
@@ -508,7 +544,7 @@ while ~isempty(nf)
     % remove this subtile from index
     nf(count) = [];
     
-end
+end % while ~isempty(nf)
 
 %% Write Output
 % save matfile outputs
@@ -548,6 +584,7 @@ writeGeotiff(outNameTif,x,y,tmin,2,0,projection)
 
 % Build mosaic centent list and write meta.txt
 fprintf('Building meta.txt\n')
+
 if exist('quadrant','var')
     addInfoToSubtileMosaic(subTileDir,dx,outName,quadrant);
 else
@@ -556,6 +593,48 @@ end
 
 tileMetav4(outName)
 
+function mergemosaic(x)
+lz = x{1};
+lN = x{2};
+lNmt = x{3};
+lz_mad = x{4};
+ltmax = x{5};
+ltmin = x{6};
+n_overlap = ~isnan(globalz(:)) & ~isnan(lz(:)); % & zsub.land(:);
+if any(n_overlap)
+    lz(isnan(lz) & ~isnan(globalz)) = globalz(isnan(lz) & ~isnan(globalz));
+    buffA = single(~(~isnan(globalz) & ~isnan(lz)));
+    buffA(~buffA) = NaN;
+    buffA(1, isnan(buffA(1,:))) = 0;
+    buffA(end,isnan(buffA(end,:))) = 0;
+    buffA(isnan(buffA(:,1)),1) = 0;
+    buffA(isnan(buffA(:,end)),end) = 0;
+
+    buffA = inpaint_nans(double(buffA), 2);
+
+    notMissing = ~isnan(globalz);
+
+    lz(notMissing) = lz(notMissing).*buffA(notMissing)+...
+        globalz(notMissing).*(1-buffA(notMissing));
+    lz_mad(notMissing) = lz_mad(notMissing).*buffA(notMissing)+...
+        globalz_mad(notMissing).*(1-buffA(notMissing));
+    globalz = lz;
+    globalz_mad = lz_mad;
+else
+    globalz(~isnan(lz)) = lz(~isnan(lz));
+    globalz_mad(~isnan(lz(:))) = lz_mad(~isnan(lz(:)));
+end % if any(n_overlap)
+globalN(globalN==0 & lN ~= 0) = lN(globalN==0 & lN~=0);
+globalNmt(globalNmt==0 & lNmt ~= 0) = lN(globalNmt==0 & lNmt~=0);
+globaltmax(globaltmax==0 & ltmax ~= 0) = ltmax(globaltmax==0 & ltmax~=0);
+globaltmin(globaltmin==0 & ltmin ~= 0) = ltmin(globaltmin==0 & ltmin~=0);
+Nn1 = sum(~isnan(globalz(:)));
+if Nn1 < globalNn
+    error('more nans in mosaic with this iteration');
+end
+globalNn = Nn1;
+end % mergemosaic
+end % mosaicSubTiles
 
 function dZ = getOffsets(subTileFiles,subTileNum,buff,outName)
 
@@ -731,7 +810,7 @@ dze = [ones(size(dze));ones(size(A,2),1).*100];
 % calculate weights
 wz = 1./dze.^2;
 
-% build offdset vector
+% build offset vector
 dZ = nan(NsubTileFiles,1);
 
 fprintf('performing LSQ adjustment\n')
@@ -752,3 +831,5 @@ save(strrep(outName,'.mat','tileReg.mat'),'dZ','-append');
 % dzn = dz-dZ0+dZ1;
 %
 % dzn = dz - dZ(n1) + dZ(n2);
+
+end
