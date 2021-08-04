@@ -355,6 +355,7 @@ Nmt = globalNmt;
 tmax = globaltmax;
 tmin = globaltmin;
 Nn = globalNn;
+Nn = sum(~isnan(z(:))); %tmp
 
 %% Add dems with nan dZ's
 
@@ -594,16 +595,22 @@ end
 tileMetav4(outName)
 
 function mergemosaic(x)
-lz = x{1};
+lz1 = x{1};
 lN = x{2};
 lNmt = x{3};
-lz_mad = x{4};
+lz_mad1 = x{4};
 ltmax = x{5};
 ltmin = x{6};
-n_overlap = ~isnan(globalz(:)) & ~isnan(lz(:)); % & zsub.land(:);
+[r,c] = find(~isnan(lz1));
+r0=min(r); r1=max(r);
+c0=min(c); c1=max(c);
+globalz1 = globalz(r0:r1,c0:c1);
+lz = lz1(r0:r1,c0:c1);
+lz_mad = lz_mad1(r0:r1,c0:c1);
+n_overlap = ~isnan(globalz1(:)) & ~isnan(lz(:)); % & zsub.land(:);
 if any(n_overlap)
-    lz(isnan(lz) & ~isnan(globalz)) = globalz(isnan(lz) & ~isnan(globalz));
-    buffA = single(~(~isnan(globalz) & ~isnan(lz)));
+    lz(isnan(lz) & ~isnan(globalz1)) = globalz1(isnan(lz) & ~isnan(globalz1));
+    buffA = single(~(~isnan(globalz1) & ~isnan(lz)));
     buffA(~buffA) = NaN;
     buffA(1, isnan(buffA(1,:))) = 0;
     buffA(end,isnan(buffA(end,:))) = 0;
@@ -612,17 +619,21 @@ if any(n_overlap)
 
     buffA = inpaint_nans(double(buffA), 2);
 
-    notMissing = ~isnan(globalz);
+    notMissing = ~isnan(globalz1);
 
     lz(notMissing) = lz(notMissing).*buffA(notMissing)+...
-        globalz(notMissing).*(1-buffA(notMissing));
+        globalz1(notMissing).*(1-buffA(notMissing));
     lz_mad(notMissing) = lz_mad(notMissing).*buffA(notMissing)+...
         globalz_mad(notMissing).*(1-buffA(notMissing));
-    globalz = lz;
-    globalz_mad = lz_mad;
+    globalz(r0:r1,c0:c1) = lz;
+    globalz_mad(r0:r1,c0:c1) = lz_mad;
 else
-    globalz(~isnan(lz)) = lz(~isnan(lz));
-    globalz_mad(~isnan(lz(:))) = lz_mad(~isnan(lz(:)));
+    %lz(isnan(lz) & ~isnan(globalz1)) = globalz1(isnan(lz) & ~isnan(globalz1));
+    %globalz(~isnan(lz)) = lz1(~isnan(lz1));
+    globalz(r0:r1,c0:c1) = lz;
+    %lz_mad(isnan(lz) & ~isnan(globalz_mad1)) = globalz_mad1(isnan(lz) & ~isnan(globalz_mad1));
+    %globalz_mad(~isnan(lz1(:))) = lz_mad(~isnan(lz1(:)));
+    globalz_mad(r0:r1,c0:c1) = lz_mad;
 end % if any(n_overlap)
 globalN(globalN==0 & lN ~= 0) = lN(globalN==0 & lN~=0);
 globalNmt(globalNmt==0 & lNmt ~= 0) = lN(globalNmt==0 & lNmt~=0);
