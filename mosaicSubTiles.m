@@ -176,6 +176,7 @@ Nmt = zeros(length(y),length(x),'uint8');
 z_mad = z;
 tmax = zeros(length(y),length(x),'uint16');
 tmin = zeros(length(y),length(x),'uint16');
+land = zeros(length(y), length(x), 'uint8');
 
 
 % initialize subtile count for use in n-weighted alignment
@@ -324,6 +325,7 @@ for filen=start:stop
         zsub.tmax(buff+1:end-buff,buff+1:end-buff);
     tmin(row0+buff:row1-buff,col0+buff:col1-buff) =...
         zsub.tmin(buff+1:end-buff,buff+1:end-buff);
+    land(row0:row1,col0:col1) = land(row0:row1,col0:col1) | zsub.land;
     
     % count the number of pixels with data after this merge
     Nn1 = sum(~isnan(z(:)));
@@ -341,7 +343,7 @@ for filen=start:stop
     subtile_n= subtile_n+1;
     
 end % for filen=1:NsubTileFiles
-send(q, {z, N, Nmt, z_mad, tmax, tmin});
+send(q, {z, N, Nmt, z_mad, tmax, tmin, land});
 end %spmd
 
 while q.QueueLength > 0
@@ -604,10 +606,12 @@ ltmin = x{6};
 [r,c] = find(~isnan(lz1));
 r0=min(r); r1=max(r);
 c0=min(c); c1=max(c);
+land = x{7}(r0:r1,c0:c1);
 globalz1 = globalz(r0:r1,c0:c1);
+globalz_mad1 = globalz_mad(r0:r1,c0:c1);
 lz = lz1(r0:r1,c0:c1);
 lz_mad = lz_mad1(r0:r1,c0:c1);
-n_overlap = ~isnan(globalz1(:)) & ~isnan(lz(:)); % & zsub.land(:);
+n_overlap = ~isnan(globalz1(:)) & ~isnan(lz(:)) & land(:);
 if any(n_overlap)
     lz(isnan(lz) & ~isnan(globalz1)) = globalz1(isnan(lz) & ~isnan(globalz1));
     buffA = single(~(~isnan(globalz1) & ~isnan(lz)));
@@ -628,12 +632,12 @@ if any(n_overlap)
     globalz(r0:r1,c0:c1) = lz;
     globalz_mad(r0:r1,c0:c1) = lz_mad;
 else
-    %lz(isnan(lz) & ~isnan(globalz1)) = globalz1(isnan(lz) & ~isnan(globalz1));
-    %globalz(~isnan(lz)) = lz1(~isnan(lz1));
-    globalz(r0:r1,c0:c1) = lz;
-    %lz_mad(isnan(lz) & ~isnan(globalz_mad1)) = globalz_mad1(isnan(lz) & ~isnan(globalz_mad1));
-    %globalz_mad(~isnan(lz1(:))) = lz_mad(~isnan(lz1(:)));
-    globalz_mad(r0:r1,c0:c1) = lz_mad;
+    lz(isnan(lz) & ~isnan(globalz1)) = globalz1(isnan(lz) & ~isnan(globalz1));
+    globalz1(~isnan(lz)) = lz1(~isnan(lz1));
+    globalz(r0:r1,c0:c1) = globalz1;
+    lz_mad(isnan(lz) & ~isnan(globalz_mad1)) = globalz_mad1(isnan(lz) & ~isnan(globalz_mad1));
+    globalz_mad1(~isnan(lz(:))) = lz_mad(~isnan(lz(:)));
+    globalz_mad(r0:r1,c0:c1) = globalz_mad1;
 end % if any(n_overlap)
 globalN(globalN==0 & lN ~= 0) = lN(globalN==0 & lN~=0);
 globalNmt(globalNmt==0 & lNmt ~= 0) = lN(globalNmt==0 & lNmt~=0);
