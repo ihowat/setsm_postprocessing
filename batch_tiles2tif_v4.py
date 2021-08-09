@@ -44,7 +44,7 @@ def main():
     if os.path.isfile(args.tiles):
         tilelist_file = args.tiles
         with open(tilelist_file, 'r') as tilelist_fp:
-            tiles = tilelist_fp.read().splitlines()
+            tiles = [line for line in tilelist_fp.read().splitlines() if line != '']
     else:
         tiles = args.tiles.split(',')
     tiles = sorted(list(set(tiles)))
