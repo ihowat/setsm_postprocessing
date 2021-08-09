@@ -33,7 +33,7 @@ if hostname.startswith('h2o'):
     sched_presubmit_cmd = 'export NOAPRUNWARN=1'
     sched_addl_envvars = "CRAY_ROOTFS=SHIFTER,UDI='ubuntu:xenial'"
     sched_specify_outerr_paths = True
-    sched_addl_vars = "-l nodes=1:ppn=32:xe,gres=shifter,walltime=96:00:00 -m n -q high"
+    sched_addl_vars = "-l nodes=1:ppn=16:xe,gres=shifter,walltime=96:00:00 -m n -q high"
 elif hostname.startswith('nunatak'):
     system_name = 'pgc'
     sched_presubmit_cmd = ''
@@ -437,7 +437,7 @@ def main():
                 #             if not args.dryrun:
                 #                 os.remove(outfile_10m)
 
-            elif any(os.scandir(tile_outdir)) > 0:
+            elif any(os.scandir(tile_outdir)):
                 print("Subtiles exist, skipping tile {}".format(tile))
                 run_tile = False
 
