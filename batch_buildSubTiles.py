@@ -3,6 +3,7 @@
 import argparse
 import glob
 import os
+import socket
 import subprocess
 import warnings
 from datetime import datetime
@@ -26,7 +27,7 @@ swift_site = 'bst'
 
 
 ## System-specific settings
-hostname = os.environ['HOSTNAME'].lower()
+hostname = socket.gethostname().lower()
 if hostname.startswith('h2o'):
     system_name = 'bw'
     sched_presubmit_cmd = 'export NOAPRUNWARN=1'
