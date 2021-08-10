@@ -80,6 +80,19 @@ I.z = [];
 if ~mapInfoOnlyFlag
     % read image
     I.z = imread(name,'PixelRegion',{subrows,subcols});
+%    try
+%        I.z = imread(name,'PixelRegion',{subrows,subcols});
+%    catch ME
+%        [stripdir, stripfname, stripfext] = fileparts(name);
+%        [~, stripdname, ~] = fileparts(stripdir);
+%        altname = fullfile('/mnt/pgc/data/scratch/erik/s2s_reruns/strips/2m', stripdname, [stripfname, stripfext]);
+%        if isfile(altname)
+%            fprintf('Switching to alternate file location: %s\n', altname)
+%            I.z = imread(altname,'PixelRegion',{subrows,subcols});
+%        else
+%            rethrow(ME)
+%        end
+%    end
 end
 
 
