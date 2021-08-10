@@ -527,8 +527,19 @@ gdalpath =[]; %set to the path of the gdal binary if not in system path.
 if ismac
     gdalpath = '/Library/Frameworks/GDAL.framework/Versions/Current/Programs/';
 end
-system([gdalpath ,'$BWPY_PREFIX gdaldem hillshade -z 4 -compute_edges  -co TILED=YES -co BIGTIFF=IF_SAFER -co COMPRESS=LZW ',...
-   outNameTif,' ',strrep(outNameTif,'_dem.tif','_browse.tif')]);
+% make browse hillshade at 10m resolution
+if dx == 2
+    outNameTemp = strrep(outNameTif,'_dem.tif','_temp.tif');
+    system(['$BWPY_PREFIX gdal_translate -q -tr 10 10 -r bilinear -co bigtiff=if_safer -a_nodata -9999 ',...
+            outNameTif,' ', outNameTemp]);
+else
+    outNameTemp = outNameTif;
+end
+system([gdalpath ,'$BWPY_PREFIX gdaldem hillshade -z 3 -compute_edges  -co TILED=YES -co BIGTIFF=IF_SAFER -co COMPRESS=LZW ',...
+   outNameTemp,' ',strrep(outNameTif,'_dem.tif','_browse.tif')]);
+if dx == 2
+    delete(outNameTemp);
+end
 
 outNameTif = strrep(outName,'.mat','_count.tif');
 writeGeotiff(outNameTif,x,y,N,1,0,projection)
