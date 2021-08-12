@@ -306,6 +306,7 @@ def main():
     template_outdir = os.path.join(args.dstdir, tilename_key, 'subtiles')
     template_finfile = "{}_{}.fin".format(template_outdir, target_res)
     template_logfile = os.path.join(bst_logdir, tilename_key+'.log')
+    template_runscript = "{}_startmatlab_{}.sh".format(template_outdir, target_res)
     jobscript_static_args_dict = {
         'system': system_name,
         'scriptdir': SCRIPT_DIR,
@@ -322,6 +323,7 @@ def main():
         'make2m': make2m_arg,
         'finfile': template_finfile,
         'logfile': template_logfile,
+        'runscript': template_runscript,
     }
     jobscript_fname = os.path.basename(args.jobscript)
     jobscript_temp_fname = jobscript_fname.replace(
@@ -422,16 +424,16 @@ def main():
                     print("Tile seems complete (2m finfile {} exists)".format(os.path.basename(finfile_2m)))
                     run_tile = False
 
-                if not args.make_10m_only:
-                    ## Remove subtiles with only 10m version
-                    tile_outfiles_10m = glob.glob(os.path.join(tile_outdir, '{}_*10m.mat'.format(tile)))
-                    for outfile_10m in tile_outfiles_10m:
-                        outfile_2m = outfile_10m.replace('10m.mat', '2m.mat')
-                        if not os.path.isfile(outfile_2m):
-                            print("Removing 10m subtile missing 2m component: {}".format(os.path.basename(outfile_10m)))
-                            run_tile = True
-                            if not args.dryrun:
-                                os.remove(outfile_10m)
+                # if not args.make_10m_only:
+                #     ## Remove subtiles with only 10m version
+                #     tile_outfiles_10m = glob.glob(os.path.join(tile_outdir, '{}_*10m.mat'.format(tile)))
+                #     for outfile_10m in tile_outfiles_10m:
+                #         outfile_2m = outfile_10m.replace('10m.mat', '2m.mat')
+                #         if not os.path.isfile(outfile_2m):
+                #             print("Removing 10m subtile missing 2m component: {}".format(os.path.basename(outfile_10m)))
+                #             run_tile = True
+                #             if not args.dryrun:
+                #                 os.remove(outfile_10m)
 
             elif any(os.scandir(tile_outdir)) > 0:
                 print("Subtiles exist, skipping tile {}".format(tile))

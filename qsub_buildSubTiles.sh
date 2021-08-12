@@ -8,7 +8,7 @@
 ##PBS -q batch
 
 ## BW settings
-##PBS -l nodes=1:ppn=32:xe,gres=shifter
+##PBS -l nodes=1:ppn=16:xe,gres=shifter
 ##PBS -l walltime=96:00:00
 ##PBS -v CRAY_ROOTFS=SHIFTER,UDI="ubuntu:xenial"
 ##PBS -e $PBS_JOBID.err
@@ -47,6 +47,7 @@ echo
 echo Working directory: $PBS_O_WORKDIR
 echo ________________________________________________________
 echo
+JOB_ID=$PBS_JOBID
 CORES_PER_NODE=$PBS_NUM_PPN
 
 #echo ________________________________________
@@ -77,6 +78,7 @@ CORES_PER_NODE=$PBS_NUM_PPN
 #echo Working directory: $SLURM_SUBMIT_DIR
 #echo ________________________________________________________
 #echo
+#JOB_ID=$SLURM_JOBID
 #CORES_PER_NODE=$SLURM_CPUS_ON_NODE
 set -u
 
@@ -97,6 +99,7 @@ tileParamListFile="$ARG_TILEPARAMLISTFILE"
 make2m="$ARG_MAKE2M"
 finfile="$ARG_FINFILE"
 logfile="$ARG_LOGFILE"
+runscript="$ARG_RUNSCRIPT"
 set -u
 
 if [ -z "$tileName" ]; then
@@ -136,10 +139,54 @@ fi
 
 finfile="${finfile/<tilename>/${tileName}}"
 logfile="${logfile/<tilename>/${tileName}}"
+runscript="${runscript/<tilename>/${tileName}}"
+
+
+# System-specific settings
+if [ "$system" = 'pgc' ]; then
+    MATLAB_WORKING_DIR="${HOME}/matlab_working_dir"
+    MATLAB_ENV="module load matlab/2019a"
+    MATLAB_PROGRAM="matlab"
+    MATLAB_SETTINGS="-nodisplay -nodesktop -nosplash"
+    MATLAB_USE_PARPOOL=true
+    GDAL_ENV="module load gdal/2.1.3"
+    export BWPY_PREFIX=""
+    APRUN_PREFIX=""
+
+elif [ "$system" = 'bw' ]; then
+    MATLAB_WORKING_DIR="/scratch/sciteam/GS_bazu/mosaic_data/matlab_working_dir"
+    MATLAB_ENV=""
+    MATLAB_PROGRAM="/projects/sciteam/bazu/matlab/R2020a/bin/matlab"
+    MATLAB_SETTINGS="-nodisplay -nodesktop -nosplash"
+    MATLAB_USE_PARPOOL=true
+    export LM_LICENSE_FILE="1711@bwlm1.ncsa.illinois.edu:1711@bwlm2.ncsa.illinois.edu"
+    GDAL_ENV="module load bwpy/2.0.2"
+    export BWPY_PREFIX="bwpy-environ -- "
+    APRUN_PREFIX="aprun -b -N 1 -d $CORES_PER_NODE -cc none --"
+    #export CRAY_ROOTFS=SHIFTER
+    #export UDI="ubuntu:xenial"
+    #echo
+    #echo "CRAY_ROOTFS=$CRAY_ROOTFS"
+    #echo "UDI=$UDI"
+    #echo
+fi
+
+if [ "$MATLAB_USE_PARPOOL" = true ]; then
+    job_working_dir="${MATLAB_WORKING_DIR}/${JOB_ID}"
+    matlab_parpool_init="\
+pc = parcluster('local'); \
+pc.JobStorageLocation = '${job_working_dir}'; \
+pc.NumWorkers = ${CORES_PER_NODE}; \
+parpool(pc, ${CORES_PER_NODE});"
+else
+    job_working_dir="$MATLAB_WORKING_DIR"
+    matlab_parpool_init=""
+fi
+
 
 matlab_cmd="\
 addpath('${scriptdir}'); addpath('${libdir}'); \
-parpool($CORES_PER_NODE); \
+${matlab_parpool_init} \
 run_buildSubTiles(\
 '${tileName}','${outDir}',\
 '${projection}','${tileDefFile}',\
@@ -149,40 +196,24 @@ run_buildSubTiles(\
 ${make2m})"
 
 
-# System-specific settings
-if [ "$system" = 'pgc' ]; then
-    MATLAB_WORKING_DIR="${HOME}/matlab_working_dir"
-    MATLAB_ENV="module load matlab/2019a"
-    MATLAB_PROGRAM="matlab"
-    MATLAB_SETTINGS="-nodisplay -nosplash"
-    GDAL_ENV="module load gdal/2.1.3"
-    export BWPY_PREFIX=""
-    APRUN_PREFIX=""
-
-elif [ "$system" = 'bw' ]; then
-    MATLAB_WORKING_DIR="/scratch/sciteam/GS_bazu/mosaic_data/matlab_working_dir"
-    MATLAB_ENV=""
-    MATLAB_PROGRAM="/projects/sciteam/bazu/matlab/bin/matlab"
-    MATLAB_SETTINGS="-nodisplay -nodesktop -nosplash"
-    GDAL_ENV="module load bwpy/2.0.2"
-    export BWPY_PREFIX="bwpy-environ -- "
-    APRUN_PREFIX="aprun -b -N 1 -d 32"
-    #export CRAY_ROOTFS=SHIFTER
-    #export UDI="ubuntu:xenial"
-    #echo
-    #echo "CRAY_ROOTFS=$CRAY_ROOTFS"
-    #echo "UDI=$UDI"
-    #echo
-fi
-
-
 task_cmd="${MATLAB_PROGRAM} ${MATLAB_SETTINGS} -r \"${matlab_cmd}\""
 
 if [ -n "$(env | grep '^SWIFT_WORKER_PID=')" ]; then
     echo "In a Swift job"
 elif [ -n "$(env | grep '^PBS_JOBID=')" ]; then
     echo "In a PBS job"
-    task_cmd="${APRUN_PREFIX} ${task_cmd}"
+    hn=$( head -1 <$PBS_NODEFILE)
+    export MATLABHOST=$( printf "nid%05d" $hn )
+    mkdir -p  `dirname $runscript`
+    cat >$runscript <<EOF
+#!/bin/bash
+
+export LD_LIBRARY_PATH="/projects/sciteam/bazu/matlab/lib-GLIBC2.12"
+$task_cmd
+
+EOF
+    chmod +x $runscript
+    task_cmd="${APRUN_PREFIX} $runscript"
 else
     echo "Not in a Swift or PBS job"
 fi
@@ -196,14 +227,15 @@ if [ -n "$GDAL_ENV" ]; then
 fi
 
 
-# Move to empty folder to reduce startup time
-if [ ! -d "$MATLAB_WORKING_DIR" ]; then
-    mkdir -p "$MATLAB_WORKING_DIR"
+# Move to working folder.
+# Working folder should be empty to reduce Matlab startup time.
+if [ ! -d "$job_working_dir" ]; then
+    mkdir -p "$job_working_dir"
 fi
-cd "$MATLAB_WORKING_DIR"
+cd "$job_working_dir"
 cd_status=$?
 if (( cd_status != 0 )); then
-    echo "Failed to change to Matlab working dir: ${MATLAB_WORKING_DIR}"
+    echo "Failed to change to working dir: ${job_working_dir}"
     exit 0
 fi
 
