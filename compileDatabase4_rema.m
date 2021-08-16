@@ -10,7 +10,7 @@ end
 res=2;
 %dbase_in =[homeDir,'/data4/REMA/polarDEMdatabase_',num2str(res),'m.mat'];
 dbase_in='';
-dbase_out='/mnt/pgc/data/common/repos/setsm_postprocessing_pgc/REMAdatabase4_2m_v4_20201105.mat';
+dbase_out='/mnt/pgc/data/projects/earthdem/strip_databases/REMAdatabase4_2m_v4_20201105.mat';
 
 reproject_list = strrep(dbase_out, '.mat', '_reproject_list.txt');
 if isfile(reproject_list) && ~isfile([reproject_list,'.bak'])

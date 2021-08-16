@@ -2,9 +2,9 @@
 
 addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4');
 
-tiledir='/mnt/pgc/data/elev/dem/setsm/EarthDEM/mosaic/v1/results/output_tiles';
-project='EarthDEM';
-tileVersion='1.0';
+tiledir='/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/results/output_tiles';
+project='REMA';
+tileVersion='2.0';
 
 tiledlist=dir([tiledir,'/*']);
 for i=1:length(tiledlist);

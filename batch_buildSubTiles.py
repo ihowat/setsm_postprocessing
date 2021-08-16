@@ -66,30 +66,28 @@ epsg_projstr_dict = {
 }
 project_epsg_dict = {
     'arcticdem': 3413,
-    'earthdem': None,
-    'rema': 3031,
+    'earthdem':  None,
+    'rema':      3031,
 }
 
 earthdem_tileprefix_key = '<tileprefix>'
 project_refDemFile_dict = {
     'arcticdem': None,
-    'earthdem': '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_UTM_90m/TDX_UTM_Mosaic_{}_90m.tif'.format(earthdem_tileprefix_key),
-    'rema': '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_Antarctica_90m/TanDEM_Antarctica_Mosaic.tif',
+    'earthdem':  '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_UTM_90m/TDX_UTM_Mosaic_{}_90m.tif'.format(earthdem_tileprefix_key),
+    'rema':      '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_Antarctica_90m/TanDEM_Antarctica_Mosaic.tif',
 }
 
 earthdem_hemisphere_key = '<hemisphere>'
 project_tileDefFile_dict = {
-    'arcticdem': 'PGC_Imagery_Mosaic_Tiles_Arctic.mat',
-    # 'rema': 'PGC_Imagery_Mosaic_Tiles_Antarctic.mat',
-    'rema': 'rema_tile_definitions.mat',
-    'earthdem': 'PGC_UTM_Mosaic_Tiles_{}.mat'.format(earthdem_hemisphere_key),
+    'arcticdem': '/mnt/pgc/data/projects/earthdem/tiledef_files/PGC_Imagery_Mosaic_Tiles_Arctic.mat',
+    'rema':      '/mnt/pgc/data/projects/earthdem/tiledef_files/rema_tile_definitions.mat',
+    'earthdem':  '/mnt/pgc/data/projects/earthdem/tiledef_files/PGC_UTM_Mosaic_Tiles_{}.mat'.format(earthdem_hemisphere_key),
 }
 
 project_databaseFile_dict = {
-    'arcticdem': 'ArcticDEMdatabase4_2m_v4_20210610_terrnva-paths.mat',
-    # 'rema': 'REMAdatabase4_2m_v4_20200806.mat',
-    'rema': 'rema_strips_v13e.shp',
-    'earthdem': 'EarthDEMdatabase4_2m_v4_20210101_terrnva-paths.mat',
+    'arcticdem': '/mnt/pgc/data/projects/earthdem/strip_databases/ArcticDEMdatabase4_2m_v4_20210610_terrnva-paths.mat',
+    'rema':      '/mnt/pgc/data/projects/earthdem/strip_databases/rema_strips_v13e.shp',
+    'earthdem':  '/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4_20210101_terrnva-paths.mat',
 }
 project_waterTileDir_dict = {
     'arcticdem': '/mnt/pgc/data/projects/arcticdem/watermasks/global_surface_water/tiled_watermasks/',
@@ -97,18 +95,18 @@ project_waterTileDir_dict = {
     'earthdem':  '/mnt/pgc/data/projects/earthdem/watermasks/global_surface_water/tiled_watermasks/',
 }
 project_stripsDirectory_dict = {
-    'arcticdem': '/mnt/pgc/terrnva_data/elev/dem/setsm/ArcticDEM/region',
-    'rema':      '/mnt/pgc/terrnva_data/elev/dem/setsm/REMA/region',
-    'earthdem':  '/mnt/pgc/terrnva_data/elev/dem/setsm/EarthDEM/region',
+    'arcticdem': '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region',
+    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/region',
+    'earthdem':  '/mnt/pgc/data/elev/dem/setsm/EarthDEM/region',
 }
 project_tileqcDir_dict = {
     'arcticdem': '',
-    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_qc_v13e',
+    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_qc/tile_qc_v13e',
     'earthdem':  '',
 }
 project_tileParamList_dict = {
     'arcticdem': '',
-    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tileParamList_v13e.txt',
+    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_params/tileParamList_v13e.txt',
     'earthdem':  '',
 }
 
