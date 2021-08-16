@@ -1,0 +1,25 @@
+Index: batch_mosaicSubTiles.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/batch_mosaicSubTiles.py b/batch_mosaicSubTiles.py
+--- a/batch_mosaicSubTiles.py	(revision 161a1cb431dc35150b40c960a661fa387a7e8653)
++++ b/batch_mosaicSubTiles.py	(date 1629109102326)
+@@ -28,12 +28,12 @@
+     'rema':      3031,
+ }
+
+-tileDefFile_utm_north = '/mnt/pgc/data/projects/earthdem/tiledef_files/PGC_UTM_Mosaic_Tiles_North.mat'
+-tileDefFile_utm_south = '/mnt/pgc/data/projects/earthdem/tiledef_files/PGC_UTM_Mosaic_Tiles_South.mat'
++tileDefFile_utm_north = '/scratch/sciteam/GS_bazu/mosaic_data/tiledef_files/PGC_UTM_Mosaic_Tiles_North.mat'
++tileDefFile_utm_south = '/scratch/sciteam/GS_bazu/mosaic_data/tiledef_files/PGC_UTM_Mosaic_Tiles_South.mat'
+ tileDefFile_utm_options = "{} or {}".format(tileDefFile_utm_north, tileDefFile_utm_south)
+ project_tileDefFile_dict = {
+-    'arcticdem': '/mnt/pgc/data/projects/earthdem/tiledef_files/PGC_Imagery_Mosaic_Tiles_Arctic.mat',
+-    'rema':      '/mnt/pgc/data/projects/earthdem/tiledef_files/rema_tile_definitions.mat',
++    'arcticdem': '/scratch/sciteam/GS_bazu/mosaic_data/tiledef_files/PGC_Imagery_Mosaic_Tiles_Arctic.mat',
++    'rema':      '/scratch/sciteam/GS_bazu/mosaic_data/tiledef_files/rema_tile_definitions.mat',
+     'earthdem':  tileDefFile_utm_options,
+ }
+ project_version_dict = {
