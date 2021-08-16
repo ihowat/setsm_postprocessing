@@ -8,6 +8,7 @@ SCRIPT_DIR = os.path.dirname(SCRIPT_FILE)
 matlab_scripts = os.path.join(SCRIPT_DIR, '../setsm_postprocessing4')
 quadnames = ('1_1','1_2','2_1','2_2')
 qsub_default = 'qsub_mergequadtilebuffer.sh'
+RESOLUTIONS = ['2','10']
 
 def main():
 
@@ -21,7 +22,7 @@ def main():
             "or a text file list (each tile on separate line)"
         ])
     )
-
+    parser.add_argument("res", choices=RESOLUTIONS, help="resolution ({})".format(','.join(RESOLUTIONS)))
     parser.add_argument("--lib-path", default=matlab_scripts,
             help="path to referenced Matlab functions (default={}".format(matlab_scripts))
     parser.add_argument("--pbs", action='store_true', default=False,
@@ -41,6 +42,8 @@ def main():
         tiles = args.tiles.split(',')
     tiles = sorted(list(set(tiles)))
 
+    res_name = '{}m'.format(args.res)
+
     dstdir = os.path.abspath(args.dstdir)
     scriptdir = SCRIPT_DIR
 
@@ -55,7 +58,7 @@ def main():
     if not os.path.isdir(dstdir):
         parser.error("dstdir does not exist: {}".format(dstdir))
 
-    # Test tiles exist and grou pinto mosaic groups
+    # Test tiles exist and group into mosaic groups
     mosaic_groups = {}
     for t in tiles:
         np = t.split('_')
@@ -72,9 +75,9 @@ def main():
         num_quads_missing_mat = 0
         for q in quadnames:
             tq = "{}_{}".format(t,q)
-            filename = "{}/{}/{}_2m.mat".format(dstdir,t,tq)
+            filename = "{}/{}/{}_{}.mat".format(dstdir, t, tq, res_name)
             if not os.path.isfile(filename):
-                print("Tile {} 2m mat file does not exist: {}".format(tq,filename))
+                print("Tile {} {} mat file does not exist: {}".format(tq, res_name, filename))
                 num_quads_missing_mat += 1
             else:
                 if not mos in mosaic_groups:
@@ -82,15 +85,15 @@ def main():
                 mosaic_groups[mos].append(tq)
 
         dstfps_old_pattern = [
-            "{0}/{1}/{1}*2m*.tif".format(dstdir,t),
-            "{0}/{1}/{1}*2m*meta.txt".format(dstdir,t)
+            "{0}/{1}/{1}_*_{2}*.tif".format(dstdir, t, res_name),
+            "{0}/{1}/{1}_*_{2}_meta.txt".format(dstdir, t, res_name)
         ]
         dstfps_old = [fp for pat in dstfps_old_pattern for fp in glob.glob(pat)]
         if dstfps_old:
             if num_quads_missing_mat == 4:
-                print("ERROR! No quad mat files exist, but other tile results exist matching {}".format(dstfps_old_pattern))
+                print("ERROR! No quad mat files exist, but other MST results exist matching {}".format(dstfps_old_pattern))
                 continue
-            print("{}Removing existing tile results matching {}".format('(dryrun) ' if args.dryrun else '', dstfps_old_pattern))
+            print("{}Removing old MST results matching {}".format('(dryrun) ' if args.dryrun else '', dstfps_old_pattern))
             if not args.dryrun:
                 for dstfp_old in dstfps_old:
                     os.remove(dstfp_old)
@@ -130,11 +133,12 @@ def main():
                 i+=1
                 if args.pbs:
                     job_name = 'tbm_{}'.format(key)
-                    cmd = r'qsub -N {} -v p1={},p2={},p3="{}",p4={} {}'.format(
+                    cmd = r'qsub -N {} -v p1={},p2={},p3="{}",p4={},p5={} {}'.format(
                         job_name,
                         scriptdir,
                         dstdir,
                         tile_str,
+                        res_name,
                         args.lib_path,
                         qsubpath
                     )
@@ -144,11 +148,12 @@ def main():
 
                 ## else run matlab
                 else:
-                    cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); addpath('{}'); batch_batchMergeQuadTileBuffer('{}',{{'{}'}}); exit" """.format(
+                    cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); addpath('{}'); batch_batchMergeQuadTileBuffer('{}',{{'{}'}},'{}'); exit" """.format(
                         scriptdir,
                         args.lib_path,
                         dstdir,
-                        tile_str.replace(";","','")
+                        tile_str.replace(";","','"),
+                        res_name
                     )
                     print("{}, {}".format(i, cmd))
                     if not args.dryrun:

@@ -70,6 +70,9 @@ def main():
     elif args.region == 'earthdem':
         projstr = None
 
+    if args.res == '10':
+        quadnames = ['']
+
     i=0
     if len(tiles) > 0:
 
@@ -88,7 +91,7 @@ def main():
                 tile_projstr = utm_tilename_prefix
 
             for q in quadnames:
-                tq = "{}_{}".format(tile,q)
+                tq = "{}_{}".format(tile,q) if args.res == '2' else tile
                 dstfp = os.path.join(dstdir,tile,'{}_{}m_dem.tif'.format(tq, args.res))
                 metafp = os.path.join(dstdir,tile,'{}_{}m_meta.txt'.format(tq, args.res))
                 matfile = os.path.join(dstdir,tile,'{}_{}m.mat'.format(tq, args.res))
