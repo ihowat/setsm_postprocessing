@@ -20,6 +20,17 @@ if dx == 2 % 2m posting, using quarter tile (50km) boundaries
 elseif dx == 10 % 10m posting, using full tile (100km) boundaries
     nx = find(mod(x,100000) == 0);
     ny = find(mod(y,100000) == 0);
+    % EarthDEM UTM mosaic 100km tile edges fall on 50km intervals
+    if length(nx) == 1
+        nx = find(mod(x,50000) == 0);
+        if length(nx) == 3
+            nx = [nx(1) nx(end)];
+        end
+        ny = find(mod(y,50000) == 0);
+        if length(ny) == 3
+            ny = [ny(1) ny(end)];
+        end
+    end
 else
     error('not compatible with a tile grid size of %dm',dx)
 end
