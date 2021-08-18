@@ -78,7 +78,7 @@ end
 NsubTileFiles = length(subTileFiles);
   
 stripList=[];
-for filen=1:NsubTileFiles
+parfor filen=1:NsubTileFiles
 
     fprintf('extracting info from subtile %d of %d: %s\n',filen,NsubTileFiles,subTileFiles{filen})
     
@@ -122,12 +122,12 @@ for filen=1:NsubTileFiles
         error('neither stripIDs or fileNames vars in %s',subTileFiles{filen})
     end
        
-    stripList=unique([stripList,stripid]);
+    stripList = [stripList, stripid];
 
 end
 
+stripList=unique(stripList);
 save(outName,'-append','stripList')
-
 
 
 
