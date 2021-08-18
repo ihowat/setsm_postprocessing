@@ -12,7 +12,7 @@ res=2;
 dbase_in='';
 dbase_out='/scratch/sciteam/GS_bazu/mosaic_data/strip_databases/ArcticDEMdatabase4_2m_v4_20210817_south.mat';
 
-bwpy_prefix='bwpy-environ --'
+bwpy_prefix='';
 
 reproject_list = strrep(dbase_out, '.mat', '_reproject_list.txt');
 if isfile(reproject_list) && ~isfile([reproject_list,'.bak'])
@@ -147,6 +147,7 @@ for i=1:length(regionDirs)
         fprintf('Gathering strips with pattern: %s ... ', stripDir_pattern)
 
         stripDirs=dir(stripDir_pattern);
+        stripDirs=stripDirs([stripDirs.isdir]);
         stripDirs = strcat({stripDirs.folder}',repmat({'/'},length(stripDirs),1),{stripDirs.name}');
         if length(stripDirs) == 0
             fprintf('None found\n')
@@ -261,7 +262,9 @@ for i=1:length(regionDirs)
                         if ~isempty(cmdout)
                             fprintf(['\n',cmdout,'\n']);
                         end
-                        if status == 0
+                        if status == 2
+                            error('\nCaught exit status 2 from proj_issame.py indicating error\n');
+                        elseif status == 0
                             strip_projname = mosaic_zone_feat.name;
                             break;
                         end
@@ -288,7 +291,9 @@ for i=1:length(regionDirs)
                         if ~isempty(cmdout)
                             fprintf(['\n',cmdout,'\n']);
                         end
-                        if status ~= 0
+                        if status == 2
+                            error('\nCaught exit status 2 from proj_issame.py indicating error\n');
+                        elseif status == 1
                             fprintf('\nProjection of strip DEM raster and PROJ.4 string in strip meta.txt file are not equal: %s, %s\n', demFile, strip_proj4);
                         end
                         strip_gtinfo = geotiffinfo(demFile);
@@ -315,7 +320,9 @@ for i=1:length(regionDirs)
                             if ~isempty(cmdout)
                                 fprintf(['\n',cmdout,'\n']);
                             end
-                            if status == 0
+                            if status == 2
+                                error('\nCaught exit status 2 from proj_issame.py indicating error\n');
+                            elseif status == 0
                                 proj4_epsg_dict(strip_proj4) = mosaic_zone_ms.epsg;
                                 reproject_strip = false;
                             end
@@ -331,10 +338,16 @@ for i=1:length(regionDirs)
                 end
 
 
-                if isempty(meta)
-                    meta=strip_meta;
-                else
-                    meta(length(meta)+1)=strip_meta;
+                try
+                    if isempty(meta)
+                        meta=strip_meta;
+                    else
+                        meta(length(meta)+1)=strip_meta;
+                    end
+                catch ME
+                    meta
+                    strip_meta
+                    rethrow(ME)
                 end
 
             end

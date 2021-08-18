@@ -9,23 +9,36 @@
 #PBS -q high
 
 
-JOB_ID=$PBS_JOBID
-CORES_PER_NODE=$PBS_NUM_PPN
+# Compute node parameters
+JOB_ID="$PBS_JOBID"
+CORES_PER_NODE="$PBS_NUM_PPN"
 
+# Standard BW wrappers
 APRUN_PREFIX="aprun -b -N 1 -d ${CORES_PER_NODE} -cc none --"
+BWPY_PREFIX="bwpy-environ --"  # bwpy doesn't work within the Matlab Shifter image...
+                               # It's possible to use bwpy outside of the Matlab process aprun,
+                               # but a certain procedure must be followed to load/unload
+                               # the Shifter image in the jobscript for running Matlab.
 
+# Matlab configuration for BW
+MATLAB_PROGRAM="/projects/sciteam/bazu/matlab/R2020a/bin/matlab"
 export MATLABHOST=$(printf 'nid%05d' "$(head -n1 "$PBS_NODEFILE")")
 export LM_LICENSE_FILE="1711@bwlm1.ncsa.illinois.edu:1711@bwlm2.ncsa.illinois.edu"
 
+# Core Matlab run settings
 MATLAB_SETTINGS="-nodisplay -nodesktop -nosplash"
 MATLAB_USE_PARPOOL=true
 
+# Load Python/GDAL env if needed
+source /projects/sciteam/bazu/tools/miniconda3/bin/activate /projects/sciteam/bazu/tools/miniconda3/envs/gdal2;
 
-MATLAB_PROGRAM="/projects/sciteam/bazu/matlab/R2020a/bin/matlab"
+### EDIT THIS BLOCK ###
+# Matlab settings specific to the script you want to run
 MATLAB_SCRIPTS_DIR="/projects/sciteam/bazu/tools/setsm_postprocessing_pgc"
+MATLAB_SCRIPTS_DIR2="/projects/sciteam/bazu/tools/setsm_postprocessing4"
 MATLAB_WORKING_DIR="/scratch/sciteam/GS_bazu/mosaic_data/matlab_working_dir"
 MATLAB_TEMP_DIR="/scratch/sciteam/GS_bazu/mosaic_data/matlab_temp_dir"
-MATLAB_LOGFILE="/scratch/sciteam/GS_bazu/mosaic_data/logs/example.log"
+#MATLAB_LOGFILE="/scratch/sciteam/GS_bazu/mosaic_data/logs/example.log"
 
 
 if [ "$MATLAB_USE_PARPOOL" = true ]; then
@@ -44,12 +57,15 @@ ps.Pool.AutoCreate = false;"
 fi
 
 
+### ENABLE AND EDIT ONE OF THE FOLLOWING TWO BLOCKS ###
+
 ## For interactive MATLAB job
 #matlab_cmd=''
 
 # For running MATLAB script
 matlab_cmd="\
 addpath('${MATLAB_SCRIPTS_DIR}'); \
+addpath('${MATLAB_SCRIPTS_DIR2}'); \
 ${matlab_parpool_init} \
 try; matlab_example; catch e; disp(getReport(e)); exit(1); end; exit(0);"\
 
@@ -80,4 +96,8 @@ fi
 
 
 echo "Running command: ${task_cmd}"
-time eval "$task_cmd" 2>&1 | tee "$MATLAB_LOGFILE"
+if [ -n "$MATLAB_LOGFILE" ]; then
+    time eval "$task_cmd" 2>&1 | tee "$MATLAB_LOGFILE"
+else
+    time eval "$task_cmd"
+fi
