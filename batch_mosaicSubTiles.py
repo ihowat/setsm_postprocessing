@@ -24,18 +24,17 @@ epsg_projstr_dict = {
 }
 project_epsg_dict = {
     'arcticdem': 3413,
-    'earthdem': None,
-    'rema': 3031,
+    'earthdem':  None,
+    'rema':      3031,
 }
 
-tileDefFile_utm_north = 'PGC_UTM_Mosaic_Tiles_North.mat'
-tileDefFile_utm_south = 'PGC_UTM_Mosaic_Tiles_South.mat'
+tileDefFile_utm_north = '/mnt/pgc/data/projects/earthdem/tiledef_files/PGC_UTM_Mosaic_Tiles_North.mat'
+tileDefFile_utm_south = '/mnt/pgc/data/projects/earthdem/tiledef_files/PGC_UTM_Mosaic_Tiles_South.mat'
 tileDefFile_utm_options = "{} or {}".format(tileDefFile_utm_north, tileDefFile_utm_south)
 project_tileDefFile_dict = {
-    'arcticdem': 'PGC_Imagery_Mosaic_Tiles_Arctic.mat',
-    # 'rema': 'PGC_Imagery_Mosaic_Tiles_Antarctic.mat',
-    'rema': 'rema_tile_definitions.mat',
-    'earthdem': tileDefFile_utm_options,
+    'arcticdem': '/mnt/pgc/data/projects/earthdem/tiledef_files/PGC_Imagery_Mosaic_Tiles_Arctic.mat',
+    'rema':      '/mnt/pgc/data/projects/earthdem/tiledef_files/rema_tile_definitions.mat',
+    'earthdem':  tileDefFile_utm_options,
 }
 project_version_dict = {
     'arcticdem': 'ArcticDEM|4.1',
@@ -95,7 +94,7 @@ def main():
     if os.path.isfile(args.tiles):
         tilelist_file = args.tiles
         with open(tilelist_file, 'r') as tilelist_fp:
-            tiles = tilelist_fp.read().splitlines()
+            tiles = [line for line in tilelist_fp.read().splitlines() if line != '']
     else:
         tiles = args.tiles.split(',')
     tiles = sorted(list(set(tiles)))

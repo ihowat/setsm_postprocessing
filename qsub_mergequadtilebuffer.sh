@@ -36,16 +36,17 @@ echo
 
 cd $PBS_O_WORKDIR
 
-module load gdal/2.1.1
+module load gdal/2.1.3
 module load matlab/2019a
 
 echo $p1
 echo $p2
 echo $p3
 echo $p4
+echo $p5
 
 tiles="${p3//;/','}"
 
-cmd="addpath('${p1}'); addpath('${p4}'); batch_batchMergeQuadTileBuffer('${p2}',{'${tiles}'}); exit"
+cmd="addpath('${p1}'); addpath('${p5}'); batch_batchMergeQuadTileBuffer('${p2}',{'${tiles}'},'${p4}'); exit"
 echo $cmd
 time matlab -nojvm -nodisplay -nosplash -r "${cmd}"
