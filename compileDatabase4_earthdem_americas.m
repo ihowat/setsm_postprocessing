@@ -10,7 +10,7 @@ end
 res=2;
 %dbase_in =[homeDir,'/data4/REMA/polarDEMdatabase_',num2str(res),'m.mat'];
 dbase_in='';
-dbase_out='/scratch/sciteam/GS_bazu/mosaic_data/strip_databases/EarthDEMdatabase4_2m_v4_20201107_americas.mat';
+dbase_out='/scratch/sciteam/GS_bazu/mosaic_data/strip_databases/EarthDEMdatabase4_2m_v4_20210817_americas.mat';
 
 bwpy_prefix='';
 
