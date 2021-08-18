@@ -2,7 +2,7 @@ function [meta,landTile] = initializeMosaic(project,tileName,outDir,varargin)
 
 % set to true to remove the subdirectory of subtile .mat files after
 % completion:
-removeSubtileFlag=true;
+removeSubtileFlag=false;
 
 subTileDir='';
 projection='';
