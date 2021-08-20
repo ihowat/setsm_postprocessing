@@ -4,6 +4,9 @@ function writeTileToTifv4(tilef,projstr)
 
 fprintf('Source: %s\n',tilef);
 
+% output tile buffer in pixels
+buffer = 10;
+
 % load m file and get coordinate vectors
 m=matfile(tilef);
 x=m.x;
@@ -20,6 +23,17 @@ if dx == 2 % 2m posting, using quarter tile (50km) boundaries
 elseif dx == 10 % 10m posting, using full tile (100km) boundaries
     nx = find(mod(x,100000) == 0);
     ny = find(mod(y,100000) == 0);
+    % EarthDEM UTM mosaic 100km tile edges fall on 50km intervals
+    if length(nx) == 1
+        nx = find(mod(x,50000) == 0);
+        if length(nx) == 3
+            nx = [nx(1) nx(end)];
+        end
+        ny = find(mod(y,50000) == 0);
+        if length(ny) == 3
+            ny = [ny(1) ny(end)];
+        end
+    end
 else
     error('not compatible with a tile grid size of %dm',dx)
 end
@@ -62,6 +76,14 @@ end
 nx(end) = nx(end)-1;
 ny(end) = ny(end)-1;
 
+% add standard tile buffer
+if buffer > 0
+    nx(1) = max(nx(1)-buffer, 1);
+    nx(2) = min(nx(2)+buffer, length(x));
+    ny(1) = max(ny(1)-buffer, 1);
+    ny(2) = min(ny(2)+buffer, length(y));
+end
+
 %crop coordinate vectors
 x=x(nx(1):nx(2));
 y=y(ny(1):ny(2));
@@ -71,7 +93,7 @@ outNameDem = strrep(tilef,'.mat','_dem.tif');
 if exist(outNameDem,'file')
     fprintf('%s exists, skipping\n',outNameDem);
 else
-    z=m.z(ny(1):ny(2),nx(1):nx(2));
+    z=m.z(ny(1):ny(end),nx(1):nx(end));
     z(isnan(z)) = -9999;
     writeGeotiff(outNameDem,x,y,z,4,-9999,projstr)
     clear z

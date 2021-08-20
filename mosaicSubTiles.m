@@ -518,33 +518,47 @@ else
     save(outName,'x','y','z','N','Nmt','z_mad','tmax','tmin','-v7.3')
 end
 
-% write tiff files
-z(isnan(z)) = -9999;
-outNameTif = strrep(outName,'.mat','_dem.tif');
-writeGeotiff(outNameTif,x,y,z,4,-9999,projection)
+% use the tile cropping logic from writeTileToTifv4
+writeTileToTifv4(outName, projection)
 
-gdalpath =[]; %set to the path of the gdal binary if not in system path.
-if ismac
-    gdalpath = '/Library/Frameworks/GDAL.framework/Versions/Current/Programs/';
-end
-system([gdalpath ,'$BWPY_PREFIX gdaldem hillshade -z 4 -compute_edges  -co TILED=YES -co BIGTIFF=IF_SAFER -co COMPRESS=LZW ',...
-   outNameTif,' ',strrep(outNameTif,'_dem.tif','_browse.tif')]);
-
-outNameTif = strrep(outName,'.mat','_count.tif');
-writeGeotiff(outNameTif,x,y,N,1,0,projection)
-
-outNameTif = strrep(outName,'.mat','_countmt.tif');
-writeGeotiff(outNameTif,x,y,Nmt,1,0,projection)
-
-z_mad(isnan(z_mad)) = -9999;
-outNameTif = strrep(outName,'.mat','_mad.tif');
-writeGeotiff(outNameTif,x,y,z_mad,4,-9999,projection)
-
-outNameTif = strrep(outName,'.mat','_maxdate.tif');
-writeGeotiff(outNameTif,x,y,tmax,2,0,projection)
-
-outNameTif = strrep(outName,'.mat','_mindate.tif');
-writeGeotiff(outNameTif,x,y,tmin,2,0,projection)
+%% write tiff files
+%z(isnan(z)) = -9999;
+%outNameTif = strrep(outName,'.mat','_dem.tif');
+%writeGeotiff(outNameTif,x,y,z,4,-9999,projection)
+%
+%gdalpath =[]; %set to the path of the gdal binary if not in system path.
+%if ismac
+%    gdalpath = '/Library/Frameworks/GDAL.framework/Versions/Current/Programs/';
+%end
+%% make browse hillshade at 10m resolution
+%if dx == 2
+%    outNameTemp = strrep(outNameTif,'_dem.tif','_temp.tif');
+%    system(['$BWPY_PREFIX gdal_translate -q -tr 10 10 -r bilinear -co bigtiff=if_safer -a_nodata -9999 ',...
+%            outNameTif,' ', outNameTemp]);
+%else
+%    outNameTemp = outNameTif;
+%end
+%system([gdalpath ,'$BWPY_PREFIX gdaldem hillshade -z 3 -compute_edges  -co TILED=YES -co BIGTIFF=IF_SAFER -co COMPRESS=LZW ',...
+%   outNameTemp,' ',strrep(outNameTif,'_dem.tif','_browse.tif')]);
+%if dx == 2
+%    delete(outNameTemp);
+%end
+%
+%outNameTif = strrep(outName,'.mat','_count.tif');
+%writeGeotiff(outNameTif,x,y,N,1,0,projection)
+%
+%outNameTif = strrep(outName,'.mat','_countmt.tif');
+%writeGeotiff(outNameTif,x,y,Nmt,1,0,projection)
+%
+%z_mad(isnan(z_mad)) = -9999;
+%outNameTif = strrep(outName,'.mat','_mad.tif');
+%writeGeotiff(outNameTif,x,y,z_mad,4,-9999,projection)
+%
+%outNameTif = strrep(outName,'.mat','_maxdate.tif');
+%writeGeotiff(outNameTif,x,y,tmax,2,0,projection)
+%
+%outNameTif = strrep(outName,'.mat','_mindate.tif');
+%writeGeotiff(outNameTif,x,y,tmin,2,0,projection)
 
 % Build mosaic centent list and write meta.txt
 fprintf('Building meta.txt\n')
