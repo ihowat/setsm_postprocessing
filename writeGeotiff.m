@@ -69,7 +69,7 @@ if ~(exist(tempfile,'file') && exist([tempfile,'.hdr'],'file'))
     keyboard
 end
 
-system([gdalpath ,'$BWPY_PREFIX gdal_translate -co bigtiff=if_safer -co compress=lzw -co tiled=yes -a_nodata ',...
+system([gdalpath ,'gdal_translate -co bigtiff=if_safer -co compress=lzw -co tiled=yes -a_nodata ',...
     num2str(nodata),' ',tempfile,' ', OutFileName]);
 
 delete([tempfile,'*'])

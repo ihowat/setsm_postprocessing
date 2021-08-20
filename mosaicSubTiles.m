@@ -533,12 +533,12 @@ writeTileToTifv4(outName, projection)
 %% make browse hillshade at 10m resolution
 %if dx == 2
 %    outNameTemp = strrep(outNameTif,'_dem.tif','_temp.tif');
-%    system(['$BWPY_PREFIX gdal_translate -q -tr 10 10 -r bilinear -co bigtiff=if_safer -a_nodata -9999 ',...
+%    system(['gdal_translate -q -tr 10 10 -r bilinear -co bigtiff=if_safer -a_nodata -9999 ',...
 %            outNameTif,' ', outNameTemp]);
 %else
 %    outNameTemp = outNameTif;
 %end
-%system([gdalpath ,'$BWPY_PREFIX gdaldem hillshade -z 3 -compute_edges  -co TILED=YES -co BIGTIFF=IF_SAFER -co COMPRESS=LZW ',...
+%system([gdalpath ,'gdaldem hillshade -z 3 -compute_edges  -co TILED=YES -co BIGTIFF=IF_SAFER -co COMPRESS=LZW ',...
 %   outNameTemp,' ',strrep(outNameTif,'_dem.tif','_browse.tif')]);
 %if dx == 2
 %    delete(outNameTemp);
