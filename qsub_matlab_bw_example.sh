@@ -30,7 +30,7 @@ MATLAB_SETTINGS="-nodisplay -nodesktop -nosplash"
 MATLAB_USE_PARPOOL=true
 
 # Load Python/GDAL env if needed
-source /projects/sciteam/bazu/tools/miniconda3/bin/activate /projects/sciteam/bazu/tools/miniconda3/envs/gdal2;
+source /projects/sciteam/bazu/tools/miniconda3/bin/activate /projects/sciteam/bazu/tools/miniconda3/envs/gdal2
 
 ### EDIT THIS BLOCK ###
 # Matlab settings specific to the script you want to run
@@ -59,15 +59,15 @@ fi
 
 ### ENABLE AND EDIT ONE OF THE FOLLOWING TWO BLOCKS ###
 
-## For interactive MATLAB job
-#matlab_cmd=''
+# For interactive MATLAB job
+matlab_cmd=''
 
-# For running MATLAB script
-matlab_cmd="\
-addpath('${MATLAB_SCRIPTS_DIR}'); \
-addpath('${MATLAB_SCRIPTS_DIR2}'); \
-${matlab_parpool_init} \
-try; matlab_example; catch e; disp(getReport(e)); exit(1); end; exit(0);"\
+## For running MATLAB script
+#matlab_cmd="\
+#addpath('${MATLAB_SCRIPTS_DIR}'); \
+#addpath('${MATLAB_SCRIPTS_DIR2}'); \
+#${matlab_parpool_init} \
+#try; matlab_example; catch e; disp(getReport(e)); exit(1); end; exit(0);"\
 
 
 task_cmd="${MATLAB_PROGRAM} ${MATLAB_SETTINGS}"

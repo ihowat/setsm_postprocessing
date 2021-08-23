@@ -258,7 +258,7 @@ def main():
         parser.error("dstdir does not exist: {}".format(args.dstdir))
     if args.project != 'earthdem':
         if not os.path.isfile(args.tile_def):
-            parser.error("--tile-def file does not exit: {}".format(args.tile_def))
+            parser.error("--tile-def file does not exist: {}".format(args.tile_def))
         if args.ref_dem is not None and not os.path.isfile(args.ref_dem):
             parser.error("--ref-dem does not exist: {}".format(args.ref_dem))
     if not os.path.isfile(args.strip_db):
