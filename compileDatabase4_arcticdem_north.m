@@ -147,6 +147,10 @@ for i=1:length(regionDirs)
         fprintf('Gathering strips with pattern: %s ... ', stripDir_pattern)
 
         stripDirs=dir(stripDir_pattern);
+        if isempty(stripDirs)
+            fprintf('None found\n')
+            continue
+        end
         stripDirs=stripDirs([stripDirs.isdir]);
         stripDirs = strcat({stripDirs.folder}',repmat({'/'},length(stripDirs),1),{stripDirs.name}');
         if length(stripDirs) == 0
