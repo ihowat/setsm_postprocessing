@@ -258,47 +258,85 @@ suby1=(y0+subtileSize:subtileSize:y1) + buffer;
 
 subN=numel(subx0);
 
-%% check for existing subtiles
-% make a cellstr of resolved subtile filenames
-if make2mFlag
-    subTileFiles=dir([outDir,'/*_2m.mat']);
-else
-    subTileFiles=dir([outDir,'/*_10m.mat']);
-end
+# The following code is left commented out after new restart logic was placed
+# inside the parfor loop for safe restart of parallel subtile building.
 
-if ~isempty(subTileFiles)
-    subTileFiles=cellfun( @(x) [outDir,'/',x],{subTileFiles.name},'uniformoutput',0);
-    
-    % Get column-wise number of subtile from file names - assumes the subtile
-    % names is {tilex}_{tily}_{subtilenum}_....
-    [~,subTileName] = cellfun(@fileparts,subTileFiles,'uniformoutput',0);
-    subTileName=cellfun(@(x) strsplit(x,'_'),subTileName,'uniformoutput',0);
-    if length(subTileName) > 0 && startsWith(subTileName{1}{1},'utm')
-        subTileNum = cellfun(@(x) str2num(x{4}),subTileName);
-    else
-        subTileNum = cellfun(@(x) str2num(x{3}),subTileName);
-    end
-    
-    % sort subtilefiles by ascending subtile number order
-    [subTileNum,n] = sort(subTileNum); % sort the numbers
-    subTileFiles = subTileFiles(n); % sort the file list
-    
-    nstrt = subTileNum(end)+1; % set first subtile next after last exisitng
-    
-    % check to make sure last file was complete
-    mvars  = who('-file',subTileFiles{end});
-    if ~any(ismember(mvars,'za_med'))
-        % if not, delete and set nstrt to that number
-        delete(subTileFiles{end})
-        nstrt =  nstrt - 1;
-    end
-    fprintf('subtiles already exist, starting on subtile %d\n',nstrt)
-end
+%%% check for existing subtiles
+%% make a cellstr of resolved subtile filenames
+%if make2mFlag
+%    subTileFiles=dir([outDir,'/*_2m.mat']);
+%else
+%    subTileFiles=dir([outDir,'/*_10m.mat']);
+%end
+%
+%if ~isempty(subTileFiles)
+%    subTileFiles=cellfun( @(x) [outDir,'/',x],{subTileFiles.name},'uniformoutput',0);
+%
+%    % Get column-wise number of subtile from file names - assumes the subtile
+%    % names is {tilex}_{tily}_{subtilenum}_....
+%    [~,subTileName] = cellfun(@fileparts,subTileFiles,'uniformoutput',0);
+%    subTileName=cellfun(@(x) strsplit(x,'_'),subTileName,'uniformoutput',0);
+%    if length(subTileName) > 0 && startsWith(subTileName{1}{1},'utm')
+%        subTileNum = cellfun(@(x) str2num(x{4}),subTileName);
+%    else
+%        subTileNum = cellfun(@(x) str2num(x{3}),subTileName);
+%    end
+%
+%    % sort subtilefiles by ascending subtile number order
+%    [subTileNum,n] = sort(subTileNum); % sort the numbers
+%    subTileFiles = subTileFiles(n); % sort the file list
+%
+%    nstrt = subTileNum(end)+1; % set first subtile next after last exisitng
+%
+%    % check to make sure last file was complete
+%    mvars  = who('-file',subTileFiles{end});
+%    if ~any(ismember(mvars,'za_med'))
+%        % if not, delete and set nstrt to that number
+%        delete(subTileFiles{end})
+%        nstrt =  nstrt - 1;
+%    end
+%    fprintf('subtiles already exist, starting on subtile %d\n',nstrt)
+%end
 
 %% subtile loop
 parfor n=nstrt:subN
     
     fprintf('subtile %d of %d\n',n,subN)
+
+    outName = [outDir,'/',tileName,'_',num2str(n),'_10m.mat'];
+    finName = [outDir,'/',tileName,'_',num2str(n),'_10m.fin'];
+
+    outName2m = strrep(outName,'_10m.mat','_2m.mat');
+    finName2m = strrep(finName,'_10m.fin','_2m.fin');
+
+    if make2mFlag
+        check_outName = outName2m;
+        check_finName = finName2m;
+    else
+        check_outName = outName;
+        check_finName = finName;
+    end
+
+    if exist(check_outName,'file')
+        % check to make sure subtile file is complete
+        mvars = who('-file',check_outName);
+        if ~any(ismember(mvars,'za_med'))
+            % if not, delete
+            fprintf('deleting 10m/2m components of incomplete existing subtile file: %s\n',check_outName)
+            if exist(outName,'file')
+                delete(outName)
+            end
+            if exist(outName2m,'file')
+                delete(outName2m)
+            end
+        else
+            fprintf('subtile file already exists, skipping: %s\n',check_outName)
+            continue
+        end
+    elseif exist(check_finName,'file')
+        fprintf('subtile-is-finished indicator file for empty subtile already exists, skipping: %s\n',check_finName)
+        continue
+    end
     
     x=subx0(n):res:subx1(n);
     y=suby1(n):-res:suby0(n);
@@ -316,6 +354,8 @@ parfor n=nstrt:subN
     
     if ~any(land(:))
         fprintf('No land in subtile %d, skipping\n',n)
+        fclose(fopen(finName, 'w'));
+        if make2mFlag; fclose(fopen(finName2m, 'w')); end
         continue
     end
     
@@ -368,6 +408,8 @@ parfor n=nstrt:subN
     
     if isempty(ind)
         fprintf('no overlapping strips, skipping\n')
+        fclose(fopen(finName, 'w'));
+        if make2mFlag; fclose(fopen(finName2m, 'w')); end
         continue
     end
     
@@ -646,8 +688,6 @@ parfor n=nstrt:subN
     tmin = uint16(min(t,[],3));
     tmean = uint16(nanmean(t,3));
     
-    outName = [outDir,'/',tileName,'_',num2str(n),'_10m.mat'];
-    
     % get stripIDs of dems used in output
     [~,stripIDs] =  cellfun(@fileparts,fileNames(~isnan(dZ)),...
         'uniformoutput',0);
@@ -660,8 +700,6 @@ parfor n=nstrt:subN
     
     if make2mFlag
         fprintf('making 2m version\n')
-
-        outName2m = strrep(outName,'_10m.mat','_2m.mat');
         
         % if strip segments were combined, need to expand offset vectors and fa
         % array to match orginal file list
