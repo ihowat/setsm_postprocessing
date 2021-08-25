@@ -19,16 +19,17 @@ fprintf("Clearing meta2\n");
 clear meta2;
 fprintf("Clearing meta3\n");
 clear meta3;
-fprintf("Saving combined meta1 database\n");
+fprintf("Saving combined meta1 database: %s\n", dbase_out);
 save(dbase_out,'-struct','meta1','-v7.3');
 fprintf("Clearing meta1\n");
 clear meta1;
 
-fprintf("Combining reproject lists\n");
 rlist1 = strrep(dbase1, '.mat', '_reproject_list.txt');
 rlist2 = strrep(dbase2, '.mat', '_reproject_list.txt');
 rlist3 = strrep(dbase3, '.mat', '_reproject_list.txt');
 rlist_out = strrep(dbase_out, '.mat', '_reproject_list.txt');
+
+fprintf("Combining reproject lists to: %s\n", rlist_out);
 system(sprintf('cat %s %s %s > %s', rlist1, rlist2, rlist3, rlist_out));
 
 fprintf("Done!\n")
