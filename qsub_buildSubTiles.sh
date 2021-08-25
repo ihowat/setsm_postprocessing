@@ -143,26 +143,41 @@ runscript="${runscript/<tilename>/${tileName}}"
 
 
 # System-specific settings
+APRUN_PREFIX=""
+
 if [ "$system" = 'pgc' ]; then
+    # Matlab settings
     MATLAB_WORKING_DIR="${HOME}/matlab_working_dir"
-    MATLAB_ENV="module load matlab/2019a"
+    MATLAB_TEMP_DIR="${HOME}/matlab_temp_dir"
+    module load matlab/2019a
     MATLAB_PROGRAM="matlab"
     MATLAB_SETTINGS="-nodisplay -nodesktop -nosplash"
     MATLAB_USE_PARPOOL=true
-    GDAL_ENV="module load gdal/2.1.3"
-    export BWPY_PREFIX=""
-    APRUN_PREFIX=""
+
+    # Load Python/GDAL environment
+    module load gdal/2.1.3
 
 elif [ "$system" = 'bw' ]; then
+    # Matlab settings
     MATLAB_WORKING_DIR="/scratch/sciteam/GS_bazu/mosaic_data/matlab_working_dir"
-    MATLAB_ENV=""
+    MATLAB_TEMP_DIR="/scratch/sciteam/GS_bazu/mosaic_data/matlab_temp_dir"
     MATLAB_PROGRAM="/projects/sciteam/bazu/matlab/R2020a/bin/matlab"
+#    export LD_LIBRARY_PATH="/projects/sciteam/bazu/matlab/lib-GLIBC2.12:${LD_LIBRARY_PATH}"
+    export MATLABHOST=$(printf 'nid%05d' "$(head -n1 "$PBS_NODEFILE")")
+    export LM_LICENSE_FILE="1711@bwlm1.ncsa.illinois.edu:1711@bwlm2.ncsa.illinois.edu"
     MATLAB_SETTINGS="-nodisplay -nodesktop -nosplash"
     MATLAB_USE_PARPOOL=true
-    export LM_LICENSE_FILE="1711@bwlm1.ncsa.illinois.edu:1711@bwlm2.ncsa.illinois.edu"
-    GDAL_ENV="module load bwpy/2.0.2"
-    export BWPY_PREFIX="bwpy-environ -- "
-    APRUN_PREFIX="aprun -b -N 1 -d $CORES_PER_NODE -cc none --"
+
+    # Load Python/GDAL env
+    source /projects/sciteam/bazu/tools/miniconda3/bin/activate /projects/sciteam/bazu/tools/miniconda3/envs/gdal2
+
+    # Site-specific settings
+    if grep -q '^SWIFT_WORKER_PID='; then
+        echo "In a Swift job"
+    else
+        echo "Not in a Swift job"
+        APRUN_PREFIX="aprun -b -N 1 -d ${CORES_PER_NODE} -cc none --"
+    fi
     #export CRAY_ROOTFS=SHIFTER
     #export UDI="ubuntu:xenial"
     #echo
@@ -171,15 +186,17 @@ elif [ "$system" = 'bw' ]; then
     #echo
 fi
 
+
 if [ "$MATLAB_USE_PARPOOL" = true ]; then
-    job_working_dir="${MATLAB_WORKING_DIR}/${JOB_ID}"
+    job_working_dir="${MATLAB_WORKING_DIR}"
+    job_temp_dir="${MATLAB_TEMP_DIR}/${JOB_ID}"
     matlab_parpool_init="\
 pc = parcluster('local'); \
-pc.JobStorageLocation = '${job_working_dir}'; \
+pc.JobStorageLocation = '${job_temp_dir}'; \
 pc.NumWorkers = ${CORES_PER_NODE}; \
 parpool(pc, ${CORES_PER_NODE});"
 else
-    job_working_dir="$MATLAB_WORKING_DIR"
+    job_working_dir="$MATLAB_TEMP_DIR"
     matlab_parpool_init="\
 ps = parallel.Settings; \
 ps.Pool.AutoCreate = false;"
@@ -199,33 +216,10 @@ ${make2m})"
 
 
 task_cmd="${MATLAB_PROGRAM} ${MATLAB_SETTINGS} -r \"${matlab_cmd}\""
-
-if [ -n "$(env | grep '^SWIFT_WORKER_PID=')" ]; then
-    echo "In a Swift job"
-elif [ -n "$(env | grep '^PBS_JOBID=')" ]; then
-    echo "In a PBS job"
-    hn=$( head -1 <$PBS_NODEFILE)
-    export MATLABHOST=$( printf "nid%05d" $hn )
-    mkdir -p  `dirname $runscript`
-    cat >$runscript <<EOF
-#!/bin/bash
-
-export LD_LIBRARY_PATH="/projects/sciteam/bazu/matlab/lib-GLIBC2.12"
-$task_cmd
-
-EOF
-    chmod +x $runscript
-    task_cmd="${APRUN_PREFIX} $runscript"
-else
-    echo "Not in a Swift or PBS job"
-fi
-
-# Load environments
-if [ -n "$MATLAB_ENV" ]; then
-    eval "$MATLAB_ENV"
-fi
-if [ -n "$GDAL_ENV" ]; then
-    eval "$GDAL_ENV"
+if [ "$system" = 'bw' ]; then
+    task_cmd="${APRUN_PREFIX} bash -c '\
+export LD_LIBRARY_PATH=\"/projects/sciteam/bazu/matlab/lib-GLIBC2.12:\${LD_LIBRARY_PATH}\"; \
+$(echo "$task_cmd" | sed "s|'|'\"'\"'|g");'"
 fi
 
 
@@ -233,6 +227,9 @@ fi
 # Working folder should be empty to reduce Matlab startup time.
 if [ ! -d "$job_working_dir" ]; then
     mkdir -p "$job_working_dir"
+fi
+if [ ! -d "$job_temp_dir" ]; then
+    mkdir -p "$job_temp_dir"
 fi
 cd "$job_working_dir"
 cd_status=$?
@@ -279,6 +276,11 @@ if (( task_return_code == 0 )) && [ -z "$log_error" ]; then
 else
     echo "Considering run unsuccessful due to either [non-zero task return code] OR [errmsgs found in logfile]"
     echo "Will not create finfile"
+fi
+
+if [ "$MATLAB_USE_PARPOOL" = true ] && [ -d "$job_temp_dir" ]; then
+    echo "Removing Matlab temp dir for parallel tasks: ${job_temp_dir}"
+    rm -rf "$job_temp_dir"
 fi
 
 echo
