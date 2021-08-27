@@ -101,3 +101,12 @@ if [ -n "$MATLAB_LOGFILE" ]; then
 else
     time eval "$task_cmd"
 fi
+
+
+if [ "$MATLAB_USE_PARPOOL" = true ] && [ -d "$job_temp_dir" ]; then
+    echo "Removing Matlab temp dir for parallel tasks: ${job_temp_dir}"
+    rm -rf "$job_temp_dir"
+fi
+
+echo
+echo "Done"
