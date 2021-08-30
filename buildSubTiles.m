@@ -258,8 +258,8 @@ suby1=(y0+subtileSize:subtileSize:y1) + buffer;
 
 subN=numel(subx0);
 
-# The following code is left commented out after new restart logic was placed
-# inside the parfor loop for safe restart of parallel subtile building.
+% The following code is left commented out after new restart logic was placed
+% inside the parfor loop for safe restart of parallel subtile building.
 
 %%% check for existing subtiles
 %% make a cellstr of resolved subtile filenames
