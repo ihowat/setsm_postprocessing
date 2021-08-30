@@ -1,12 +1,8 @@
-Index: batch_mosaicSubTiles.py
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/batch_mosaicSubTiles.py b/batch_mosaicSubTiles.py
---- a/batch_mosaicSubTiles.py	(revision 161a1cb431dc35150b40c960a661fa387a7e8653)
-+++ b/batch_mosaicSubTiles.py	(date 1629109102326)
-@@ -28,12 +28,12 @@
+index feb8358..1f71741 100644
+--- a/batch_mosaicSubTiles.py
++++ b/batch_mosaicSubTiles.py
+@@ -28,12 +28,12 @@ project_epsg_dict = {
      'rema':      3031,
  }
 

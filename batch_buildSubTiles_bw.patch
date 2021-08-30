@@ -1,12 +1,8 @@
-Index: batch_buildSubTiles.py
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/batch_buildSubTiles.py b/batch_buildSubTiles.py
---- a/batch_buildSubTiles.py	(revision 161a1cb431dc35150b40c960a661fa387a7e8653)
-+++ b/batch_buildSubTiles.py	(date 1629108998984)
-@@ -73,40 +73,40 @@
+index 98e4b8c..55721a4 100644
+--- a/batch_buildSubTiles.py
++++ b/batch_buildSubTiles.py
+@@ -73,40 +73,40 @@ project_epsg_dict = {
  earthdem_tileprefix_key = '<tileprefix>'
  project_refDemFile_dict = {
      'arcticdem': None,
@@ -35,8 +31,8 @@ diff --git a/batch_buildSubTiles.py b/batch_buildSubTiles.py
 +    'earthdem':  '/scratch/sciteam/GS_bazu/mosaic_data/strip_databases/EarthDEMdatabase4_2m_v4_20210817.mat',
  }
  project_waterTileDir_dict = {
--    'arcticdem': '/mnt/pgc/data/projects/arcticdem/watermasks/global_surface_water/tiled_watermasks/',
-+    'arcticdem': '/scratch/sciteam/GS_bazu/mosaic_data/watermasks/arcticdem/tiled_watermasks/',
+-    'arcticdem': '/mnt/pgc/data/projects/arcticdem/watermasks/',
++    'arcticdem': '/scratch/sciteam/GS_bazu/mosaic_data/watermasks/arcticdem/',
      'rema':      '',
 -    'earthdem':  '/mnt/pgc/data/projects/earthdem/watermasks/global_surface_water/tiled_watermasks/',
 +    'earthdem':  '/scratch/sciteam/GS_bazu/mosaic_data/watermasks/earthdem/tiled_watermasks/',
