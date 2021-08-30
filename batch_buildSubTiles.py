@@ -90,7 +90,7 @@ project_databaseFile_dict = {
     'earthdem':  '/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4_20210101_terrnva-paths.mat',
 }
 project_waterTileDir_dict = {
-    'arcticdem': '/mnt/pgc/data/projects/arcticdem/watermasks/global_surface_water/tiled_watermasks/',
+    'arcticdem': '/mnt/pgc/data/projects/arcticdem/watermasks/',
     'rema':      '',
     'earthdem':  '/mnt/pgc/data/projects/earthdem/watermasks/global_surface_water/tiled_watermasks/',
 }
@@ -109,6 +109,15 @@ project_tileParamList_dict = {
     'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_params/tileParamList_v13e.txt',
     'earthdem':  '',
 }
+
+
+with open(os.path.join(SCRIPT_DIR, 'watermask_tiles_greenland.txt'), 'r') as tilelist_fp:
+    watermask_tiles_greenland = [line.strip() for line in tilelist_fp.read().splitlines() if line != '']
+with open(os.path.join(SCRIPT_DIR, 'watermask_tiles_needing_visnav.txt'), 'r') as tilelist_fp:
+    watermask_tiles_needing_visnav = [line.strip() for line in tilelist_fp.read().splitlines() if line != '']
+watermask_tiles_visnav_need_editing_file = os.path.join(SCRIPT_DIR, 'watermask_tiles_visnav_need_editing_canada.txt')
+with open(watermask_tiles_visnav_need_editing_file, 'r') as tilelist_fp:
+    watermask_tiles_visnav_need_editing = [line.strip() for line in tilelist_fp.read().splitlines() if line != '']
 
 
 def main():
@@ -226,8 +235,11 @@ def main():
         args.ref_dem = project_refDemFile_dict[args.project]
         if args.ref_dem is None:
             parser.error("--ref-dem argument must be provided if --project={}".format(args.project))
+    auto_select_arcticdem_water_tile_dir = False
     if args.water_tile_dir is None:
         args.water_tile_dir = project_waterTileDir_dict[args.project]
+        if args.project == 'arcticdem':
+            auto_select_arcticdem_water_tile_dir = True
     if args.tileqc_dir is None:
         args.tileqc_dir = project_tileqcDir_dict[args.project]
     if args.tileparam_list is None:
@@ -316,7 +328,6 @@ def main():
         'tileDefFile': args.tile_def,
         'stripDatabaseFile': args.strip_db,
         'stripsDirectory': args.strips_dir,
-        'waterTileDir': args.water_tile_dir,
         'refDemFile': args.ref_dem,
         'tileqcDir': args.tileqc_dir,
         'tileParamListFile': args.tileparam_list,
@@ -325,6 +336,8 @@ def main():
         'logfile': template_logfile,
         'runscript': template_runscript,
     }
+    if not auto_select_arcticdem_water_tile_dir:
+        jobscript_static_args_dict['waterTileDir'] = args.water_tile_dir
     jobscript_fname = os.path.basename(args.jobscript)
     jobscript_temp_fname = jobscript_fname.replace(
         '.sh',
@@ -350,12 +363,14 @@ def main():
 
 
     tiles_to_run = []
+    tile_waterTileDir_dict = dict()
 
     for tile in tiles:
 
         tile_projstr = projection_string
         tile_def = args.tile_def
         ref_dem = args.ref_dem
+        water_tile_dir = args.water_tile_dir
 
         if tile_projstr == '' or earthdem_hemisphere_key in tile_def or earthdem_tileprefix_key in ref_dem:
             assert args.project == 'earthdem'
@@ -384,6 +399,24 @@ def main():
                 ref_dem = ref_dem.replace(earthdem_tileprefix_key, utm_tilename_prefix)
                 if not os.path.isfile(ref_dem):
                     parser.error("Reference DEM file does not exist: {}".format(tile_def))
+
+        if water_tile_dir != '':
+            if auto_select_arcticdem_water_tile_dir:
+                if tile in watermask_tiles_visnav_need_editing:
+                    parser.error("Tile '{}' is in tilelist indicating the visnav watermask "
+                                 "still needs fixing: {}".format(tile, watermask_tiles_visnav_need_editing_file))
+                if tile in watermask_tiles_greenland:
+                    water_tile_dir = os.path.join(water_tile_dir, 'howat_greenland/tiled_watermasks/')
+                elif tile in watermask_tiles_needing_visnav:
+                    water_tile_dir = os.path.join(water_tile_dir, 'visnav/tiled_watermasks/')
+                else:
+                    water_tile_dir = os.path.join(water_tile_dir, 'global_surface_water/tiled_watermasks/')
+                tile_waterTileDir_dict[tile] = water_tile_dir
+            tile_land_file = os.path.join(water_tile_dir, '{}_land.tif'.format(tile))
+            tile_ice_file = os.path.join(water_tile_dir, '{}_ice.tif'.format(tile))
+            tile_water_file = os.path.join(water_tile_dir, '{}_water.tif'.format(tile))
+            if not (os.path.isfile(tile_land_file) or os.path.isfile(tile_water_file)):
+                parser.error("Tile land/water mask file does not exist: {}".format(tile_water_file))
 
         ## If output does not exist, add to task list
         tile_outdir = os.path.join(args.dstdir, tile, 'subtiles')
@@ -471,11 +504,16 @@ def main():
             job_outfile = os.path.join(pbs_logdir, tile+'.out')
             job_errfile = os.path.join(pbs_logdir, tile+'.err')
 
+            arg_waterTileDir = None
+            if auto_select_arcticdem_water_tile_dir:
+                arg_waterTileDir = tile_waterTileDir_dict[tile]
+
             if args.pbs:
-                cmd = r""" {}qsub -N {} -v ARG_TILENAME={}{} {} {} "{}" """.format(
+                cmd = r""" {}qsub -N {} -v ARG_TILENAME={}{}{} {} {} "{}" """.format(
                     sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
                     job_name,
                     tile,
+                    ',ARG_WATERTILEDIR="{}"'.format(arg_waterTileDir) if arg_waterTileDir is not None else '',
                     ','+sched_addl_envvars if sched_addl_envvars != '' else '',
                     '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
                     sched_addl_vars,
@@ -487,6 +525,7 @@ def main():
                     sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
                     job_name,
                     tile,
+                    ',ARG_WATERTILEDIR="{}"'.format(arg_waterTileDir) if arg_waterTileDir is not None else '',
                     ','+sched_addl_envvars if sched_addl_envvars != '' else '',
                     '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
                     sched_addl_vars,
