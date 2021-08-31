@@ -30,7 +30,9 @@ MATLAB_SETTINGS="-nodisplay -nodesktop -nosplash"
 MATLAB_USE_PARPOOL=true
 
 # Load Python/GDAL env if needed
+set +u
 source /projects/sciteam/bazu/tools/miniconda3/bin/activate /projects/sciteam/bazu/tools/miniconda3/envs/gdal2
+set -u
 
 ### EDIT THIS BLOCK ###
 # Matlab settings specific to the script you want to run

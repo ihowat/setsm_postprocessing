@@ -169,7 +169,9 @@ elif [ "$system" = 'bw' ]; then
     MATLAB_USE_PARPOOL=true
 
     # Load Python/GDAL env
+    set +u
     source /projects/sciteam/bazu/tools/miniconda3/bin/activate /projects/sciteam/bazu/tools/miniconda3/envs/gdal2
+    set -u
 
     # Site-specific settings
     if grep -q '^SWIFT_WORKER_PID='; then
