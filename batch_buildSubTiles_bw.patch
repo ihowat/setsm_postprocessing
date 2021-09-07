@@ -35,7 +35,7 @@ index 98e4b8c..55721a4 100644
 +    'arcticdem': '/scratch/sciteam/GS_bazu/mosaic_data/watermasks/arcticdem/',
      'rema':      '',
 -    'earthdem':  '/mnt/pgc/data/projects/earthdem/watermasks/global_surface_water/tiled_watermasks/',
-+    'earthdem':  '/scratch/sciteam/GS_bazu/mosaic_data/watermasks/earthdem/tiled_watermasks/',
++    'earthdem':  '/scratch/sciteam/GS_bazu/mosaic_data/watermasks/earthdem/global_surface_water/tiled_watermasks/',
  }
  project_stripsDirectory_dict = {
 -    'arcticdem': '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region',
