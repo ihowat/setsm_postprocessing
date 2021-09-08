@@ -142,9 +142,15 @@ meta.scene_alignment.rmse=A(:,1);
 meta.scene_alignment.dz=A(:,2);
 meta.scene_alignment.dx=A(:,3);
 meta.scene_alignment.dy=A(:,4);
-meta.scene_alignment.dze=A(:,5);
-meta.scene_alignment.dxe=A(:,6);
-meta.scene_alignment.dye=A(:,7);
+
+% Allow skipping translation error fields that are (currently) unused
+% to support older strips that don't have these fields.
+[alignment_rows,alignment_cols]=size(A);
+if alignment_cols == 7
+    meta.scene_alignment.dze=A(:,5);
+    meta.scene_alignment.dxe=A(:,6);
+    meta.scene_alignment.dye=A(:,7);
+end
 
 if ~noSceneMetaFlag
 	for n=1:Nscenes
