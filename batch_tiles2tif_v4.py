@@ -13,6 +13,7 @@ default_qsub = 'qsub_tiles2tif_v4.sh'
 
 #### TODO add projstring to passed args
 def main():
+    global quadnames
 
     ## args
     parser = argparse.ArgumentParser()
