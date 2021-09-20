@@ -32,6 +32,7 @@ MATLAB_USE_PARPOOL=true
 # Load Python/GDAL env if needed
 set +u
 source /projects/sciteam/bazu/tools/miniconda3/bin/activate /projects/sciteam/bazu/tools/miniconda3/envs/gdal2
+export PATH="${PATH}:/projects/sciteam/bazu/tools/miniconda3/envs/gdal2/bin/"
 set -u
 
 ### EDIT THIS BLOCK ###

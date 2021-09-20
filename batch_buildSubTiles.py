@@ -5,6 +5,8 @@ import glob
 import os
 import socket
 import subprocess
+import sys
+import time
 import warnings
 from datetime import datetime
 
@@ -71,10 +73,10 @@ project_epsg_dict = {
     'rema':      3031,
 }
 
-earthdem_tileprefix_key = '<tileprefix>'
+earthdem_tilePrefix_key = '<tilePrefix>'
 project_refDemFile_dict = {
     'arcticdem': None,
-    'earthdem':  '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_UTM_90m/TDX_UTM_Mosaic_{}_90m.tif'.format(earthdem_tileprefix_key),
+    'earthdem':  '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_UTM_90m/TDX_UTM_Mosaic_{}_90m.tif'.format(earthdem_tilePrefix_key),
     'rema':      '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_Antarctica_90m/TanDEM_Antarctica_Mosaic.tif',
 }
 
@@ -124,7 +126,7 @@ with open(watermask_tiles_visnav_need_editing_file, 'r') as tilelist_fp:
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("dstdir", help="target directory (tile subfolders will be created)")
+    parser.add_argument("dstdir", help="target directory (where tile subfolders will be created)")
     parser.add_argument("tiles",
         help=' '.join([
             "list of mosaic tiles; either specified on command line (comma delimited),",
@@ -317,7 +319,7 @@ def main():
             os.makedirs(outdir)
 
     ## Create temp jobscript with comment mosaicking args filled in
-    tilename_key = '<tilename>'
+    tilename_key = '<tileName>'
     template_outdir = os.path.join(args.dstdir, tilename_key, 'subtiles')
     template_finfile = "{}_{}.fin".format(template_outdir, target_res)
     template_logfile = os.path.join(bst_logdir, tilename_key+'.log')
@@ -375,7 +377,7 @@ def main():
         ref_dem = args.ref_dem
         water_tile_dir = args.water_tile_dir
 
-        if tile_projstr == '' or earthdem_hemisphere_key in tile_def or earthdem_tileprefix_key in ref_dem:
+        if tile_projstr == '' or earthdem_hemisphere_key in tile_def or earthdem_tilePrefix_key in ref_dem:
             assert args.project == 'earthdem'
 
             utm_tilename_parts = tile.split('_')
@@ -398,8 +400,8 @@ def main():
                 if not os.path.isfile(tile_def):
                     parser.error("Tile definition file does not exist: {}".format(tile_def))
 
-            if earthdem_tileprefix_key in ref_dem:
-                ref_dem = ref_dem.replace(earthdem_tileprefix_key, utm_tilename_prefix)
+            if earthdem_tilePrefix_key in ref_dem:
+                ref_dem = ref_dem.replace(earthdem_tilePrefix_key, utm_tilename_prefix)
                 if not os.path.isfile(ref_dem):
                     parser.error("Reference DEM file does not exist: {}".format(tile_def))
 
@@ -480,6 +482,11 @@ def main():
 
 
     print("Running {} tiles".format(len(tiles_to_run)))
+    if len(tiles_to_run) == 0:
+        sys.exit(0)
+    sleep_seconds = 10
+    print("Sleeping {} seconds before submission".format(sleep_seconds))
+    time.sleep(sleep_seconds)
 
     if args.swift:
         with open(swift_tasklist_file, 'w') as swift_tasklist_fp:
@@ -553,6 +560,7 @@ def main():
 
 
     print("Done")
+
 
 
 if __name__ == '__main__':

@@ -109,16 +109,15 @@ if [ -z "$tileName" ]; then
     echo "argument 'tileName' not supplied, exiting"
     exit 0
 fi
-outDir="${outDir/<tilename>/${tileName}}"
 
-utm_tileprefix=$(echo "$tileName" | grep -Eo '^utm[0-9]{2}[ns]')
-if [ -n "$utm_tileprefix" ]; then
+utm_tilePrefix=$(echo "$tileName" | grep -Eo '^utm[0-9]{2}[ns]')
+if [ -n "$utm_tilePrefix" ]; then
 
     if [ -z "$projection" ]; then
-        projection="$utm_tileprefix"
+        projection="$utm_tilePrefix"
     fi
 
-    hemi_abbrev="${utm_tileprefix: -1}"
+    hemi_abbrev="${utm_tilePrefix: -1}"
     if [ "$hemi_abbrev" = 'n' ]; then
         hemisphere='North'
     elif [ "$hemi_abbrev" = 's' ]; then
@@ -130,16 +129,17 @@ if [ -n "$utm_tileprefix" ]; then
         tileDefFile="${tileDefFile/<hemisphere>/${hemisphere}}"
     fi
 
-    refDemFile="${refDemFile/<tileprefix>/${utm_tileprefix}}"
+    refDemFile="${refDemFile/<tilePrefix>/${utm_tilePrefix}}"
 fi
 if [ -z "$projection" ]; then
     echo "argument 'projection' not supplied, exiting"
     exit 0
 fi
 
-finfile="${finfile/<tilename>/${tileName}}"
-logfile="${logfile/<tilename>/${tileName}}"
-runscript="${runscript/<tilename>/${tileName}}"
+outDir="${outDir/<tileName>/${tileName}}"
+finfile="${finfile/<tileName>/${tileName}}"
+logfile="${logfile/<tileName>/${tileName}}"
+runscript="${runscript/<tileName>/${tileName}}"
 
 
 # System-specific settings
@@ -168,10 +168,11 @@ elif [ "$system" = 'bw' ]; then
     MATLAB_SETTINGS="-nodisplay -nodesktop -nosplash"
     MATLAB_USE_PARPOOL=true
 
-    # Load Python/GDAL env
-    set +u
-    source /projects/sciteam/bazu/tools/miniconda3/bin/activate /projects/sciteam/bazu/tools/miniconda3/envs/gdal2
-    set -u
+#    # Load Python/GDAL env if needed
+#    set +u
+#    source /projects/sciteam/bazu/tools/miniconda3/bin/activate /projects/sciteam/bazu/tools/miniconda3/envs/gdal2
+#    export PATH="${PATH}:/projects/sciteam/bazu/tools/miniconda3/envs/gdal2/bin/"
+#    set -u
 
     # Site-specific settings
     if grep -q '^SWIFT_WORKER_PID='; then
