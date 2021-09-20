@@ -177,16 +177,28 @@ if exist(outNameBrowse,'file')
 else
     if dx == 2
         outNameTemp = strrep(tilef,'.mat','_temp.tif');
-        system(['gdal_translate -q -tr 10 10 -r bilinear -co bigtiff=if_safer -a_nodata -9999 ',...
+        [status,cmdout]=system(['gdal_translate -q -tr 10 10 -r bilinear -co bigtiff=if_safer -a_nodata -9999 ',...
             outNameDem,' ', outNameTemp]);
+        if ~isempty(cmdout)
+            fprintf('%s',cmdout)
+        end
+        if status ~= 0
+            error('Non-zero exit status (%d) from gdal_translate',status)
+        end
     elseif dx == 10
         outNameTemp = outNameDem;
     end
 
     % convert to hillshade
-    system(['gdaldem hillshade -q -z 3 -compute_edges -of GTiff -co TILED=YES -co BIGTIFF=IF_SAFER -co COMPRESS=LZW ',...
+    [status,cmdout]=system(['gdaldem hillshade -q -z 3 -compute_edges -of GTiff -co TILED=YES -co BIGTIFF=IF_SAFER -co COMPRESS=LZW ',...
         outNameTemp,' ', outNameBrowse]);
-    
+    if ~isempty(cmdout)
+        fprintf('%s',cmdout)
+    end
+    if status ~= 0
+        error('Non-zero exit status (%d) from gdaldem hillshade',status)
+    end
+
     if dx == 2
         delete(outNameTemp);
     end

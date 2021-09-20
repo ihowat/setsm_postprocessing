@@ -69,7 +69,13 @@ if ~(exist(tempfile,'file') && exist([tempfile,'.hdr'],'file'))
     keyboard
 end
 
-system([gdalpath ,'gdal_translate -co bigtiff=if_safer -co compress=lzw -co tiled=yes -a_nodata ',...
+[status,cmdout]=system([gdalpath ,'gdal_translate -co bigtiff=if_safer -co compress=lzw -co tiled=yes -a_nodata ',...
     num2str(nodata),' ',tempfile,' ', OutFileName]);
+if ~isempty(cmdout)
+    fprintf('%s',cmdout)
+end
+if status ~= 0
+    error('Non-zero exit status (%d) from gdal_translate',status)
+end
 
 delete([tempfile,'*'])
