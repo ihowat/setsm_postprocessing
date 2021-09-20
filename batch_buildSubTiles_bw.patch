@@ -1,17 +1,17 @@
 diff --git a/batch_buildSubTiles.py b/batch_buildSubTiles.py
-index 98e4b8c..55721a4 100644
+index 9873178..7c94432 100644
 --- a/batch_buildSubTiles.py
 +++ b/batch_buildSubTiles.py
-@@ -73,40 +73,40 @@ project_epsg_dict = {
- earthdem_tileprefix_key = '<tileprefix>'
+@@ -76,40 +76,40 @@ project_epsg_dict = {
+ earthdem_tilePrefix_key = '<tilePrefix>'
  project_refDemFile_dict = {
      'arcticdem': None,
--    'earthdem':  '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_UTM_90m/TDX_UTM_Mosaic_{}_90m.tif'.format(earthdem_tileprefix_key),
+-    'earthdem':  '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_UTM_90m/TDX_UTM_Mosaic_{}_90m.tif'.format(earthdem_tilePrefix_key),
 -    'rema':      '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_Antarctica_90m/TanDEM_Antarctica_Mosaic.tif',
-+    'earthdem':  '/scratch/sciteam/GS_bazu/elev/dem/tandem-x/90m/TanDEM-X_UTM_90m/TDX_UTM_Mosaic_{}_90m.tif'.format(earthdem_tileprefix_key),
++    'earthdem':  '/scratch/sciteam/GS_bazu/elev/dem/tandem-x/90m/TanDEM-X_UTM_90m/TDX_UTM_Mosaic_{}_90m.tif'.format(earthdem_tilePrefix_key),
 +    'rema':      '/scratch/sciteam/GS_bazu/elev/dem/tandem-x/90m/TanDEM-X_Antarctica_90m/TanDEM_Antarctica_Mosaic.tif',
  }
-
+ 
  earthdem_hemisphere_key = '<hemisphere>'
  project_tileDefFile_dict = {
 -    'arcticdem': '/mnt/pgc/data/projects/earthdem/tiledef_files/PGC_Imagery_Mosaic_Tiles_Arctic.mat',
@@ -21,7 +21,7 @@ index 98e4b8c..55721a4 100644
 +    'rema':      '/scratch/sciteam/GS_bazu/mosaic_data/tiledef_files/rema_tile_definitions.mat',
 +    'earthdem':  '/scratch/sciteam/GS_bazu/mosaic_data/tiledef_files/PGC_UTM_Mosaic_Tiles_{}.mat'.format(earthdem_hemisphere_key),
  }
-
+ 
  project_databaseFile_dict = {
 -    'arcticdem': '/mnt/pgc/data/projects/earthdem/strip_databases/ArcticDEMdatabase4_2m_v4_20210610_terrnva-paths.mat',
 -    'rema':      '/mnt/pgc/data/projects/earthdem/strip_databases/rema_strips_v13e.shp',
