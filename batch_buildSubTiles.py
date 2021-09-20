@@ -33,15 +33,15 @@ if hostname.startswith('h2o'):
     sched_presubmit_cmd = 'export NOAPRUNWARN=1'
     sched_addl_envvars = "CRAY_ROOTFS=SHIFTER,UDI='ubuntu:xenial'"
     sched_specify_outerr_paths = True
-    sched_addl_vars = "-l nodes=1:ppn=16:xe,gres=shifter,walltime=96:00:00 -m n -q high"
+    sched_addl_vars = "-l nodes=1:ppn=16:xe,gres=shifter,walltime=96:00:00 -m n"
+    sched_default_queue = 'normal'
 elif hostname.startswith('nunatak'):
     system_name = 'pgc'
     sched_presubmit_cmd = ''
     sched_addl_envvars = ''
-    # sched_specify_outerr_paths = True
-    # sched_addl_vars = "-l walltime=200:00:00,nodes=1:ppn=16,mem=64gb -m n -q batch"
     sched_specify_outerr_paths = False
-    sched_addl_vars = "-l walltime=200:00:00,nodes=1:ppn=16,mem=64gb -m n -k oe -j oe -q old"
+    sched_addl_vars = "-l walltime=200:00:00,nodes=1:ppn=16,mem=64gb -m n -k oe -j oe"
+    sched_default_queue = 'old'
 else:
     warnings.warn("Hostname '{}' not recognized. System-specific settings will not be applied.".format(hostname))
     system_name = ''
@@ -49,6 +49,7 @@ else:
     sched_addl_envvars = ''
     sched_specify_outerr_paths = False
     sched_addl_vars = ''
+    sched_default_queue = None
 
 
 ## Argument defaults by 'project'
@@ -189,6 +190,8 @@ def main():
     parser.add_argument("--logdir", default=default_logdir,
             help="directory where logfiles for Matlab tile processing are created (default is {} from dstdir)".format(default_logdir))
 
+    parser.add_argument("--queue", default=sched_default_queue,
+            help="queue for scheduler submission")
     parser.add_argument("--pbs", action='store_true', default=False,
             help="submit tasks to PBS")
     parser.add_argument("--slurm", action='store_true', default=False,
@@ -509,12 +512,13 @@ def main():
                 arg_waterTileDir = tile_waterTileDir_dict[tile]
 
             if args.pbs:
-                cmd = r""" {}qsub -N {} -v ARG_TILENAME={}{}{} {} {} "{}" """.format(
+                cmd = r""" {}qsub -N {} -v ARG_TILENAME={}{}{} {} {} {} "{}" """.format(
                     sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
                     job_name,
                     tile,
                     ',ARG_WATERTILEDIR="{}"'.format(arg_waterTileDir) if arg_waterTileDir is not None else '',
                     ','+sched_addl_envvars if sched_addl_envvars != '' else '',
+                    '-q {}'.format(args.queue) if args.queue is not None else '',
                     '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
                     sched_addl_vars,
                     jobscript_temp,
