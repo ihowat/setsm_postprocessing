@@ -28,18 +28,25 @@ if ~isempty(n)
     quadrant = varargin{n+1};
 end
 
-n = find(strcmpi('version',varargin));
-if ~isempty(n)
-    version = varargin{n+1};
-    fprintf('Version: %s\n', version)
-end
-
 projection = '';
 n = find(strcmpi('projection',varargin));
 if ~isempty(n)
     projection = varargin{n+1};
 else
     error("'projection' argument must be provided");
+end
+
+n = find(strcmpi('version',varargin));
+if ~isempty(n)
+    version = varargin{n+1};
+    fprintf('Version: %s\n', version)
+end
+
+n = find(strcmpi('exportTif',varargin));
+if ~isempty(n)
+    exportTif = varargin{n+1};
+else
+    exportTif = true;
 end
 
 n = find(strcmpi('extent',varargin));
@@ -519,7 +526,7 @@ else
 end
 
 % use the tile cropping logic from writeTileToTifv4
-writeTileToTifv4(outName, projection)
+writeTileToTifv4(outName, projection, 'browseOnly', ~exportTif)
 
 %% write tiff files
 %z(isnan(z)) = -9999;
@@ -561,14 +568,16 @@ writeTileToTifv4(outName, projection)
 %writeGeotiff(outNameTif,x,y,tmin,2,0,projection)
 
 % Build mosaic centent list and write meta.txt
-fprintf('Building meta.txt\n')
+fprintf('Gathering subtile information for tile meta.txt file\n')
 if exist('quadrant','var')
     addInfoToSubtileMosaic(subTileDir,dx,outName,quadrant);
 else
     addInfoToSubtileMosaic(subTileDir,dx,outName);
 end
-
-tileMetav4(outName)
+%if ~browseOnly
+    fprintf('Writing meta.txt\n')
+    tileMetav4(outName)
+%end
 
 
 function dZ = getOffsets(subTileFiles,subTileNum,buff,outName)

@@ -1,6 +1,13 @@
-function writeTileToTifv4(tilef,projstr)
+function writeTileToTifv4(tilef,projstr,varargin)
 % Write 2m or 10m dem matfiles to tif
 %   compatible with setsm_postprocesing v4 branch
+
+n = find(strcmpi('browseOnly',varargin));
+if ~isempty(n)
+    browseOnly = varargin{n+1};
+else
+    browseOnly = false;
+end
 
 fprintf('Source: %s\n',tilef);
 
@@ -101,68 +108,70 @@ end
 
 flds=fields(m);
 
-if contains('z_mad',flds)
-    fprintf('Writing mad\n')
-    outNameTif = strrep(tilef,'.mat','_mad.tif');
-    if exist(outNameTif,'file')
-        fprintf('%s exists, skipping\n',outNameTif);
-    else
-        z_mad=m.z_mad(ny(1):ny(end),nx(1):nx(end));
-        z_mad(isnan(z_mad)) = -9999;
-        writeGeotiff(outNameTif,x,y,z_mad,4,-9999,projstr)
-        clear z_mad
+if ~browseOnly
+    if contains('z_mad',flds)
+        fprintf('Writing mad\n')
+        outNameTif = strrep(tilef,'.mat','_mad.tif');
+        if exist(outNameTif,'file')
+            fprintf('%s exists, skipping\n',outNameTif);
+        else
+            z_mad=m.z_mad(ny(1):ny(end),nx(1):nx(end));
+            z_mad(isnan(z_mad)) = -9999;
+            writeGeotiff(outNameTif,x,y,z_mad,4,-9999,projstr)
+            clear z_mad
+        end
     end
-end
 
-% data count
-if contains('N',flds)
-    fprintf('Writing N\n')
-    outNameTif = strrep(tilef,'.mat','_count.tif');
-    if exist(outNameTif,'file')
-        fprintf('%s exists, skipping\n',outNameTif);
-    else
-        N=m.N(ny(1):ny(end),nx(1):nx(end));
-        writeGeotiff(outNameTif,x,y,N,1,0,projstr)
-        clear N
+    % data count
+    if contains('N',flds)
+        fprintf('Writing N\n')
+        outNameTif = strrep(tilef,'.mat','_count.tif');
+        if exist(outNameTif,'file')
+            fprintf('%s exists, skipping\n',outNameTif);
+        else
+            N=m.N(ny(1):ny(end),nx(1):nx(end));
+            writeGeotiff(outNameTif,x,y,N,1,0,projstr)
+            clear N
+        end
     end
-end
 
-% matchtag count
-if contains('Nmt',flds)
-    fprintf('Writing Nmt\n')
-    outNameTif = strrep(tilef,'.mat','_countmt.tif');
-    if exist(outNameTif,'file')
-        fprintf('%s exists, skipping\n',outNameTif);
-    else
-        Nmt=m.Nmt(ny(1):ny(end),nx(1):nx(end));
-        writeGeotiff(outNameTif,x,y,Nmt,1,0,projstr)
-        clear Nmt
+    % matchtag count
+    if contains('Nmt',flds)
+        fprintf('Writing Nmt\n')
+        outNameTif = strrep(tilef,'.mat','_countmt.tif');
+        if exist(outNameTif,'file')
+            fprintf('%s exists, skipping\n',outNameTif);
+        else
+            Nmt=m.Nmt(ny(1):ny(end),nx(1):nx(end));
+            writeGeotiff(outNameTif,x,y,Nmt,1,0,projstr)
+            clear Nmt
+        end
     end
-end
 
-% Maximum date
-if contains('tmax',flds)
-    fprintf('Writing tmax\n')
-    outNameTif = strrep(tilef,'.mat','_maxdate.tif');
-    if exist(outNameTif,'file')
-        fprintf('%s exists, skipping\n',outNameTif);
-    else
-        tmax=m.tmax(ny(1):ny(end),nx(1):nx(end));
-        writeGeotiff(outNameTif,x,y,tmax,2,0,projstr)
-        clear tmax
+    % Maximum date
+    if contains('tmax',flds)
+        fprintf('Writing tmax\n')
+        outNameTif = strrep(tilef,'.mat','_maxdate.tif');
+        if exist(outNameTif,'file')
+            fprintf('%s exists, skipping\n',outNameTif);
+        else
+            tmax=m.tmax(ny(1):ny(end),nx(1):nx(end));
+            writeGeotiff(outNameTif,x,y,tmax,2,0,projstr)
+            clear tmax
+        end
     end
-end
-    
-% Minimum date
-if contains('tmin',flds)
-    fprintf('Writing tmin\n')
-    outNameTif = strrep(tilef,'.mat','_mindate.tif');
-    if exist(outNameTif,'file')
-        fprintf('%s exists, skipping\n',outNameTif);
-    else
-        tmin=m.tmin(ny(1):ny(end),nx(1):nx(end));
-       writeGeotiff(outNameTif,x,y,tmin,2,0,projstr)
-        clear tmin
+
+    % Minimum date
+    if contains('tmin',flds)
+        fprintf('Writing tmin\n')
+        outNameTif = strrep(tilef,'.mat','_mindate.tif');
+        if exist(outNameTif,'file')
+            fprintf('%s exists, skipping\n',outNameTif);
+        else
+            tmin=m.tmin(ny(1):ny(end),nx(1):nx(end));
+           writeGeotiff(outNameTif,x,y,tmin,2,0,projstr)
+            clear tmin
+        end
     end
 end
 
@@ -202,6 +211,11 @@ else
     if dx == 2
         delete(outNameTemp);
     end
+end
+
+
+if browseOnly
+    delete(outNameDem)
 end
 
 
