@@ -93,6 +93,7 @@ resolution="$ARG_RESOLUTION"
 outMatFile="$ARG_OUTMATFILE"
 projection="$ARG_PROJECTION"
 version="$ARG_VERSION"
+exportTif="$ARG_EXPORTTIF"
 finfile="$ARG_FINFILE"
 logfile="$ARG_LOGFILE"
 set -u
@@ -224,7 +225,7 @@ ${matlab_parpool_init} \
 run_mosaicSubTiles(\
 '${superTileName}','${quadrant}','${tileDefFile}',\
 '${subTileDir}',${resolution},'${outMatFile}',\
-'${projection}','${version}')"
+'${projection}','${version}',${exportTif})"
 
 
 task_cmd="${MATLAB_PROGRAM} ${MATLAB_SETTINGS} -r \"${matlab_cmd}\""
@@ -283,6 +284,15 @@ echo
 # Create finfile if Matlab command exited without error
 if (( task_return_code == 0 )) && [ -z "$log_error" ]; then
     echo "Considering run successful due to [task return code of zero] AND [no errmsgs found in logfile]"
+
+    if [ "$exportTif" = false ]; then
+        echo "Removing unneeded tile result metadata files, since 'exportTif' argument is false"
+        tileRegFile="${outMatFile/.mat/tileReg.mat}"
+        tileMetaFile="${outMatFile/.mat/_meta.txt}"
+        rm -vf "$tileRegFile"
+        rm -vf "$tileMetaFile"
+    fi
+
     echo "Creating finfile: ${finfile}"
     touch "$finfile"
 else

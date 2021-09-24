@@ -123,6 +123,12 @@ def main():
 
     parser.add_argument('--quads', action='store_true', default=False,
             help="build into quad subtiles")
+    parser.add_argument('--export-tif', action='store_true', default=False,
+        help=' '.join([
+            "export all tile result .tif rasters and meta.txt files at end of MST process,",
+            "else finish after creating tile result .mat file and browse .tif files only"
+        ])
+    )
 
     parser.add_argument('--bypass-bst-finfile-req', action='store_true', default=False,
             help="do not require BST finfiles exist before mosaicking tiles")
@@ -247,6 +253,7 @@ def main():
         'outMatFile': template_outmatfile,
         'projection': projection_string,
         'version': args.version,
+        'exportTif': 'true' if args.export_tif else 'false',
         'finfile': template_finfile,
         'logfile': template_logfile,
     }
