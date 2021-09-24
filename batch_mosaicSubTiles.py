@@ -83,7 +83,7 @@ project_tileDefFile_dict = {
 project_version_dict = {
     'arcticdem': 'ArcticDEM|4.1',
     'rema': 'REMA|2.0',
-    'earthdem': 'EarthDEM|1.0',
+    'earthdem': 'EarthDEM|1.1',
 }
 
 
