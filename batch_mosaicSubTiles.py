@@ -450,13 +450,13 @@ def main():
                 tiles_to_run.append(outtile)
 
 
-    # if error_messages:
-    #     print('----')
-    #     print("The following error messages were received")
-    #     print('----')
-    #     for errmsg in error_messages:
-    #         print(errmsg)
-    #     print('----')
+    if error_messages:
+        print('----')
+        print("The following error messages were received")
+        print('----')
+        for errmsg in error_messages:
+            print(errmsg)
+        print('----')
 
     inspect_tiles = []
     for tile, num_nodata in supertile_num_nodata_dict.items():
