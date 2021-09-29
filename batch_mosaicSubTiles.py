@@ -450,6 +450,97 @@ def main():
                 tiles_to_run.append(outtile)
 
 
+    ran_tiles = False
+    if len(tiles_to_run) > 0 and (args.submit or args.test_submit):
+        ran_tiles = True
+
+        print("Running {} {}tiles".format(len(tiles_to_run), 'quad-' if args.quads else ''))
+
+        if not args.test_submit:
+            sleep_seconds = 10
+            print("Sleeping {} seconds before job submission".format(sleep_seconds))
+            time.sleep(sleep_seconds)
+
+        if args.swift:
+            with open(swift_tasklist_file, 'w') as swift_tasklist_fp:
+                for tile in tiles_to_run:
+                    swift_tasklist_fp.write(tile+'\n')
+            swift_cmd = r""" "{}" -config "{}" -sites {},local "{}" -tasklist_file="{}" -jobscript="{}" -task_description="{}" -logdir="{}" """.format(
+                swift_program,
+                swift_config,
+                swift_site,
+                swift_script,
+                swift_tasklist_file,
+                jobscript_temp,
+                "tiles to run",
+                swift_logdir,
+            )
+            print("Running Swift command: {}".format(swift_cmd))
+            if not args.dryrun:
+                subprocess.call(swift_cmd, shell=True, cwd=swift_rundir)
+            print("Ran {} tiles".format(len(tiles_to_run)))
+
+        else:
+
+            jobnum_total = int(math.ceil(len(tiles_to_run) / float(args.tasks_per_job)))
+            jobnum_fmt = '{:0>'+str(min(3, len(str(jobnum_total))))+'}'
+
+            for jobnum, task_start_idx in enumerate(range(0, len(tiles_to_run), args.tasks_per_job), 1):
+
+                tile_bundle = tiles_to_run[task_start_idx:task_start_idx+args.tasks_per_job]
+                if batch_job_submission:
+                    tile = None
+                    task_name = jobnum_fmt.format(jobnum)
+                else:
+                    tile = tiles_to_run[task_start_idx]
+                    task_name = tile
+                job_name = 'mst_{}'.format(task_name)
+                job_outfile = os.path.join(pbs_logdir, task_name+'.out')
+                job_errfile = os.path.join(pbs_logdir, task_name+'.err')
+
+                if args.pbs:
+                    cmd = r""" {}qsub -N {} -v {}ARG_TILENAME={}{} {} {} {} "{}" """.format(
+                        sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
+                        job_name,
+                        'TILERUN_JOBSCRIPT="{}",'.format(tilerun_jobscript) if batch_job_submission else '',
+                        '@'.join(tile_bundle) if batch_job_submission else tile,
+                        ','+sched_addl_envvars if sched_addl_envvars != '' else '',
+                        '-q {}'.format(args.queue) if args.queue is not None else '',
+                        '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
+                        sched_addl_vars,
+                        batch_jobscript if batch_job_submission else tilerun_jobscript,
+                    )
+
+                elif args.slurm:
+                    job_outfile = job_outfile.replace('pbs', 'slurm')
+                    job_errfile = job_errfile.replace('pbs', 'slurm')
+                    cmd = r""" {}sbatch -J {} -v {}ARG_TILENAME={} {} {} "{}" """.format(
+                        sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
+                        job_name,
+                        'TILERUN_JOBSCRIPT="{}",'.format(tilerun_jobscript) if batch_job_submission else '',
+                        '@'.join(tile_bundle) if batch_job_submission else tile,
+                        ','+sched_addl_envvars if sched_addl_envvars != '' else '',
+                        '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
+                        sched_addl_vars,
+                        batch_jobscript if batch_job_submission else tilerun_jobscript,
+                    )
+
+                else:
+                    cmd = r""" bash "{}" {} """.format(
+                        jobscript_temp,
+                        tile,
+                    )
+
+                print("{}, {}".format(jobnum, cmd))
+                if not args.dryrun:
+                    subprocess.call(cmd, shell=True, cwd=(pbs_logdir if args.pbs else None))
+
+            if args.pbs or args.slurm:
+                print("Submitted {} {}tiles to scheduler".format(len(tiles_to_run), 'quad-' if args.quads else ''))
+            else:
+                print("Ran {} {}tiles".format(len(tiles_to_run), 'quad-' if args.quads else ''))
+
+
     if error_messages:
         print('----')
         print("The following error messages were received")
@@ -472,104 +563,16 @@ def main():
         print("Checking those {} super-tiles for existence of subtile results...".format(len(inspect_tiles)))
         for tile in inspect_tiles:
             subtile_dir = os.path.join(args.srcdir, tile, 'subtiles')
-            if not glob.glob(os.path.join(subtile_dir, '{}_*{}m.mat'.format(tile, args.res))):
+            if not glob.glob(os.path.join(subtile_dir, '{}_*_{}m.*'.format(tile, args.res))):
                 print("ERROR! No {}m results exist in subtile directory for tile {}: {}".format(args.res, tile, subtile_dir))
         print('-----')
-        sys.exit(1)
 
 
-    print("Running {} {}tiles".format(len(tiles_to_run), 'quad-' if args.quads else ''))
-    if len(tiles_to_run) == 0:
-        sys.exit(0)
-    elif not (args.submit or args.test_submit):
-        print("Exiting dryrun. Provide the --submit option to submit tasks.")
-        sys.exit(0)
-
-    sleep_seconds = 10
-    print("Sleeping {} seconds before submission".format(sleep_seconds))
-    time.sleep(sleep_seconds)
-
-    if args.swift:
-        with open(swift_tasklist_file, 'w') as swift_tasklist_fp:
-            for tile in tiles_to_run:
-                swift_tasklist_fp.write(tile+'\n')
-        swift_cmd = r""" "{}" -config "{}" -sites {},local "{}" -tasklist_file="{}" -jobscript="{}" -task_description="{}" -logdir="{}" """.format(
-            swift_program,
-            swift_config,
-            swift_site,
-            swift_script,
-            swift_tasklist_file,
-            jobscript_temp,
-            "tiles to run",
-            swift_logdir,
-        )
-        print("Running Swift command: {}".format(swift_cmd))
-        if not args.dryrun:
-            subprocess.call(swift_cmd, shell=True, cwd=swift_rundir)
-        print("Ran {} tiles".format(len(tiles_to_run)))
-
-    else:
-
-        jobnum_total = int(math.ceil(len(tiles_to_run) / float(args.tasks_per_job)))
-        jobnum_fmt = '{:0>'+str(min(3, len(str(jobnum_total))))+'}'
-
-        for jobnum, task_start_idx in enumerate(range(0, len(tiles_to_run), args.tasks_per_job), 1):
-
-            tile_bundle = tiles_to_run[task_start_idx:task_start_idx+args.tasks_per_job]
-            if batch_job_submission:
-                tile = None
-                task_name = jobnum_fmt.format(jobnum)
-            else:
-                tile = tiles_to_run[task_start_idx]
-                task_name = tile
-            job_name = 'mst_{}'.format(task_name)
-            job_outfile = os.path.join(pbs_logdir, task_name+'.out')
-            job_errfile = os.path.join(pbs_logdir, task_name+'.err')
-
-            if args.pbs:
-                cmd = r""" {}qsub -N {} -v {}ARG_TILENAME={}{} {} {} {} "{}" """.format(
-                    sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
-                    job_name,
-                    'TILERUN_JOBSCRIPT="{}",'.format(tilerun_jobscript) if batch_job_submission else '',
-                    '@'.join(tile_bundle) if batch_job_submission else tile,
-                    ','+sched_addl_envvars if sched_addl_envvars != '' else '',
-                    '-q {}'.format(args.queue) if args.queue is not None else '',
-                    '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
-                    sched_addl_vars,
-                    batch_jobscript if batch_job_submission else tilerun_jobscript,
-                )
-
-            elif args.slurm:
-                job_outfile = job_outfile.replace('pbs', 'slurm')
-                job_errfile = job_errfile.replace('pbs', 'slurm')
-                cmd = r""" {}sbatch -J {} -v {}ARG_TILENAME={} {} {} "{}" """.format(
-                    sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
-                    job_name,
-                    'TILERUN_JOBSCRIPT="{}",'.format(tilerun_jobscript) if batch_job_submission else '',
-                    '@'.join(tile_bundle) if batch_job_submission else tile,
-                    ','+sched_addl_envvars if sched_addl_envvars != '' else '',
-                    '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
-                    sched_addl_vars,
-                    batch_jobscript if batch_job_submission else tilerun_jobscript,
-                )
-
-            else:
-                cmd = r""" bash "{}" {} """.format(
-                    jobscript_temp,
-                    tile,
-                )
-
-            print("{}, {}".format(jobnum, cmd))
-            if not args.dryrun:
-                subprocess.call(cmd, shell=True, cwd=(pbs_logdir if args.pbs else None))
-
-        if args.pbs or args.slurm:
-            print("Submitted {} {}tiles to scheduler".format(len(tiles_to_run), 'quad-' if args.quads else ''))
-        else:
-            print("Ran {} {}tiles".format(len(tiles_to_run), 'quad-' if args.quads else ''))
-
-
-    print("Done")
+    print("{} {}tiles are incomplete and {} (re)submitted".format(
+        len(tiles_to_run),
+        'quad-' if args.quads else '',
+        'were' if ran_tiles else 'need to be'
+    ))
 
 
 
