@@ -2,6 +2,7 @@
 
 import argparse
 import glob
+import math
 import os
 import socket
 import subprocess
@@ -20,6 +21,7 @@ SCRIPT_DIR = os.path.dirname(SCRIPT_FILE)
 ## General argument defaults and settings
 default_matlab_scriptdir = os.path.join(SCRIPT_DIR, '../setsm_postprocessing4')
 default_jobscript = os.path.join(SCRIPT_DIR, 'qsub_mosaicSubTiles.sh')
+batch_jobscript = os.path.join(SCRIPT_DIR, 'qsub_batchRunTiles.sh')
 default_tempdir = os.path.join(SCRIPT_DIR, 'temp')
 default_logdir = '../logs/[DSTDIR_FOLDER_NAME]'  # relative path appended to argument dstdir
 swift_program = os.path.abspath('/projects/sciteam/bazu/tools/swift-2/bin/swift')
@@ -36,7 +38,7 @@ if hostname.startswith('h2o'):
     sched_presubmit_cmd = 'export NOAPRUNWARN=1'
     sched_addl_envvars = "CRAY_ROOTFS=SHIFTER,UDI='ubuntu:xenial'"
     sched_specify_outerr_paths = True
-    sched_addl_vars = "-l nodes=1:ppn=16:xe,gres=shifter,walltime=96:00:00 -m n"
+    sched_addl_vars = "-l nodes=1:ppn=16:xe,gres=shifter,walltime=96:00:00 -m n -j oe"
     sched_default_queue = 'normal'
 elif hostname.startswith('nunatak'):
     system_name = 'pgc'
@@ -159,13 +161,17 @@ def main():
     parser.add_argument("--swift-logdir", default=None,
             help="directory where output job logs from Swift will go (default is ../logs/ from dstdir)")
 
+    parser.add_argument("--tasks-per-job", type=int, default=1,
+            help="Number of tiles to run in a single PBS or Slurm job")
     parser.add_argument("--submit", action='store_true', default=False,
             help="Submit tasks. If this option is not provided, --dryrun is automatically applied.")
+    parser.add_argument("--test-submit", action='store_true', default=False,
+            help="Print tile-submission commands without executing")
     parser.add_argument("--dryrun", action='store_true', default=False,
             help="Print actions without executing")
 
     args = parser.parse_args()
-    if not args.submit:
+    if (not args.submit) or args.test_submit:
         args.dryrun = True
 
     if os.path.isfile(args.tiles):
@@ -177,6 +183,14 @@ def main():
     tiles = sorted(list(set(tiles)))
 
     target_res = '10m' if args.res == 10 else '2m'
+
+    if args.tasks_per_job > 1:
+        if not (args.pbs or args.slurm):
+            parser.error("--tasks-per-job > 1 can only be provided in addition to"
+                         " --pbs or --slurm scheduler job submission options")
+        batch_job_submission = True
+    else:
+        batch_job_submission = False
 
     ## Set default arguments by project setting
     if args.project is None and True in [arg is None for arg in [args.epsg, args.tile_def, args.version]]:
@@ -217,10 +231,13 @@ def main():
     if args.bypass_bst_finfile_req and args.relax_bst_finfile_req:
         parser.error("--bypass-bst-finfile-req and --relax-bst-finfile-req arguments are mutually exclusive")
 
-    mst_logdir = os.path.join(args.logdir, target_res, 'mst')
-    pbs_logdir = os.path.join(args.logdir, 'pbs', target_res, 'mst')
+    log_time = datetime.now().strftime("%Y%m%d%H%M%S")
+    mst_logdir = os.path.join(args.logdir, 'matlab', 'mst', target_res)
+    pbs_logdir = os.path.join(args.logdir, 'pbs', 'mst', target_res)
+    if batch_job_submission:
+        pbs_logdir = '{}_batch_{}_{}-tiles'.format(pbs_logdir, log_time, len(tiles))
     swift_logrootdir = os.path.join(args.logdir, 'swift')
-    swift_logdir = os.path.join(swift_logrootdir, target_res, 'mst')
+    swift_logdir = os.path.join(swift_logrootdir, 'mst', target_res)
     swift_tasklist_dir = os.path.join(swift_logrootdir, 'tasklist')
     swift_tasklist_fname = 'mst_{}_tasklist_{}.txt'.format(target_res, datetime.now().strftime("%Y%m%d%H%M%S"))
     swift_tasklist_file = os.path.join(swift_tasklist_dir, swift_tasklist_fname)
@@ -231,10 +248,16 @@ def main():
         outdir_list.append(pbs_logdir)
     if args.swift:
         outdir_list.extend([swift_rundir, swift_logdir, swift_tasklist_dir])
-    for outdir in outdir_list:
-        if not os.path.isdir(outdir):
-            print("Creating output directory: {}".format(outdir))
-            os.makedirs(outdir)
+    if not args.dryrun:
+        for outdir in outdir_list:
+            if not os.path.isdir(outdir):
+                print("Creating output directory: {}".format(outdir))
+                os.makedirs(outdir)
+        if batch_job_submission:
+            pbs_batch_tilelist = os.path.join(pbs_logdir, 'tilelist.txt')
+            with open(pbs_batch_tilelist, 'w') as tilelist_fp:
+                for tile in tiles:
+                    tilelist_fp.write(tile+'\n')
 
     ## Create temp jobscript with comment mosaicking args filled in
     supertilename_key = '<superTileName>'
@@ -279,6 +302,8 @@ def main():
     print("Writing temporary jobscript file: {}".format(jobscript_temp))
     with open(jobscript_temp, 'w') as jobscript_fp:
         jobscript_fp.write(jobscript_temp_text)
+
+    tilerun_jobscript = jobscript_temp
 
 
 
@@ -456,7 +481,7 @@ def main():
     print("Running {} {}tiles".format(len(tiles_to_run), 'quad-' if args.quads else ''))
     if len(tiles_to_run) == 0:
         sys.exit(0)
-    elif not args.submit:
+    elif not (args.submit or args.test_submit):
         print("Exiting dryrun. Provide the --submit option to submit tasks.")
         sys.exit(0)
 
@@ -484,33 +509,48 @@ def main():
         print("Ran {} tiles".format(len(tiles_to_run)))
 
     else:
-        for tasknum, tile in enumerate(tiles_to_run, 1):
 
-            job_name = 'mst_{}'.format(tile)
-            job_outfile = os.path.join(pbs_logdir, tile+'.out')
-            job_errfile = os.path.join(pbs_logdir, tile+'.err')
+        jobnum_total = int(math.ceil(len(tiles_to_run) / float(args.tasks_per_job)))
+        jobnum_fmt = '{:0>'+str(min(3, len(str(jobnum_total))))+'}'
+
+        for jobnum, task_start_idx in enumerate(range(0, len(tiles_to_run), args.tasks_per_job), 1):
+
+            tile_bundle = tiles_to_run[task_start_idx:task_start_idx+args.tasks_per_job]
+            if batch_job_submission:
+                tile = None
+                task_name = jobnum_fmt.format(jobnum)
+            else:
+                tile = tiles_to_run[task_start_idx]
+                task_name = tile
+            job_name = 'mst_{}'.format(task_name)
+            job_outfile = os.path.join(pbs_logdir, task_name+'.out')
+            job_errfile = os.path.join(pbs_logdir, task_name+'.err')
 
             if args.pbs:
-                cmd = r""" {}qsub -N {} -v ARG_TILENAME={}{} {} {} {} "{}" """.format(
+                cmd = r""" {}qsub -N {} -v {}ARG_TILENAME={}{} {} {} {} "{}" """.format(
                     sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
                     job_name,
-                    tile,
+                    'TILERUN_JOBSCRIPT="{}",'.format(tilerun_jobscript) if batch_job_submission else '',
+                    '@'.join(tile_bundle) if batch_job_submission else tile,
                     ','+sched_addl_envvars if sched_addl_envvars != '' else '',
                     '-q {}'.format(args.queue) if args.queue is not None else '',
                     '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
                     sched_addl_vars,
-                    jobscript_temp,
+                    batch_jobscript if batch_job_submission else tilerun_jobscript,
                 )
 
             elif args.slurm:
-                cmd = r""" {}sbatch -J {} -v ARG_TILENAME={} {} {} "{}" """.format(
+                job_outfile = job_outfile.replace('pbs', 'slurm')
+                job_errfile = job_errfile.replace('pbs', 'slurm')
+                cmd = r""" {}sbatch -J {} -v {}ARG_TILENAME={} {} {} "{}" """.format(
                     sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
                     job_name,
-                    tile,
+                    'TILERUN_JOBSCRIPT="{}",'.format(tilerun_jobscript) if batch_job_submission else '',
+                    '@'.join(tile_bundle) if batch_job_submission else tile,
                     ','+sched_addl_envvars if sched_addl_envvars != '' else '',
                     '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
                     sched_addl_vars,
-                    jobscript_temp,
+                    batch_jobscript if batch_job_submission else tilerun_jobscript,
                 )
 
             else:
@@ -519,7 +559,7 @@ def main():
                     tile,
                 )
 
-            print("{}, {}".format(tasknum, cmd))
+            print("{}, {}".format(jobnum, cmd))
             if not args.dryrun:
                 subprocess.call(cmd, shell=True, cwd=(pbs_logdir if args.pbs else None))
 
