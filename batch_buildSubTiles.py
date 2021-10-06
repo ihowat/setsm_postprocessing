@@ -299,10 +299,10 @@ def main():
     if args.rerun and args.rerun_without_cleanup:
         parser.error("--rerun and --rerun-without-cleanup are mutually exclusive")
 
-    bst_logdir = os.path.join(args.logdir, target_res, 'bst')
-    pbs_logdir = os.path.join(args.logdir, 'pbs', target_res, 'bst')
+    bst_logdir = os.path.join(args.logdir, 'matlab', 'bst', target_res)
+    pbs_logdir = os.path.join(args.logdir, 'pbs', 'bst', target_res)
     swift_logrootdir = os.path.join(args.logdir, 'swift')
-    swift_logdir = os.path.join(swift_logrootdir, target_res, 'bst')
+    swift_logdir = os.path.join(swift_logrootdir, 'bst', target_res)
     swift_tasklist_dir = os.path.join(swift_logrootdir, 'tasklist')
     swift_tasklist_fname = 'bst_{}_tasklist_{}.txt'.format(target_res, datetime.now().strftime("%Y%m%d%H%M%S"))
     swift_tasklist_file = os.path.join(swift_tasklist_dir, swift_tasklist_fname)
