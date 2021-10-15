@@ -112,7 +112,7 @@ val(first_scene_line(1):end)=[];
 
 % reformat strip data into structure
 for it=1:length(name)
-    if endsWith(name{it}, '_coverage') || endsWith(name{it}, '_density') || endsWith(name{it}, '_elevation_value')
+    if strcmp(name{it}, 'strip_dem_id') || endsWith(name{it}, '_coverage') || endsWith(name{it}, '_density') || endsWith(name{it}, '_elevation_value')
         % these fields are not present in all strip metadata files
         continue
     end
