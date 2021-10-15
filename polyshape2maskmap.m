@@ -35,6 +35,12 @@ end
 % make bitmask grid
 BW = false(length(y),length(x));
 
+if isempty(p.Vertices)
+%    error('polyshape has no vertices')
+    fprintf('polyshape has no vertices\n')
+    return
+end
+
 % index the polygons within the vertices vectors
 NR = [0;find(isnan(p.Vertices(:,1)));length(p.Vertices(:,1))+1];
 
