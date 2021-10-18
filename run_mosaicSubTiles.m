@@ -5,6 +5,9 @@ function run_mosaicSubTiles(...
 )
 
 try
+    if ~isempty(version)
+        version = strrep(version, ',', '|');
+    end
     if isempty(quadrant)
         [x0,x1,y0,y1] = getTileExtents(tileName,tileDefFile);
         mosaicSubTiles(subTileDir,resolution,outMatFile,...

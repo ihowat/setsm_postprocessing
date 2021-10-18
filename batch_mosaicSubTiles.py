@@ -83,9 +83,9 @@ project_tileDefFile_dict = {
     'earthdem':  '/mnt/pgc/data/projects/earthdem/tiledef_files/PGC_UTM_Mosaic_Tiles_{}.mat'.format(earthdem_hemisphere_key),
 }
 project_version_dict = {
-    'arcticdem': 'ArcticDEM|4.1',
-    'rema': 'REMA|2.0',
-    'earthdem': 'EarthDEM|1.1',
+    'arcticdem': 'ArcticDEM,4.1',
+    'rema': 'REMA,2.0',
+    'earthdem': 'EarthDEM,1.1',
 }
 
 
