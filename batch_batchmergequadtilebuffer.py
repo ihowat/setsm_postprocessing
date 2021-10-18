@@ -8,7 +8,8 @@ SCRIPT_DIR = os.path.dirname(SCRIPT_FILE)
 matlab_scripts = os.path.join(SCRIPT_DIR, '../setsm_postprocessing4')
 quadnames = ('1_1','1_2','2_1','2_2')
 qsub_default = 'qsub_mergequadtilebuffer.sh'
-RESOLUTIONS = ['2','10']
+# RESOLUTIONS = ['2','10']
+RESOLUTIONS = ['2']
 
 def main():
 

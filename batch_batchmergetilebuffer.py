@@ -7,7 +7,8 @@ SCRIPT_DIR = os.path.dirname(SCRIPT_FILE)
 
 matlab_scripts = os.path.join(SCRIPT_DIR, '../setsm_postprocessing4')
 qsub_default = 'qsub_mergetilebuffer.sh'
-RESOLUTIONS = ['2','10']
+# RESOLUTIONS = ['2','10']
+RESOLUTIONS = ['10']
 
 def main():
 
