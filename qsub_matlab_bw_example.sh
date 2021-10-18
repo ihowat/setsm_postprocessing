@@ -42,6 +42,7 @@ MATLAB_SCRIPTS_DIR2="/projects/sciteam/bazu/tools/setsm_postprocessing4"
 MATLAB_WORKING_DIR="/scratch/sciteam/GS_bazu/mosaic_data/matlab_working_dir"
 MATLAB_TEMP_DIR="/scratch/sciteam/GS_bazu/mosaic_data/matlab_temp_dir"
 #MATLAB_LOGFILE="/scratch/sciteam/GS_bazu/mosaic_data/logs/example.log"
+MATLAB_LOGFILE=''
 
 
 if [ "$MATLAB_USE_PARPOOL" = true ]; then

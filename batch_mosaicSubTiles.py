@@ -574,6 +574,9 @@ def main():
         'were' if ran_tiles else 'need to be'
     ))
 
+    if len(tiles_to_run) > 0 and not args.submit:
+        print("Provide the --submit option to run tiles")
+
 
 
 if __name__ == '__main__':
