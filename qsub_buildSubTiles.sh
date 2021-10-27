@@ -172,6 +172,7 @@ elif [ "$system" = 'bw' ]; then
 #    set +u
 #    source /projects/sciteam/bazu/tools/miniconda3/bin/activate /projects/sciteam/bazu/tools/miniconda3/envs/gdal2
 #    export PATH="${PATH}:/projects/sciteam/bazu/tools/miniconda3/envs/gdal2/bin/"
+#    export GDAL_SKIP="JP2OpenJPEG"
 #    set -u
 
     # Site-specific settings
