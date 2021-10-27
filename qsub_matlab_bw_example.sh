@@ -23,7 +23,7 @@ BWPY_PREFIX="bwpy-environ --"  # bwpy doesn't work within the Matlab Shifter ima
 # Matlab configuration for BW
 MATLAB_PROGRAM="/projects/sciteam/bazu/matlab/R2020a/bin/matlab"
 export MATLABHOST=$(printf 'nid%05d' "$(head -n1 "$PBS_NODEFILE")")
-export LM_LICENSE_FILE="1711@bwlm1.ncsa.illinois.edu:1711@bwlm2.ncsa.illinois.edu"
+export LM_LICENSE_FILE="27000@matlab-pgc.cse.umn.edu"
 
 # Core Matlab run settings
 MATLAB_SETTINGS="-nodisplay -nodesktop -nosplash"

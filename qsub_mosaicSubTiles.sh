@@ -176,7 +176,7 @@ elif [ "$system" = 'bw' ]; then
     MATLAB_PROGRAM="/projects/sciteam/bazu/matlab/R2020a/bin/matlab"
 #    export LD_LIBRARY_PATH="/projects/sciteam/bazu/matlab/lib-GLIBC2.12:${LD_LIBRARY_PATH}"
     export MATLABHOST=$(printf 'nid%05d' "$(head -n1 "$PBS_NODEFILE")")
-    export LM_LICENSE_FILE="1711@bwlm1.ncsa.illinois.edu:1711@bwlm2.ncsa.illinois.edu"
+    export LM_LICENSE_FILE="27000@matlab-pgc.cse.umn.edu"
     MATLAB_SETTINGS="-nodisplay -nodesktop -nosplash"
     MATLAB_USE_PARPOOL=true
 
