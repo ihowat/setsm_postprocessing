@@ -212,6 +212,7 @@ pc.NumWorkers = ${CORES_PER_NODE}; \
 parpool(pc, ${CORES_PER_NODE});"
 else
     job_working_dir="$MATLAB_TEMP_DIR"
+    job_temp_dir="$MATLAB_TEMP_DIR"
     matlab_parpool_init="\
 ps = parallel.Settings; \
 ps.Pool.AutoCreate = false;"
