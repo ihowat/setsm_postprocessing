@@ -95,18 +95,20 @@ def main():
                 tq = "{}_{}".format(tile,q) if args.res == '2' else tile
                 dstfp = os.path.join(dstdir,tile,'{}_{}m_dem.tif'.format(tq, args.res))
                 metafp = os.path.join(dstdir,tile,'{}_{}m_meta.txt'.format(tq, args.res))
-                matfile = os.path.join(dstdir,tile,'{}_{}m.mat'.format(tq, args.res))
+                unregmatfile = os.path.join(dstdir,tile,'{}_{}m.mat'.format(tq, args.res))
+                regmatfile = os.path.join(dstdir,tile,'{}_{}m_reg.mat'.format(tq, args.res))
+                matfile = regmatfile if os.path.isfile(regmatfile) else unregmatfile
 
                 run_tile = True
 
-                if not os.path.isfile(matfile):
-                    print("Tile {} {}m mat file does not exist: {}".format(tq,args.res,matfile))
+                if not os.path.isfile(unregmatfile) and not os.path.isfile(regmatfile):
+                    print("Tile {} {}m mat and reg.mat files do not exist: {}".format(tq,args.res,matfile))
                     run_tile = False
 
                 elif not args.meta_only and os.path.isfile(dstfp):
                     if args.rerun:
                         dstfps_old_pattern = [
-                            matfile.replace('.mat', '*.tif'),
+                            dstfp.replace('_dem.tif', '*.tif'),
                             metafp
                         ]
                         dstfps_old = [fp for pat in dstfps_old_pattern for fp in glob.glob(pat)]

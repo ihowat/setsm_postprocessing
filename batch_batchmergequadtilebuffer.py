@@ -7,7 +7,7 @@ SCRIPT_DIR = os.path.dirname(SCRIPT_FILE)
 
 matlab_scripts = os.path.join(SCRIPT_DIR, '../setsm_postprocessing4')
 quadnames = ('1_1','1_2','2_1','2_2')
-qsub_default = 'qsub_mergequadtilebuffer.sh'
+qsub_default = 'qsub_mergetilebuffer.sh'
 # RESOLUTIONS = ['2','10']
 RESOLUTIONS = ['2']
 
@@ -76,9 +76,10 @@ def main():
         num_quads_missing_mat = 0
         for q in quadnames:
             tq = "{}_{}".format(t,q)
-            filename = "{}/{}/{}_{}.mat".format(dstdir, t, tq, res_name)
-            if not os.path.isfile(filename):
-                print("Tile {} {} mat file does not exist: {}".format(tq, res_name, filename))
+            filename = "{}/{}/{}_{}*.mat".format(dstdir, t, tq, res_name)
+            matfiles = glob.glob(filename)
+            if len(matfiles) == 0:
+                print("Tile {0} {1} .mat and _reg.mat do not exist: {2}".format(tq, res_name, filename))
                 num_quads_missing_mat += 1
             else:
                 if not mos in mosaic_groups:
@@ -149,7 +150,7 @@ def main():
 
                 ## else run matlab
                 else:
-                    cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); addpath('{}'); batch_batchMergeQuadTileBuffer('{}',{{'{}'}},'{}'); exit" """.format(
+                    cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); addpath('{}'); batch_batchMergeTileBuffer('{}',{{'{}'}},'{}'); exit" """.format(
                         scriptdir,
                         args.lib_path,
                         dstdir,

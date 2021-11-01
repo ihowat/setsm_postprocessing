@@ -62,9 +62,10 @@ def main():
     mosaic_groups = {}
     existing_tiles = []
     for t in tiles:
-        filename = "{0}/{1}/{1}_{2}.mat".format(dstdir, t, res_name)
-        if not os.path.isfile(filename):
-            print("Tile {} {} dem does not exist: {}".format(t, res_name, filename))
+        filename = "{0}/{1}/{1}_{2}*.mat".format(dstdir, t, res_name)
+        matfiles = glob.glob(filename)
+        if len(matfiles) == 0:
+            print("Tile {} {} .mat or reg.mat do not exist: {}".format(t, res_name, filename))
         else:
             existing_tiles.append(t)
 
