@@ -10,8 +10,16 @@ tilef={};
 
 for i=1:length(tileList)
     tile=tileList{i};
-    p=[outdir,'/',tile(1:5),'/',tile,'_',res,'_reg.mat'];
-    p2=[outdir,'/',tile(1:5),'/',tile,'_',res,'.mat'];
+
+    tile_parts=split(tile,'_');
+    if startsWith(tile,'utm')
+        supertile = strjoin(tile_parts(1:3),'_');
+    else
+        supertile = strjoin(tile_parts(1:2),'_');
+    end
+
+    p=[outdir,'/',supertile,'/',tile,'_',res,'_reg.mat'];
+    p2=[outdir,'/',supertile,'/',tile,'_',res,'.mat'];
     if exist(p)
         fprintf('Found reg tile %s\n',p)   ;
         tilef = [tilef, p];
