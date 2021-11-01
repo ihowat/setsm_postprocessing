@@ -116,9 +116,11 @@ for i=1:length(demMatFiles)
             % load x and y coordintes
             x = m.x;
             y = m.y;
+            stripList = m.stripList;
+            version = m.version;
 
             % save to matfile
-            save(outName,'regData','x','y','-v7.3');
+            save(outName,'regData','x','y','stripList','version','-v7.3');
 
             % register z and add to mat file
             z = applyRegistration(regData.reg.p,m,C,'gridvar','z','subsetSize',5000);
