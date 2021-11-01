@@ -33,8 +33,14 @@ elseif isvalid(f) % not a string, is it a valid file handle?
 else error('input arg must be a filename or valid matfile handle')
 end
 
+% load unreg matfile if f in reg.mat
+f0 = strrep(f,'_reg.mat','.mat');
+if ~strcmp(f,f0)
+    m0=matfile(f0);
+end
+
 % make outname
-outfile=strrep(f,'.mat','_meta.txt');
+outfile=strrep(f0,'.mat','_meta.txt');
 varlist = who(m);
 fileAtts= dir(m.Properties.Source);
 
@@ -46,15 +52,23 @@ end
     
 %% Read and format strip info
 if ~isempty(whos(m,'stripList'))
-    strip.name=unique(m.stripList);
-    strip.name=strip.name(:);
+    stripList=m.stripList;
+elseif exist('m0') && ~isempty(whos(m0,'stripList')) % check unreg file if var not found
+    stripList=m0.stripList;
 else
-    fprintf('WARNING stripList variable not found in matfile\n')
+    fprintf('WARNING stripList variable not found in matfile(s)\n')
 end
 
 %% Get tile version
 if ~isempty(whos(m,'version'))
     pv=strsplit(m.version,'|');
+elseif exist('m0') && ~isempty(whos(m0,'version'))
+    pv=strsplit(m0.version,'|');
+else
+    fprintf('WARNING version variable not found in matfile(s)\n')
+end
+
+if exist('pv')
     if length(pv) == 2
         project=pv{1};
         tileVersion=pv{2};
@@ -68,7 +82,7 @@ fprintf('writing meta\n')
 %% Write File
 fid=fopen(outfile,'w');
 fprintf(fid,'%s Mosaic Tile Metadata \n',project);
-fprintf(fid, 'Tile: %s\n', strrep(fileAtts.name,'.mat',''));
+fprintf(fid, 'Tile: %s\n', strrep(strrep(fileAtts.name,'_reg',''),'.mat',''));
 fprintf(fid,'Creation Date: %s\n',fileAtts.date);
 fprintf(fid,'Version: %s\n',tileVersion);
 fprintf(fid,'\n');
@@ -88,7 +102,9 @@ fprintf(fid,'Bottom edge merged: %s\n', mat2str(any(strcmp(varlist,'mergedBottom
 fprintf(fid,'\n');
 
 fprintf(fid,'List of DEMs used in mosaic:\n');
-if ~isempty(whos(m,'stripList'))
+if exist('stripList') && ~isempty(stripList)
+    strip.name=unique(stripList);
+    strip.name=strip.name(:);
     i=1;
     for i=1:length(strip.name)
         fprintf(fid,'%s\n',...

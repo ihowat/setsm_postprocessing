@@ -95,8 +95,12 @@ end
 x=x(nx(1):nx(2));
 y=y(ny(1):ny(2));
 
+%get name without "_reg"
+outNameBase = strrep(tilef,'_reg.mat','.mat');
+
+
 fprintf('Writing DEM\n')
-outNameDem = strrep(tilef,'.mat','_dem.tif');
+outNameDem = strrep(outNameBase,'.mat','_dem.tif');
 if exist(outNameDem,'file')
     fprintf('%s exists, skipping\n',outNameDem);
 else
@@ -111,7 +115,7 @@ flds=fields(m);
 if ~browseOnly
     if contains('z_mad',flds)
         fprintf('Writing mad\n')
-        outNameTif = strrep(tilef,'.mat','_mad.tif');
+        outNameTif = strrep(outNameBase,'.mat','_mad.tif');
         if exist(outNameTif,'file')
             fprintf('%s exists, skipping\n',outNameTif);
         else
@@ -125,7 +129,7 @@ if ~browseOnly
     % data count
     if contains('N',flds)
         fprintf('Writing N\n')
-        outNameTif = strrep(tilef,'.mat','_count.tif');
+        outNameTif = strrep(outNameBase,'.mat','_count.tif');
         if exist(outNameTif,'file')
             fprintf('%s exists, skipping\n',outNameTif);
         else
@@ -138,7 +142,7 @@ if ~browseOnly
     % matchtag count
     if contains('Nmt',flds)
         fprintf('Writing Nmt\n')
-        outNameTif = strrep(tilef,'.mat','_countmt.tif');
+        outNameTif = strrep(outNameBase,'.mat','_countmt.tif');
         if exist(outNameTif,'file')
             fprintf('%s exists, skipping\n',outNameTif);
         else
@@ -151,7 +155,7 @@ if ~browseOnly
     % Maximum date
     if contains('tmax',flds)
         fprintf('Writing tmax\n')
-        outNameTif = strrep(tilef,'.mat','_maxdate.tif');
+        outNameTif = strrep(outNameBase,'.mat','_maxdate.tif');
         if exist(outNameTif,'file')
             fprintf('%s exists, skipping\n',outNameTif);
         else
@@ -164,7 +168,7 @@ if ~browseOnly
     % Minimum date
     if contains('tmin',flds)
         fprintf('Writing tmin\n')
-        outNameTif = strrep(tilef,'.mat','_mindate.tif');
+        outNameTif = strrep(outNameBase,'.mat','_mindate.tif');
         if exist(outNameTif,'file')
             fprintf('%s exists, skipping\n',outNameTif);
         else
@@ -180,7 +184,7 @@ end
 fprintf('Writing browse\n')
 
 % if 2m posting, first downsample to 10m
-outNameBrowse = strrep(tilef,'.mat','_browse.tif');
+outNameBrowse = strrep(outNameBase,'.mat','_browse.tif');
 if exist(outNameBrowse,'file')
     fprintf('%s exists, skipping\n',outNameBrowse);
 else
