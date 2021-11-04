@@ -132,6 +132,8 @@ def main():
         ])
     )
 
+    parser.add_argument('--bypass-quads-error', action='store_true', default=False,
+            help="allow non-standard resolution-quads settings")
     parser.add_argument('--bypass-bst-finfile-req', action='store_true', default=False,
             help="do not require BST finfiles exist before mosaicking tiles")
     parser.add_argument('--relax-bst-finfile-req', action='store_true', default=False,
@@ -183,6 +185,21 @@ def main():
     tiles = sorted(list(set(tiles)))
 
     target_res = '10m' if args.res == 10 else '2m'
+
+    quads_errmsg = None
+    if args.res == 2 and not args.quads:
+        quads_errmsg = "!!! {} !!! --quads argument should be provided when res is 2m".format(
+            'WARNING' if args.bypass_quads_error else 'ERROR'
+        )
+    elif args.res == 10 and args.quads:
+        quads_errmsg = "!!! {} !!! --quads argument should not be provided when res is 10m".format(
+            'WARNING' if args.bypass_quads_error else 'ERROR'
+        )
+    if quads_errmsg is not None:
+        print(quads_errmsg)
+        if not args.bypass_quads_error:
+            print("Provide the --bypass-quads-error argument to use non-standard resolution-quads settings")
+            sys.exit(1)
 
     if args.tasks_per_job > 1:
         if not (args.pbs or args.slurm):
