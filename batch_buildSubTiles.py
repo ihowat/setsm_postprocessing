@@ -184,6 +184,8 @@ def main():
     #         help="let existence of finfiles dictate reruns")
     parser.add_argument('--bypass-finfile-req', action='store_true', default=False,
             help="upon rerun, deem tiles complete when the 10,000-th subtile exists even though finfile does not exist")
+    parser.add_argument('--skip-missing-watermasks', action='store_true', default=False,
+            help="if tiles are missing watermasks, skip them and submit the rest of the tiles for processing")
 
     parser.add_argument("--jobscript", default=default_jobscript,
             help="jobscript used in task submission (default={})".format(default_jobscript))
@@ -367,8 +369,11 @@ def main():
         jobscript_fp.write(jobscript_temp_text)
 
 
+    number_incomplete_tiles = 0
     tiles_to_run = []
+    tiles_missing_watermask = []
     tile_waterTileDir_dict = dict()
+    incomplete_tiles_missing_watermask = []
 
     for tile in tiles:
 
@@ -376,6 +381,7 @@ def main():
         tile_def = args.tile_def
         ref_dem = args.ref_dem
         water_tile_dir = args.water_tile_dir
+        tile_missing_watermask = False
 
         if tile_projstr == '' or earthdem_hemisphere_key in tile_def or earthdem_tilePrefix_key in ref_dem:
             assert args.project == 'earthdem'
@@ -421,7 +427,9 @@ def main():
             tile_ice_file = os.path.join(water_tile_dir, '{}_ice.tif'.format(tile))
             tile_water_file = os.path.join(water_tile_dir, '{}_water.tif'.format(tile))
             if not (os.path.isfile(tile_land_file) or os.path.isfile(tile_water_file)):
-                parser.error("Tile land/water mask file does not exist: {}".format(tile_water_file))
+                print("ERROR: Tile land/water mask file does not exist: {}".format(tile_water_file))
+                tile_missing_watermask = True
+                tiles_missing_watermask.append(tile)
 
         ## If output does not exist, add to task list
         tile_outdir = os.path.join(args.dstdir, tile, 'subtiles')
@@ -478,10 +486,38 @@ def main():
                 run_tile = False
 
         if run_tile:
-            tiles_to_run.append(tile)
+            number_incomplete_tiles += 1
+            if tile_missing_watermask:
+                incomplete_tiles_missing_watermask.append(tile)
+            else:
+                tiles_to_run.append(tile)
 
 
-    print("Running {} tiles".format(len(tiles_to_run)))
+    if len(tiles_to_run) != number_incomplete_tiles:
+        number_run_tiles_text = "{} of {} incomplete".format(len(tiles_to_run), number_incomplete_tiles)
+    else:
+        number_run_tiles_text = "{}".format(len(tiles_to_run))
+
+    tiles_missing_watermask.sort()
+    if len(tiles_missing_watermask) > 0:
+        print("\n!!! ERROR !!! {} tiles are missing watermasks:\n{}\n".format(
+            len(tiles_missing_watermask), '\n'.join(tiles_missing_watermask))
+        )
+        if len(incomplete_tiles_missing_watermask) > 0:
+            print("!!! ERROR !!! {} INCOMPLETE tiles are missing watermasks:\n{}\n".format(
+                len(incomplete_tiles_missing_watermask), '\n'.join(incomplete_tiles_missing_watermask))
+            )
+        if not args.skip_missing_watermasks:
+            if len(tiles_to_run) > 0:
+                print("{} total incomplete tiles, {} incomplete tiles missing watermasks".format(
+                    number_incomplete_tiles, len(incomplete_tiles_missing_watermask)
+                ))
+                print("Provide the --skip-missing-watermasks argument to skip those tiles missing watermasks and run the rest")
+                print("\nCould run {} tiles that have watermasks".format(number_run_tiles_text))
+            sys.exit(1)
+
+
+    print("Running {} tiles".format(number_run_tiles_text))
     if len(tiles_to_run) == 0:
         sys.exit(0)
     sleep_seconds = 10
@@ -554,12 +590,18 @@ def main():
                 subprocess.call(cmd, shell=True, cwd=(pbs_logdir if args.pbs else None))
 
         if args.pbs or args.slurm:
-            print("Submitted {} tiles to scheduler".format(len(tiles_to_run)))
+            print("Submitted {} tiles to scheduler".format(number_run_tiles_text))
         else:
-            print("Ran {} tiles".format(len(tiles_to_run)))
+            print("Ran {} tiles".format(number_run_tiles_text))
 
-
-    print("Done")
+    if len(tiles_missing_watermask) > 0:
+        print("\n!!! WARNING !!! {} tiles are missing watermasks:\n{}\n".format(
+            len(tiles_missing_watermask), '\n'.join(tiles_missing_watermask))
+        )
+        if len(incomplete_tiles_missing_watermask):
+            print("!!! WARNING !!! {} INCOMPLETE tiles are missing watermasks:\n{}\n".format(
+                len(incomplete_tiles_missing_watermask), '\n'.join(incomplete_tiles_missing_watermask))
+            )
 
 
 
