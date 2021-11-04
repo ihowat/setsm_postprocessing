@@ -93,7 +93,12 @@ I.z = [];
 
 if ~mapInfoOnlyFlag
     % read image
-    I.z = imread(name,'PixelRegion',{subrows,subcols});
+    try
+        I.z = imread(name,'PixelRegion',{subrows,subcols});
+    catch ME
+        name
+        rethrow(ME)
+    end
 %    try
 %        I.z = imread(name,'PixelRegion',{subrows,subcols});
 %    catch ME
