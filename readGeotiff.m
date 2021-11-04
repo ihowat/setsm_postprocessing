@@ -18,6 +18,13 @@ function I= readGeotiff(name,varargin)
 % Byrd Polar Resear Center, Ohio State University 
 % Referenced enviread.m (Ian Howat)
 
+n = find(strcmpi(varargin,'reportMapSubsetError'));
+if ~isempty(n)
+    reportMapSubsetError = true;
+else
+    reportMapSubsetError = false;
+end
+
 Tinfo       = imfinfo(name);
 info.cols   = Tinfo.Width;
 info.rows   = Tinfo.Height;
@@ -60,7 +67,14 @@ for i=1:length(varargin);
             info.map_info.dy+1;
         subcols= round(subcols);
         subrows = round(subrows);
-        
+
+        if reportMapSubsetError
+            if any(subcols < 1) || any(subrows < 1) || any(subcols > info.cols) || any(subrows > info.rows)
+                map_subset
+                error('readGeotiff map_subset extends beyond raster extent (x=[%d,%d], y=[%d,%d]): %s',...
+                    x(1),x(end),y(end),y(1),name)
+            end
+        end
         subcols(subcols < 1) = 1;
         subrows(subrows < 1) = 1;
         subcols(subcols > info.cols) = info.cols;

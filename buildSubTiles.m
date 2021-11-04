@@ -526,7 +526,8 @@ parfor n=nstrt:subN
                 
                 % load subset of reference dem covering subtile
                 zr=readGeotiff(refDemFile,...
-                    'map_subset',[x(1)-90 x(end)+90 y(end)-90 y(1)+90]);
+                    'map_subset',[x(1)-90 x(end)+90 y(end)-90 y(1)+90],...
+                    'reportMapSubsetError');
                 
                 zr.z(zr.z < -200) = NaN;
                 
