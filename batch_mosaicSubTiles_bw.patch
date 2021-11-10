@@ -1,8 +1,8 @@
 diff --git a/batch_mosaicSubTiles.py b/batch_mosaicSubTiles.py
-index ec2de1f..ab555fe 100644
+index 19b7879..6bb46fa 100644
 --- a/batch_mosaicSubTiles.py
 +++ b/batch_mosaicSubTiles.py
-@@ -76,9 +76,9 @@ project_epsg_dict = {
+@@ -78,9 +78,9 @@ project_epsg_dict = {
  
  earthdem_hemisphere_key = '<hemisphere>'
  project_tileDefFile_dict = {
