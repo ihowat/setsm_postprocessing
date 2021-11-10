@@ -82,11 +82,10 @@ CORES_PER_NODE=$PBS_NUM_PPN
 #CORES_PER_NODE=$SLURM_CPUS_ON_NODE
 set -u
 
-set +u
+set +u; tileName="$ARG_TILENAME"; set -u
 system="$ARG_SYSTEM"
 scriptdir="$ARG_SCRIPTDIR"
 libdir="$ARG_LIBDIR"
-tileName="$ARG_TILENAME"
 outDir="$ARG_OUTDIR"
 projection="$ARG_PROJECTION"
 tileDefFile="$ARG_TILEDEFFILE"
@@ -100,10 +99,11 @@ make2m="$ARG_MAKE2M"
 finfile="$ARG_FINFILE"
 logfile="$ARG_LOGFILE"
 runscript="$ARG_RUNSCRIPT"
-set -u
 
-if [ -z "$tileName" ]; then
-    tileName="$1"
+if (( $# == 1 )); then
+    if [ -z "$tileName" ]; then
+        tileName="$1"
+    fi
 fi
 if [ -z "$tileName" ]; then
     echo "argument 'tileName' not supplied, exiting"
@@ -259,8 +259,7 @@ task_return_code=$?
 echo
 echo "Task return code: ${task_return_code}"
 if [ ! -f "$logfile" ]; then
-    log_error=''
-    echo "WARNING! Logfile does not exist: ${logfile}"
+    log_error="ERROR! Logfile does not exist: ${logfile}"
     echo "Cannot check logfile for potential errmsgs from task"
 else
     log_error=$(grep -i -m1 'error' "$logfile")
@@ -271,22 +270,24 @@ else
         echo "Found no errmsg in logfile (${logfile})"
     fi
 fi
-echo
 
 # Create finfile if Matlab command exited without error
 if (( task_return_code == 0 )) && [ -z "$log_error" ]; then
-    echo "Considering run successful due to [task return code of zero] AND [no errmsgs found in logfile]"
+    echo -e "\nConsidering run successful due to [task return code of zero] AND [no errmsgs found in logfile]"
     echo "Creating finfile: ${finfile}"
     touch "$finfile"
+    exit_status=2
 else
-    echo "Considering run unsuccessful due to either [non-zero task return code] OR [errmsgs found in logfile]"
+    echo -e "\nConsidering run unsuccessful due to either [non-zero task return code] OR [logfile DNE] OR [errmsgs found in logfile]"
     echo "Will not create finfile"
+    exit_status=1
 fi
 
+echo
 if [ "$MATLAB_USE_PARPOOL" = true ] && [ -d "$job_temp_dir" ]; then
     echo "Removing Matlab temp dir for parallel tasks: ${job_temp_dir}"
     rm -rf "$job_temp_dir"
 fi
 
-echo
 echo "Done"
+exit "$exit_status"
