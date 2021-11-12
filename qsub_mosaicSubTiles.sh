@@ -145,20 +145,20 @@ else
     echo "Running full supertile ${tileName}"
 fi
 
-subTileDir="${subTileDir/<superTileName>/${superTileName}}"
-outMatFile="${outMatFile/<superTileName>/${superTileName}}"
-finfile="${finfile/<superTileName>/${superTileName}}"
-logfile="${logfile/<superTileName>/${superTileName}}"
+subTileDir="${subTileDir//<superTileName>/${superTileName}}"
+outMatFile="${outMatFile//<superTileName>/${superTileName}}"
+finfile="${finfile//<superTileName>/${superTileName}}"
+logfile="${logfile//<superTileName>/${superTileName}}"
 
-subTileDir="${subTileDir/<outTileName>/${outTileName}}"
-outMatFile="${outMatFile/<outTileName>/${outTileName}}"
-finfile="${finfile/<outTileName>/${outTileName}}"
-logfile="${logfile/<outTileName>/${outTileName}}"
+subTileDir="${subTileDir//<outTileName>/${outTileName}}"
+outMatFile="${outMatFile//<outTileName>/${outTileName}}"
+finfile="${finfile//<outTileName>/${outTileName}}"
+logfile="${logfile//<outTileName>/${outTileName}}"
 
-subTileDir="${subTileDir/<resolution>/${resolution}}"
-outMatFile="${outMatFile/<resolution>/${resolution}}"
-finfile="${finfile/<resolution>/${resolution}}"
-logfile="${logfile/<resolution>/${resolution}}"
+subTileDir="${subTileDir//<resolution>/${resolution}m}"
+outMatFile="${outMatFile//<resolution>/${resolution}m}"
+finfile="${finfile//<resolution>/${resolution}m}"
+logfile="${logfile//<resolution>/${resolution}m}"
 
 
 # System-specific settings

@@ -101,7 +101,9 @@ logfile="$ARG_LOGFILE"
 runscript="$ARG_RUNSCRIPT"
 
 if (( $# == 1 )); then
-    if [ -z "$tileName" ]; then
+    if [ "$1" = '--make-10m-only' ]; then
+        make2m=false
+    elif [ -z "$tileName" ]; then
         tileName="$1"
     fi
 fi

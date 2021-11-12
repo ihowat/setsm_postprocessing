@@ -294,7 +294,7 @@ def main():
     if args.chain_mst_jobscript is not None:
         jobscript_temp = args.chain_mst_jobscript
     else:
-        ## Create temp jobscript with comment mosaicking args filled in
+        ## Create temp jobscript with mosaicking args filled in
         supertilename_key = '<superTileName>'
         outtilename_key = '<outTileName>'
         resolution_key = '<resolution>'

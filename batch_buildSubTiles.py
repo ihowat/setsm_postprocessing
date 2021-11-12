@@ -507,7 +507,7 @@ def main():
         tile_outdir = os.path.join(args.dstdir, tile)
         tile_stdir = os.path.join(args.dstdir, tile, 'subtiles')
         tile_stdir_exists = os.path.isdir(tile_stdir)
-        if not os.path.isdir(tile_stdir):
+        if not args.chain_mst and not os.path.isdir(tile_stdir):
             if not args.dryrun:
                 os.makedirs(tile_stdir)
 
