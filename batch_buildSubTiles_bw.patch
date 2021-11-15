@@ -1,8 +1,8 @@
 diff --git a/batch_buildSubTiles.py b/batch_buildSubTiles.py
-index 9873178..7c94432 100644
+index d82842c..067ac33 100644
 --- a/batch_buildSubTiles.py
 +++ b/batch_buildSubTiles.py
-@@ -76,40 +76,40 @@ project_epsg_dict = {
+@@ -78,40 +78,40 @@ project_epsg_dict = {
  earthdem_tilePrefix_key = '<tilePrefix>'
  project_refDemFile_dict = {
      'arcticdem': None,

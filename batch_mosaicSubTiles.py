@@ -145,10 +145,14 @@ def main():
 
     parser.add_argument("--jobscript", default=default_jobscript,
             help="jobscript used in task submission (default={})".format(default_jobscript))
+    parser.add_argument("--chain-mst-jobscript", default=None,
+            help="filled-out MST jobscript, this arg should only be used by BST --chain-mst option")
     parser.add_argument("--tempdir", default=default_tempdir,
             help="directory where filled-out running copy of jobscript is created (default={})".format(default_tempdir))
     parser.add_argument("--logdir", default=default_logdir,
             help="directory where logfiles for Matlab tile processing are created (default is {} from srcdir)".format(default_logdir))
+    parser.add_argument("--make-2m-logdirs", action='store_true', default=False,
+            help="create 2m logdir directories if they do not exist")
 
     parser.add_argument("--queue", default=sched_default_queue,
             help="queue for scheduler submission")
@@ -171,10 +175,14 @@ def main():
             help="Print tile-submission commands without executing")
     parser.add_argument("--dryrun", action='store_true', default=False,
             help="Print actions without executing")
+    parser.add_argument("--write-jobscript-and-exit", action='store_true', default=False,
+            help="Write filled-out running copy of jobscript and then exit")
 
     args = parser.parse_args()
-    if (not args.submit) or args.test_submit:
-        args.dryrun = True
+    if ((not args.submit) or args.test_submit) and (not args.dryrun):
+        real_submit = True
+    else:
+        real_submit = False
 
     if os.path.isfile(args.tiles):
         tilelist_file = args.tiles
@@ -241,6 +249,8 @@ def main():
         parser.error("--libdir does not exist: {}".format(args.libdir))
     if not os.path.isfile(args.jobscript):
         parser.error("--jobscript does not exist: {}".format(args.jobscript))
+    if args.chain_mst_jobscript is not None and not os.path.isfile(args.chain_mst_jobscript):
+        parser.error("--chain-mst-jobscript does not exist: {}".format(args.chain_mst_jobscript))
 
     ## Verify other arguments
     if [args.pbs, args.slurm, args.swift].count(True) > 1:
@@ -248,80 +258,90 @@ def main():
     if args.bypass_bst_finfile_req and args.relax_bst_finfile_req:
         parser.error("--bypass-bst-finfile-req and --relax-bst-finfile-req arguments are mutually exclusive")
 
+    res_list = [target_res]
+    if args.make_2m_logdirs and target_res != '2m':
+        res_list.insert(0, '2m')
     log_time = datetime.now().strftime("%Y%m%d%H%M%S")
-    mst_logdir = os.path.join(args.logdir, 'matlab', 'mst', target_res)
-    pbs_logdir = os.path.join(args.logdir, 'pbs', 'mst', target_res)
-    if batch_job_submission:
-        pbs_logdir = '{}_batch_{}_{}-tiles'.format(pbs_logdir, log_time, len(tiles))
-    swift_logrootdir = os.path.join(args.logdir, 'swift')
-    swift_logdir = os.path.join(swift_logrootdir, 'mst', target_res)
-    swift_tasklist_dir = os.path.join(swift_logrootdir, 'tasklist')
-    swift_tasklist_fname = 'mst_{}_tasklist_{}.txt'.format(target_res, datetime.now().strftime("%Y%m%d%H%M%S"))
-    swift_tasklist_file = os.path.join(swift_tasklist_dir, swift_tasklist_fname)
+    for res in res_list:
+        template_mst_logdir = os.path.join(args.logdir, 'matlab', 'mst', res)
+        mst_logdir = os.path.join(args.logdir, 'matlab', 'mst', res)
+        pbs_logdir = os.path.join(args.logdir, 'pbs', 'mst', res)
+        if batch_job_submission and res == target_res:
+            pbs_logdir = '{}_batch_{}_{}-tiles'.format(pbs_logdir, log_time, len(tiles))
+        swift_logrootdir = os.path.join(args.logdir, 'swift')
+        swift_logdir = os.path.join(swift_logrootdir, 'mst', res)
+        swift_tasklist_dir = os.path.join(swift_logrootdir, 'tasklist')
+        swift_tasklist_fname = 'mst_{}_tasklist_{}.txt'.format(res, datetime.now().strftime("%Y%m%d%H%M%S"))
+        swift_tasklist_file = os.path.join(swift_tasklist_dir, swift_tasklist_fname)
 
-    ## Create output directories
-    outdir_list = [args.tempdir, mst_logdir]
-    if args.pbs:
-        outdir_list.append(pbs_logdir)
-    if args.swift:
-        outdir_list.extend([swift_rundir, swift_logdir, swift_tasklist_dir])
-    if not args.dryrun:
-        for outdir in outdir_list:
-            if not os.path.isdir(outdir):
-                print("Creating output directory: {}".format(outdir))
-                os.makedirs(outdir)
-        if batch_job_submission:
-            pbs_batch_tilelist = os.path.join(pbs_logdir, 'tilelist.txt')
-            with open(pbs_batch_tilelist, 'w') as tilelist_fp:
-                for tile in tiles:
-                    tilelist_fp.write(tile+'\n')
+        ## Create output directories
+        outdir_list = [args.tempdir, mst_logdir]
+        if args.pbs:
+            outdir_list.append(pbs_logdir)
+        if args.swift:
+            outdir_list.extend([swift_rundir, swift_logdir, swift_tasklist_dir])
+        if not args.dryrun:
+            for outdir in outdir_list:
+                if not os.path.isdir(outdir):
+                    print("Creating output directory: {}".format(outdir))
+                    os.makedirs(outdir)
+            if batch_job_submission and res == target_res:
+                pbs_batch_tilelist = os.path.join(pbs_logdir, 'tilelist.txt')
+                with open(pbs_batch_tilelist, 'w') as tilelist_fp:
+                    for tile in tiles:
+                        tilelist_fp.write(tile+'\n')
 
-    ## Create temp jobscript with comment mosaicking args filled in
-    supertilename_key = '<superTileName>'
-    outtilename_key = '<outTileName>'
-    template_subtiledir = os.path.join(args.srcdir, supertilename_key, 'subtiles')
-    template_outmatfile = os.path.join(args.srcdir, supertilename_key, "{}_{}.mat".format(outtilename_key, target_res))
-    template_finfile = os.path.join(args.srcdir, supertilename_key, "{}_{}.fin".format(outtilename_key, target_res))
-    template_logfile = os.path.join(mst_logdir, outtilename_key+'.log')
-    jobscript_static_args_dict = {
-        'system': system_name,
-        'scriptdir': SCRIPT_DIR,
-        'libdir': args.libdir,
-        'tileDefFile': args.tile_def,
-        'subTileDir': template_subtiledir,
-        'resolution': args.res,
-        'outMatFile': template_outmatfile,
-        'projection': projection_string,
-        'version': args.version,
-        'exportTif': 'true' if args.export_tif else 'false',
-        'finfile': template_finfile,
-        'logfile': template_logfile,
-    }
-    jobscript_fname = os.path.basename(args.jobscript)
-    jobscript_temp_fname = jobscript_fname.replace(
-        '.sh',
-        '{}_{}.sh'.format(
-            '_{}'.format(args.project) if args.project is not None else '',
-            datetime.now().strftime("%Y%m%d%H%M%S")
+    if args.chain_mst_jobscript is not None:
+        jobscript_temp = args.chain_mst_jobscript
+    else:
+        ## Create temp jobscript with mosaicking args filled in
+        supertilename_key = '<superTileName>'
+        outtilename_key = '<outTileName>'
+        resolution_key = '<resolution>'
+        template_subtiledir = os.path.join(args.srcdir, supertilename_key, 'subtiles')
+        template_outmatfile = os.path.join(args.srcdir, supertilename_key, "{}_{}.mat".format(outtilename_key, resolution_key))
+        template_finfile = os.path.join(args.srcdir, supertilename_key, "{}_{}.fin".format(outtilename_key, resolution_key))
+        template_logfile = os.path.join(os.path.join(args.logdir, 'matlab', 'mst', resolution_key), outtilename_key+'.log')
+        jobscript_static_args_dict = {
+            'system': system_name,
+            'scriptdir': SCRIPT_DIR,
+            'libdir': args.libdir,
+            'tileDefFile': args.tile_def,
+            'subTileDir': template_subtiledir,
+            'resolution': args.res,
+            'outMatFile': template_outmatfile,
+            'projection': projection_string,
+            'version': args.version,
+            'exportTif': 'true' if args.export_tif else 'false',
+            'finfile': template_finfile,
+            'logfile': template_logfile,
+        }
+        jobscript_fname = os.path.basename(args.jobscript)
+        jobscript_temp_fname = jobscript_fname.replace(
+            '.sh',
+            '{}_{}.sh'.format(
+                '_{}'.format(args.project) if args.project is not None else '',
+                datetime.now().strftime("%Y%m%d%H%M%S")
+            )
         )
-    )
 
-    jobscript_temp = os.path.join(args.tempdir, jobscript_temp_fname)
-    with open(args.jobscript, 'r') as jobscript_fp:
-        jobscript_text = jobscript_fp.read()
+        jobscript_temp = os.path.join(args.tempdir, jobscript_temp_fname)
+        with open(args.jobscript, 'r') as jobscript_fp:
+            jobscript_text = jobscript_fp.read()
 
-    jobscript_temp_text = jobscript_text
-    for argname, argval in jobscript_static_args_dict.items():
-        jobscript_argname = '"$ARG_{}"'.format(argname).upper()
-        jobscript_argval = '"{}"'.format(argval)
-        jobscript_temp_text = jobscript_temp_text.replace(jobscript_argname, jobscript_argval)
+        jobscript_temp_text = jobscript_text
+        for argname, argval in jobscript_static_args_dict.items():
+            jobscript_argname = '"$ARG_{}"'.format(argname).upper()
+            jobscript_argval = '"{}"'.format(argval)
+            jobscript_temp_text = jobscript_temp_text.replace(jobscript_argname, jobscript_argval)
 
-    print("Writing temporary jobscript file: {}".format(jobscript_temp))
-    with open(jobscript_temp, 'w') as jobscript_fp:
-        jobscript_fp.write(jobscript_temp_text)
+        print("Writing temporary jobscript file: {}".format(jobscript_temp))
+        with open(jobscript_temp, 'w') as jobscript_fp:
+            jobscript_fp.write(jobscript_temp_text)
+        if args.write_jobscript_and_exit:
+            sys.exit(0)
 
     tilerun_jobscript = jobscript_temp
-
 
 
     tiles_to_run = []
@@ -336,7 +356,6 @@ def main():
                 tasks.append(Task(tile, 'null'))
 
     print("{} {}tiles to check".format(len(tasks), 'quad-' if args.quads else ''))
-    num_tiles_to_run = 0
 
     error_messages = []
     supertile_num_nodata_dict = dict()
@@ -440,8 +459,8 @@ def main():
                 dstfps_old_pattern = dstfp.replace('.mat', '*')
                 dstfps_old = glob.glob(dstfps_old_pattern)
                 if dstfps_old:
-                    print("{}Removing old MST results matching {}".format('(dryrun) ' if args.dryrun else '', dstfps_old_pattern))
-                    if not args.dryrun:
+                    print("{}Removing old MST results matching {}".format('(dryrun) ' if not real_submit else '', dstfps_old_pattern))
+                    if real_submit:
                         for dstfp_old in dstfps_old:
                             os.remove(dstfp_old)
                 run_tile = True
@@ -466,6 +485,8 @@ def main():
             if run_tile:
                 tiles_to_run.append(outtile)
 
+    task_success_rc = 3 if len(tiles_to_run) > 0 else -1
+    matlab_cmd_success = None
 
     ran_tiles = False
     if len(tiles_to_run) > 0 and (args.submit or args.test_submit):
@@ -550,7 +571,11 @@ def main():
 
                 print("{}, {}".format(jobnum, cmd))
                 if not args.dryrun:
-                    subprocess.call(cmd, shell=True, cwd=(pbs_logdir if args.pbs else None))
+                    matlab_cmd_rc = subprocess.call(cmd, shell=True, cwd=(pbs_logdir if args.pbs else None))
+                    if matlab_cmd_rc == 2 and matlab_cmd_success is not False:
+                        matlab_cmd_success = True
+                    else:
+                        matlab_cmd_success = False
 
             if args.pbs or args.slurm:
                 print("Submitted {} {}tiles to scheduler".format(len(tiles_to_run), 'quad-' if args.quads else ''))
@@ -593,6 +618,13 @@ def main():
 
     if len(tiles_to_run) > 0 and not args.submit:
         print("Provide the --submit option to run tiles")
+
+    if matlab_cmd_success is True:
+        task_success_rc = 2
+    elif matlab_cmd_success is False:
+        task_success_rc = 1
+
+    sys.exit(task_success_rc)
 
 
 

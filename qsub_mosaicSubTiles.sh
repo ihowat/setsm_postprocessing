@@ -82,24 +82,26 @@ CORES_PER_NODE=$PBS_NUM_PPN
 #CORES_PER_NODE=$SLURM_CPUS_ON_NODE
 set -u
 
-set +u
+set +u; tileName="$ARG_TILENAME"; set -u
+resolution="$ARG_RESOLUTION"
 system="$ARG_SYSTEM"
 scriptdir="$ARG_SCRIPTDIR"
 libdir="$ARG_LIBDIR"
-tileName="$ARG_TILENAME"
 tileDefFile="$ARG_TILEDEFFILE"
 subTileDir="$ARG_SUBTILEDIR"
-resolution="$ARG_RESOLUTION"
 outMatFile="$ARG_OUTMATFILE"
 projection="$ARG_PROJECTION"
 version="$ARG_VERSION"
 exportTif="$ARG_EXPORTTIF"
 finfile="$ARG_FINFILE"
 logfile="$ARG_LOGFILE"
-set -u
 
-if [ -z "$tileName" ]; then
-    tileName="$1"
+if (( $# == 1 )); then
+    if [ -z "$tileName" ]; then
+        tileName="$1"
+    else
+        resolution="$1"
+    fi
 fi
 if [ -z "$tileName" ]; then
     echo "argument 'tileName' not supplied, exiting"
@@ -143,15 +145,20 @@ else
     echo "Running full supertile ${tileName}"
 fi
 
-subTileDir="${subTileDir/<superTileName>/${superTileName}}"
-outMatFile="${outMatFile/<superTileName>/${superTileName}}"
-finfile="${finfile/<superTileName>/${superTileName}}"
-logfile="${logfile/<superTileName>/${superTileName}}"
+subTileDir="${subTileDir//<superTileName>/${superTileName}}"
+outMatFile="${outMatFile//<superTileName>/${superTileName}}"
+finfile="${finfile//<superTileName>/${superTileName}}"
+logfile="${logfile//<superTileName>/${superTileName}}"
 
-subTileDir="${subTileDir/<outTileName>/${outTileName}}"
-outMatFile="${outMatFile/<outTileName>/${outTileName}}"
-finfile="${finfile/<outTileName>/${outTileName}}"
-logfile="${logfile/<outTileName>/${outTileName}}"
+subTileDir="${subTileDir//<outTileName>/${outTileName}}"
+outMatFile="${outMatFile//<outTileName>/${outTileName}}"
+finfile="${finfile//<outTileName>/${outTileName}}"
+logfile="${logfile//<outTileName>/${outTileName}}"
+
+subTileDir="${subTileDir//<resolution>/${resolution}m}"
+outMatFile="${outMatFile//<resolution>/${resolution}m}"
+finfile="${finfile//<resolution>/${resolution}m}"
+logfile="${logfile//<resolution>/${resolution}m}"
 
 
 # System-specific settings
@@ -269,8 +276,8 @@ task_return_code=$?
 echo
 echo "Task return code: ${task_return_code}"
 if [ ! -f "$logfile" ]; then
-    log_error=''
-    echo "WARNING! Logfile does not exist: ${logfile}"
+    log_error="ERROR! Logfile does not exist: ${logfile}"
+    echo "$log_error"
     echo "Cannot check logfile for potential errmsgs from task"
 else
     log_error=$(grep -i -m1 'error' "$logfile")
@@ -283,29 +290,38 @@ else
 fi
 echo
 
-# Create finfile if Matlab command exited without error
-if (( task_return_code == 0 )) && [ -z "$log_error" ]; then
-    echo "Considering run successful due to [task return code of zero] AND [no errmsgs found in logfile]"
 
-    if [ "$exportTif" = false ]; then
-        echo "Removing unneeded tile result metadata files, since 'exportTif' argument is false"
-        tileRegFile="${outMatFile/.mat/tileReg.mat}"
-        tileMetaFile="${outMatFile/.mat/_meta.txt}"
+tileRegFile="${outMatFile/.mat/tileReg.mat}"
+tileMetaFile="${outMatFile/.mat/_meta.txt}"
+if [ "$exportTif" = false ] && { [ -f "$tileRegFile" ] || [ -f "$tileMetaFile" ]; }; then
+    echo "Removing unneeded tile result metadata files, since 'exportTif' argument is false"
+    if [ -f "$tileRegFile" ]; then
         rm -vf "$tileRegFile"
+    fi
+    if [ -f "$tileMetaFile" ]; then
         rm -vf "$tileMetaFile"
     fi
-
-    echo "Creating finfile: ${finfile}"
-    touch "$finfile"
-else
-    echo "Considering run unsuccessful due to either [non-zero task return code] OR [errmsgs found in logfile]"
-    echo "Will not create finfile"
+    echo
 fi
 
+
+# Create finfile if Matlab command exited without error
+if (( task_return_code == 0 )) && [ -z "$log_error" ]; then
+    echo -e "\nConsidering run successful due to [task return code of zero] AND [no errmsgs found in logfile]"
+    echo "Creating finfile: ${finfile}"
+    touch "$finfile"
+    exit_status=2
+else
+    echo -e "\nConsidering run unsuccessful due to either [non-zero task return code] OR [logfile DNE] OR [errmsgs found in logfile]"
+    echo "Will not create finfile"
+    exit_status=1
+fi
+
+echo
 if [ "$MATLAB_USE_PARPOOL" = true ] && [ -d "$job_temp_dir" ]; then
     echo "Removing Matlab temp dir for parallel tasks: ${job_temp_dir}"
     rm -rf "$job_temp_dir"
 fi
 
-echo
 echo "Done"
+exit "$exit_status"

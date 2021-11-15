@@ -17,8 +17,10 @@ SCRIPT_DIR = os.path.dirname(SCRIPT_FILE)
 
 
 ## General argument defaults and settings
+mst_pyscript = os.path.join(SCRIPT_DIR, 'batch_mosaicSubTiles.py')
 default_matlab_scriptdir = os.path.join(SCRIPT_DIR, '../setsm_postprocessing4')
-default_jobscript = os.path.join(SCRIPT_DIR, 'qsub_buildSubTiles.sh')
+default_bst_jobscript = os.path.join(SCRIPT_DIR, 'qsub_buildSubTiles.sh')
+chain_jobscript = os.path.join(SCRIPT_DIR, 'qsub_runBstThenMst.sh')
 default_tempdir = os.path.join(SCRIPT_DIR, 'temp')
 default_logdir = '../logs/[DSTDIR_FOLDER_NAME]'  # relative path appended to argument dstdir
 swift_program = os.path.abspath('/projects/sciteam/bazu/tools/swift-2/bin/swift')
@@ -122,6 +124,8 @@ watermask_tiles_visnav_need_editing_file = os.path.join(SCRIPT_DIR, 'watermask_t
 with open(watermask_tiles_visnav_need_editing_file, 'r') as tilelist_fp:
     watermask_tiles_visnav_need_editing = [line.strip() for line in tilelist_fp.read().splitlines() if line != '']
 
+quads = ['1_1', '1_2', '2_1', '2_2']
+
 
 def main():
 
@@ -179,6 +183,10 @@ def main():
             help="rerun tile without attempting to clean up potentially corrupted subtiles")
     # parser.add_argument("--sort-fix", action="store_true", default=False,
     #         help="run tile with buildSubTilesSortFix script")
+    parser.add_argument("--chain-mst", action='store_true', default=False,
+            help=("Run 10m and 2m mosaicSubTiles processes for each tile after buildSubTiles completes successfully. "
+                  "Delete 'subtiles' folder for the tile upon successful completion of 10m and 2m MST processes. "
+                  "Only 10m MST process will be run if --make-10m-only option is provided."))
 
     # parser.add_argument('--require-finfiles', action='store_true', default=False,
     #         help="let existence of finfiles dictate reruns")
@@ -187,8 +195,8 @@ def main():
     parser.add_argument('--skip-missing-watermasks', action='store_true', default=False,
             help="if tiles are missing watermasks, skip them and submit the rest of the tiles for processing")
 
-    parser.add_argument("--jobscript", default=default_jobscript,
-            help="jobscript used in task submission (default={})".format(default_jobscript))
+    parser.add_argument("--jobscript", default=default_bst_jobscript,
+            help="jobscript used in BST task submission (default={})".format(default_bst_jobscript))
     parser.add_argument("--tempdir", default=default_tempdir,
             help="directory where filled-out running copy of jobscript is created (default={})".format(default_tempdir))
     parser.add_argument("--logdir", default=default_logdir,
@@ -220,6 +228,7 @@ def main():
         tiles = args.tiles.split(',')
     tiles = sorted(list(set(tiles)))
 
+    make_10m_only = 'true' if args.make_10m_only else 'false'
     make2m_arg = 'false' if args.make_10m_only else 'true'
     target_res = '10m' if args.make_10m_only else '2m'
 
@@ -300,6 +309,8 @@ def main():
         parser.error("--pbs --slurm --swift are mutually exclusive")
     if args.rerun and args.rerun_without_cleanup:
         parser.error("--rerun and --rerun-without-cleanup are mutually exclusive")
+    if args.chain_mst and args.project is None:
+        parser.error('--chain-mst option requires --project arg is also provided')
 
     bst_logdir = os.path.join(args.logdir, 'matlab', 'bst', target_res)
     pbs_logdir = os.path.join(args.logdir, 'pbs', 'bst', target_res)
@@ -320,7 +331,8 @@ def main():
             print("Creating output directory: {}".format(outdir))
             os.makedirs(outdir)
 
-    ## Create temp jobscript with comment mosaicking args filled in
+
+    ## Create temp jobscript with mosaicking args filled in
     tilename_key = '<tileName>'
     template_outdir = os.path.join(args.dstdir, tilename_key, 'subtiles')
     template_finfile = "{}_{}.fin".format(template_outdir, target_res)
@@ -364,9 +376,69 @@ def main():
         jobscript_argval = '"{}"'.format(argval)
         jobscript_temp_text = jobscript_temp_text.replace(jobscript_argname, jobscript_argval)
 
-    print("Writing temporary jobscript file: {}".format(jobscript_temp))
+    print("Writing temporary BST jobscript file: {}".format(jobscript_temp))
     with open(jobscript_temp, 'w') as jobscript_fp:
         jobscript_fp.write(jobscript_temp_text)
+    bst_jobscript = jobscript_temp
+
+
+    if args.chain_mst:
+
+        ## Create temp MST jobscript
+        mst_jobscript = None
+        mst_args = ['python', mst_pyscript, args.dstdir, tiles[0], '10', '--project', args.project, '--write-jobscript-and-exit']
+        if not args.make_10m_only:
+            mst_args.append('--make-2m-logdirs')
+        print("Creating MST temporary jobscript file with the following command:\n    {}".format(' '.join(mst_args)))
+        mst_proc = subprocess.Popen(mst_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        mst_stdout, mst_stderr = mst_proc.communicate()
+        mst_stdout = mst_stdout.decode('utf-8').strip()
+        mst_stderr = mst_stderr.decode('utf-8').strip()
+        if mst_stdout != '':
+            print("STDOUT:\n'''\n{}\n'''".format(mst_stdout))
+        if mst_stderr != '':
+            print("STDERR:\n'''\n{}\n'''".format(mst_stderr))
+        mst_out_lines = mst_stdout.splitlines()
+        for line in mst_out_lines:
+            if "Writing temporary jobscript file:" in line:
+                mst_jobscript = line.split(':')[1].strip()
+        if mst_jobscript is None:
+            parser.error("Failed to parse path to MST temporary jobscript from stdout")
+            
+        ## Create temp chain jobscript
+        jobscript_static_args_dict = {
+            'system': system_name,
+            'bst_jobscript': bst_jobscript,
+            'mst_jobscript': mst_jobscript,
+            'mst_pyscript': mst_pyscript,
+            'output_tiles_dir': args.dstdir,
+            'project': args.project,
+            'make_10m_only': make_10m_only,
+        }
+        if not auto_select_arcticdem_water_tile_dir:
+            jobscript_static_args_dict['waterTileDir'] = args.water_tile_dir
+        jobscript_fname = os.path.basename(chain_jobscript)
+        jobscript_temp_fname = jobscript_fname.replace(
+            '.sh',
+            '{}_{}.sh'.format(
+                '_{}'.format(args.project) if args.project is not None else '',
+                datetime.now().strftime("%Y%m%d%H%M%S")
+            )
+        )
+
+        jobscript_temp = os.path.join(args.tempdir, jobscript_temp_fname)
+        with open(chain_jobscript, 'r') as jobscript_fp:
+            jobscript_text = jobscript_fp.read()
+
+        jobscript_temp_text = jobscript_text
+        for argname, argval in jobscript_static_args_dict.items():
+            jobscript_argname = '"$ARG_{}"'.format(argname).upper()
+            jobscript_argval = '"{}"'.format(argval)
+            jobscript_temp_text = jobscript_temp_text.replace(jobscript_argname, jobscript_argval)
+
+        print("Writing temporary chain jobscript file: {}".format(jobscript_temp))
+        with open(jobscript_temp, 'w') as jobscript_fp:
+            jobscript_fp.write(jobscript_temp_text)
 
 
     number_incomplete_tiles = 0
@@ -432,16 +504,17 @@ def main():
                 tiles_missing_watermask.append(tile)
 
         ## If output does not exist, add to task list
-        tile_outdir = os.path.join(args.dstdir, tile, 'subtiles')
-        tile_outdir_exists = os.path.isdir(tile_outdir)
-        if not os.path.isdir(tile_outdir):
+        tile_outdir = os.path.join(args.dstdir, tile)
+        tile_stdir = os.path.join(args.dstdir, tile, 'subtiles')
+        tile_stdir_exists = os.path.isdir(tile_stdir)
+        if not args.chain_mst and not os.path.isdir(tile_stdir):
             if not args.dryrun:
-                os.makedirs(tile_outdir)
+                os.makedirs(tile_stdir)
 
-        final_subtile_fp_10m = os.path.join(tile_outdir, '{}_10000_10m.mat'.format(tile))
-        final_subtile_fp_2m = os.path.join(tile_outdir, '{}_10000_2m.mat'.format(tile))
-        finfile_10m = "{}_10m.fin".format(tile_outdir)
-        finfile_2m = "{}_2m.fin".format(tile_outdir)
+        final_subtile_fp_10m = os.path.join(tile_stdir, '{}_10000_10m.mat'.format(tile))
+        final_subtile_fp_2m = os.path.join(tile_stdir, '{}_10000_2m.mat'.format(tile))
+        finfile_10m = "{}_10m.fin".format(tile_stdir)
+        finfile_2m = "{}_2m.fin".format(tile_stdir)
         if args.make_10m_only:
             final_subtile_fp = final_subtile_fp_10m
             finfile = finfile_10m
@@ -451,38 +524,64 @@ def main():
 
         run_tile = True
 
-        if tile_outdir_exists:
+        mst_complete = False
+        if args.chain_mst:
+            mst_complete = True
+            mst_finfile_10m = os.path.join(tile_outdir, '{}_10m.fin'.format(tile))
+            if not os.path.isfile(mst_finfile_10m):
+                mst_complete = False
+            if not args.make_10m_only:
+                for q in quads:
+                    mst_finfile_2m = os.path.join(tile_outdir, '{}_{}_2m.fin'.format(tile, q))
+                    if not os.path.isfile(mst_finfile_2m):
+                        mst_complete = False
+                        break
+            if mst_complete:
+                if args.make_10m_only:
+                    print("Tile {} seems complete (MST 10m finfile exists)".format(tile))
+                else:
+                    print("Tile {} seems complete (MST 10m and 2m quad finfiles exist)".format(tile))
+                run_tile = False
+
+        if run_tile:
             # if args.sort_fix or args.rerun_without_cleanup:
             if args.rerun_without_cleanup:
                 pass
 
             elif args.rerun:
-                print("Verifying tile {} before rerun".format(tile))
+                print("Verifying tile {} BST results before rerun".format(tile))
 
+                bst_complete = False
                 # if os.path.isfile(final_subtile_fp) and not args.require_finfiles:
                 if os.path.isfile(final_subtile_fp) and args.bypass_finfile_req:
-                    print("Tile seems complete ({} exists)".format(os.path.basename(final_subtile_fp)))
-                    run_tile = False
+                    print("Tile seems complete with BST step ({} exists)".format(os.path.basename(final_subtile_fp)))
+                    bst_complete = True
                 elif os.path.isfile(finfile):
-                    print("Tile seems complete ({} exists)".format(os.path.basename(finfile)))
-                    run_tile = False
+                    print("Tile seems complete with BST step ({} exists)".format(os.path.basename(finfile)))
+                    bst_complete = True
                 elif os.path.isfile(finfile_2m):
-                    print("Tile seems complete (2m finfile {} exists)".format(os.path.basename(finfile_2m)))
-                    run_tile = False
+                    print("Tile seems complete with BST step (2m finfile {} exists)".format(os.path.basename(finfile_2m)))
+                    bst_complete = True
 
-                # if not args.make_10m_only:
+                # if tile_stdir_exists and not args.make_10m_only:
                 #     ## Remove subtiles with only 10m version
-                #     tile_outfiles_10m = glob.glob(os.path.join(tile_outdir, '{}_*10m.mat'.format(tile)))
+                #     tile_outfiles_10m = glob.glob(os.path.join(tile_stdir, '{}_*10m.mat'.format(tile)))
                 #     for outfile_10m in tile_outfiles_10m:
                 #         outfile_2m = outfile_10m.replace('10m.mat', '2m.mat')
                 #         if not os.path.isfile(outfile_2m):
                 #             print("Removing 10m subtile missing 2m component: {}".format(os.path.basename(outfile_10m)))
-                #             run_tile = True
+                #             bst_complete = False
                 #             if not args.dryrun:
                 #                 os.remove(outfile_10m)
 
-            elif any(os.scandir(tile_outdir)):
-                print("Subtiles exist, skipping tile {}".format(tile))
+                if args.chain_mst and not mst_complete:
+                    if bst_complete:
+                        print("... but MST step is not complete, so tile will be run")
+                elif bst_complete:
+                    run_tile = False
+
+            elif tile_stdir_exists and any(os.scandir(tile_stdir)):
+                print("Subtiles exist, skipping BST step for tile {}".format(tile))
                 run_tile = False
 
         if run_tile:
@@ -523,6 +622,9 @@ def main():
     sleep_seconds = 10
     print("Sleeping {} seconds before submission".format(sleep_seconds))
     time.sleep(sleep_seconds)
+
+    task_success_rc = 3 if len(tiles_to_run) > 0 else -1
+    matlab_cmd_success = None
 
     if args.swift:
         with open(swift_tasklist_file, 'w') as swift_tasklist_fp:
@@ -580,14 +682,19 @@ def main():
                 )
 
             else:
-                cmd = r""" bash "{}" {} """.format(
+                cmd = r""" {}bash "{}" {} """.format(
+                    'export ARG_WATERTILEDIR="{}"'.format(arg_waterTileDir) if arg_waterTileDir is not None else '',
                     jobscript_temp,
                     tile,
                 )
 
             print("{}, {}".format(tasknum, cmd))
             if not args.dryrun:
-                subprocess.call(cmd, shell=True, cwd=(pbs_logdir if args.pbs else None))
+                matlab_cmd_rc = subprocess.call(cmd, shell=True, cwd=(pbs_logdir if args.pbs else None))
+                if matlab_cmd_rc == 2 and matlab_cmd_success is not False:
+                    matlab_cmd_success = True
+                else:
+                    matlab_cmd_success = False
 
         if args.pbs or args.slurm:
             print("Submitted {} tiles to scheduler".format(number_run_tiles_text))
@@ -602,6 +709,13 @@ def main():
             print("!!! WARNING !!! {} INCOMPLETE tiles are missing watermasks:\n{}\n".format(
                 len(incomplete_tiles_missing_watermask), '\n'.join(incomplete_tiles_missing_watermask))
             )
+
+    if matlab_cmd_success is True:
+        task_success_rc = 2
+    elif matlab_cmd_success is False:
+        task_success_rc = 1
+
+    sys.exit(task_success_rc)
 
 
 
