@@ -148,6 +148,10 @@ fi
 # BST step
 bst_failure=false
 if [ "$run_bst" = true ]; then
+    if [ ! -d "$tile_subtiles_dir" ]; then
+        echo "Creating tile subtiles dir: ${tile_subtiles_dir}"
+        mkdir -p "$tile_subtiles_dir"
+    fi
     cmd="$bst_cmd"
     echo "Running BST process with command: ${cmd}"
     export ARG_TILENAME="$tileName"
