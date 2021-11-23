@@ -36,8 +36,8 @@ end
 BW = false(length(y),length(x));
 
 if isempty(p.Vertices)
-%    error('polyshape has no vertices')
-    fprintf('polyshape has no vertices\n')
+    error('polyshape has no vertices')
+%    fprintf('polyshape has no vertices\n')
     return
 end
 
