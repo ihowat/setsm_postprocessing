@@ -187,6 +187,8 @@ def main():
             help=("Run 10m and 2m mosaicSubTiles processes for each tile after buildSubTiles completes successfully. "
                   "Delete 'subtiles' folder for the tile upon successful completion of 10m and 2m MST processes. "
                   "Only 10m MST process will be run if --make-10m-only option is provided."))
+    parser.add_argument("--chain-mst-keep-subtiles", action='store_true', default=False,
+            help="do not remove tiles' 'subtiles' folders after successful BST+MST steps")
 
     # parser.add_argument('--require-finfiles', action='store_true', default=False,
     #         help="let existence of finfiles dictate reruns")
@@ -414,6 +416,7 @@ def main():
             'output_tiles_dir': args.dstdir,
             'project': args.project,
             'make_10m_only': make_10m_only,
+            'keep_subtiles': str(args.chain_mst_keep_subtiles).lower(),
         }
         if not auto_select_arcticdem_water_tile_dir:
             jobscript_static_args_dict['waterTileDir'] = args.water_tile_dir

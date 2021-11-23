@@ -28,6 +28,7 @@ output_tiles_dir="$ARG_OUTPUT_TILES_DIR"
 project="$ARG_PROJECT"
 waterTileDir="$ARG_WATERTILEDIR"
 make_10m_only="$ARG_MAKE_10M_ONLY"
+keep_subtiles="$ARG_KEEP_SUBTILES"
 
 if [ -z "$tileName" ]; then
     tileName="$1"
@@ -212,14 +213,16 @@ if [ "$make_10m_only" = false ]; then
 fi
 
 
-echo
-if [ "$mst_failure" = true ]; then
-    echo "Will not remove tile subtiles directory due to MST failure"
-    exit 1
-fi
-if [ -d "$tile_subtiles_dir" ]; then
-    echo "Removing tile subtiles directory: ${tile_subtiles_dir}"
-    rm -rf "$tile_subtiles_dir"
-else
-    echo "Cannot remove tile subtiles directory, it does not exist: ${tile_subtiles_dir}"
+if [ "$keep_subtiles" = false ]; then
+    echo
+    if [ "$mst_failure" = true ]; then
+        echo "Will not remove tile subtiles directory due to MST failure"
+        exit 1
+    fi
+    if [ -d "$tile_subtiles_dir" ]; then
+        echo "Removing tile subtiles directory: ${tile_subtiles_dir}"
+        rm -rf "$tile_subtiles_dir"
+    else
+        echo "Cannot remove tile subtiles directory, it does not exist: ${tile_subtiles_dir}"
+    fi
 fi
