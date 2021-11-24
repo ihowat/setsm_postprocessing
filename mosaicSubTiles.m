@@ -57,6 +57,12 @@ if ~isempty(n)
     y1 = varargin{n+1}(4);
 end
 
+%if output directory doesnt already exist, make it
+[outDir,~,~] = fileparts(outName)
+if ~exist(outDir,'dir')
+    mkdir(outDir)
+end
+
 fprintf('Indexing subtiles\n')
 
 % make a cellstr of resolved subtile filenames
