@@ -37,6 +37,9 @@ function buildSubTiles(tileName,outDir,tileDefs,meta,varargin)
 %waterTileDir= directory of water/land mask rasters (e.g. '~/data/pgc_projects/ak_water_rasters_v2');
 %refDemFile= geotiff reference DEM for quality control ('~/tandemx_alaska_mosaic_3413_tap90m.tif');
 
+fprintf('tileName = %s\n',tileName)
+fprintf('outDir = %s\n',outDir)
+
 %% parameters/defaults
 res=10; % ouput mosaic resolution in meters
 subtileSize=1000; % subtile dimensions in meters

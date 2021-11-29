@@ -23,6 +23,9 @@ subTileDir = varargin{1};
 dx = varargin{2};
 outName = varargin{3};
 
+fprintf('subTileDir = %s\n',subTileDir)
+fprintf('outName = %s\n',outName)
+
 n = find(strcmpi('quadrant',varargin));
 if ~isempty(n)
     quadrant = varargin{n+1};
