@@ -29,8 +29,9 @@ project="$ARG_PROJECT"
 waterTileDir="$ARG_WATERTILEDIR"
 make_10m_only="$ARG_MAKE_10M_ONLY"
 keep_subtiles="$ARG_KEEP_SUBTILES"
+use_local="$ARG_USE_LOCAL"
 
-if [ -z "$tileName" ]; then
+if (( $# == 1 )); then
     tileName="$1"
 fi
 if [ -z "$tileName" ]; then
@@ -38,11 +39,33 @@ if [ -z "$tileName" ]; then
     exit 0
 fi
 
-tile_subtiles_dir="${output_tiles_dir}/${tileName}/subtiles/"
-bst_finfile_10m="${output_tiles_dir}/${tileName}/subtiles_10m.fin"
-bst_finfile_2m="${output_tiles_dir}/${tileName}/subtiles_2m.fin"
-mst_finfile_10m="${output_tiles_dir}/${tileName}/${tileName}_10m.fin"
-mst_finfile_2m_template="${output_tiles_dir}/${tileName}/<quadTileName>_2m.fin"
+tile_results_dir="${output_tiles_dir}/${tileName}"
+tile_subtiles_dir="${tile_results_dir}/subtiles/"
+if [ "$use_local" = false ]; then
+    echo "USE_LOCAL flag is FALSE"
+elif [ "$use_local" = true ]; then
+    echo -n "USE_LOCAL flag is TRUE, "
+    if [ -d "$tile_subtiles_dir" ]; then
+        echo "but subtiles folder already exists and will be used instead"
+    else
+        temp_subtiles_dir=''
+        if [ "$system" = 'bw' ]; then
+            temp_subtiles_dir="/tmp/results/${tileName}_${RANDOM}/"
+        fi
+        if [ -n "$temp_subtiles_dir" ]; then
+            echo "so subtile files will be created in local space"
+            export TEMP_SUBTILE_DIR="$temp_subtiles_dir"
+            tile_subtiles_dir="$temp_subtiles_dir"
+        else
+            echo "but no setting for system '${system}' so regular subtiles folder will be used"
+        fi
+    fi
+fi
+echo "Subtiles directory: ${tile_subtiles_dir}"
+bst_finfile_10m="${tile_results_dir}/subtiles_10m.fin"
+bst_finfile_2m="${tile_results_dir}/subtiles_2m.fin"
+mst_finfile_10m="${tile_results_dir}/${tileName}_10m.fin"
+mst_finfile_2m_template="${tile_results_dir}/<quadTileName>_2m.fin"
 
 
 #if [ "$system" = 'pgc' ]; then
@@ -143,6 +166,12 @@ if [ "$make_10m_only" = true ]; then
     echo "Will run ${bst_txt}MST 10m for tile: ${tileName}"
 else
     echo "Will run ${bst_txt}MST 10m and 2m for tile: ${tileName}"
+fi
+
+
+if [ ! -d "$tile_results_dir" ]; then
+    echo "Creating tile results dir: ${tile_results_dir}"
+    mkdir -p "$tile_results_dir"
 fi
 
 

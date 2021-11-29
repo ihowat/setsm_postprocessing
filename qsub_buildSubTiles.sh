@@ -99,17 +99,21 @@ make2m="$ARG_MAKE2M"
 finfile="$ARG_FINFILE"
 logfile="$ARG_LOGFILE"
 runscript="$ARG_RUNSCRIPT"
+set +u; temp_subtile_dir="$TEMP_SUBTILE_DIR"; set -u
 
 if (( $# == 1 )); then
     if [ "$1" = '--make-10m-only' ]; then
         make2m=false
-    elif [ -z "$tileName" ]; then
+    else
         tileName="$1"
     fi
 fi
 if [ -z "$tileName" ]; then
     echo "argument 'tileName' not supplied, exiting"
     exit 0
+fi
+if [ -n "$temp_subtile_dir" ]; then
+    outDir="$temp_subtile_dir"
 fi
 
 utm_tilePrefix=$(echo "$tileName" | grep -Eo '^utm[0-9]{2}[ns]')
@@ -195,7 +199,7 @@ fi
 
 if [ "$MATLAB_USE_PARPOOL" = true ]; then
     job_working_dir="${MATLAB_WORKING_DIR}"
-    job_temp_dir="${MATLAB_TEMP_DIR}/${JOB_ID}"
+    job_temp_dir="${MATLAB_TEMP_DIR}/${JOB_ID}/${tileName}"
     matlab_parpool_init="\
 pc = parcluster('local'); \
 pc.JobStorageLocation = '${job_temp_dir}'; \

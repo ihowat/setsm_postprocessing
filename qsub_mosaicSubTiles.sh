@@ -95,12 +95,13 @@ version="$ARG_VERSION"
 exportTif="$ARG_EXPORTTIF"
 finfile="$ARG_FINFILE"
 logfile="$ARG_LOGFILE"
+set +u; temp_subtile_dir="$TEMP_SUBTILE_DIR"; set -u
 
 if (( $# == 1 )); then
-    if [ -z "$tileName" ]; then
-        tileName="$1"
-    else
+    if [ "$1" = '10' ] || [ "$1" = '2' ]; then
         resolution="$1"
+    else
+        tileName="$1"
     fi
 fi
 if [ -z "$tileName" ]; then
@@ -108,6 +109,9 @@ if [ -z "$tileName" ]; then
     exit 0
 fi
 outTileName="$tileName"
+if [ -n "$temp_subtile_dir" ]; then
+    subTileDir="$temp_subtile_dir"
+fi
 
 utm_tileprefix=$(echo "$tileName" | grep -Eo '^utm[0-9]{2}[ns]')
 if [ -z "$utm_tileprefix" ]; then
@@ -212,7 +216,7 @@ fi
 
 if [ "$MATLAB_USE_PARPOOL" = true ]; then
     job_working_dir="${MATLAB_WORKING_DIR}"
-    job_temp_dir="${MATLAB_TEMP_DIR}/${JOB_ID}"
+    job_temp_dir="${MATLAB_TEMP_DIR}/${JOB_ID}/${tileName}"
     matlab_parpool_init="\
 pc = parcluster('local'); \
 pc.JobStorageLocation = '${job_temp_dir}'; \
