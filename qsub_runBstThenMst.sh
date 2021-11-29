@@ -42,26 +42,30 @@ fi
 tile_results_dir="${output_tiles_dir}/${tileName}"
 tile_subtiles_dir="${tile_results_dir}/subtiles/"
 if [ "$use_local" = false ]; then
-    echo "USE_LOCAL flag is FALSE"
+    echo "USE_LOCAL flag is FALSE, so regular subtiles folder will be used"
 elif [ "$use_local" = true ]; then
-    echo -n "USE_LOCAL flag is TRUE, "
     if [ -d "$tile_subtiles_dir" ]; then
-        echo "but subtiles folder already exists and will be used instead"
+        echo "USE_LOCAL flag is TRUE, but subtiles folder already exists and will be used instead"
+        use_local=false
     else
         temp_subtiles_dir=''
         if [ "$system" = 'bw' ]; then
             temp_subtiles_dir="/tmp/results/${tileName}_${RANDOM}/"
         fi
         if [ -n "$temp_subtiles_dir" ]; then
-            echo "so subtile files will be created in local space"
+            echo "USE_LOCAL flag is TRUE, so subtile files will be created in local space"
             export TEMP_SUBTILE_DIR="$temp_subtiles_dir"
             tile_subtiles_dir="$temp_subtiles_dir"
         else
-            echo "but no setting for system '${system}' so regular subtiles folder will be used"
+            echo "USE_LOCAL flag is TRUE, but no setting for system '${system}' so regular subtiles folder will be used"
+            use_local=false
         fi
     fi
 fi
-echo "Subtiles directory: ${tile_subtiles_dir}"
+if [ "$use_local" = true ]; then
+    echo "Using local space for subtile file creation"
+fi
+echo "Tile ${tileName} subtiles directory: ${tile_subtiles_dir}"
 bst_finfile_10m="${tile_results_dir}/subtiles_10m.fin"
 bst_finfile_2m="${tile_results_dir}/subtiles_2m.fin"
 mst_finfile_10m="${tile_results_dir}/${tileName}_10m.fin"
