@@ -26,6 +26,10 @@ outName = varargin{3};
 fprintf('subTileDir = %s\n',subTileDir)
 fprintf('outName = %s\n',outName)
 
+if ~exist(subTileDir,'dir')
+    error('Subtiles folder does not exist: %s', subTileDir)
+end
+
 n = find(strcmpi('quadrant',varargin));
 if ~isempty(n)
     quadrant = varargin{n+1};
@@ -61,7 +65,7 @@ if ~isempty(n)
 end
 
 %if output directory doesnt already exist, make it
-[outDir,~,~] = fileparts(outName)
+[outDir,~,~] = fileparts(outName);
 if ~exist(outDir,'dir')
     mkdir(outDir)
 end
@@ -71,7 +75,7 @@ fprintf('Indexing subtiles\n')
 % make a cellstr of resolved subtile filenames
 subTileFiles=dir([subTileDir,'/*_',num2str(dx),'m.mat']);
 if isempty(subTileFiles)
-    fprintf('No files found matching %s, skipping\n',...
+    fprintf('ERROR: No files found matching %s, skipping\n',...
         [subTileDir,'/*_',num2str(dx),'m.mat']);
     return
 end
