@@ -1,5 +1,9 @@
 #!/bin/bash
 
+CORES_PER_NODE=$PBS_NUM_PPN
+APRUN_PREFIX="aprun -b -N 1 -d ${CORES_PER_NODE} -cc none"
+export ALREADY_IN_APRUN=true
+
 tilelist_string="$ARG_TILENAME"
 tilerun_jobscript="$TILERUN_JOBSCRIPT"
 run_tiles_in_parallel="$IN_PARALLEL"
@@ -18,9 +22,9 @@ for tile_idx in "${!tilelist_arr[@]}"; do
     echo -e "\n\nRunning tile $((tile_idx+1)) of ${total_ntiles}: ${tile}"
     export ARG_TILENAME="$tile"
     if [ "$run_tiles_in_parallel" = true ]; then
-        bash "$tilerun_jobscript" &
+        ${APRUN_PREFIX} bash "$tilerun_jobscript" &
     else
-        bash "$tilerun_jobscript"
+        ${APRUN_PREFIX} bash "$tilerun_jobscript"
     fi
 done
 

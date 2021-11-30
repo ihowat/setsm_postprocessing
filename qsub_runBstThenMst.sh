@@ -196,6 +196,13 @@ if [ "$run_bst" = true ]; then
         echo "BST jobscript exited with non-success(2) exit status (${cmd_status})"
         bst_failure=true
     fi
+#    if [ ! -d "$tile_subtiles_dir" ]; then
+#        echo "Tile subtiles folder does not exist after BST step: ${tile_subtiles_dir}"
+#        bst_failure=true
+#    elif [ -z "$(find "$tile_subtiles_dir" -mindepth 1 -type f -print -quit 2>/dev/null)" ]; then
+#        echo "No files exist in tile subtiles dir after BST step: ${tile_subtiles_dir}"
+#        bst_failure=true
+#    fi
 fi
 if [ "$bst_failure" = true ]; then
     echo "Exiting before MST step due to BST failure"

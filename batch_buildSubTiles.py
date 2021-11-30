@@ -664,6 +664,13 @@ def main():
     print("Sleeping {} seconds before submission".format(sleep_seconds))
     time.sleep(sleep_seconds)
 
+    if not args.dryrun and batch_job_submission:
+        pbs_ran_tilelist = os.path.join(pbs_logdir, 'ran_tiles.txt')
+        with open(pbs_ran_tilelist, 'w') as tilelist_fp:
+            for tile in tiles:
+                tilelist_fp.write(tile+'\n')
+
+
     task_success_rc = 3 if len(tiles_to_run) > 0 else -1
     matlab_cmd_success = None
 
