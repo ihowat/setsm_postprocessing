@@ -3,6 +3,9 @@ function mergeTileBuffer(f0,f1,varargin)
 %
 % mergeTileBuffer(f0,f1) where f0 and f1 are the file names or mat file
 % handles of neighboring tiles.
+%
+% mergeTileBuffer(...,'overwrite') forces overwrite of existing buffer.
+% mergeTileBuffer(...,'zOnly') only apply buffer merge to the z array.
 
 % top = 1, Bottom = 2, left = 3, right = 4;
 
@@ -36,8 +39,10 @@ else
 end
 
 overwriteBuffer=false;
-if nargin==3
-    overwriteBuffer=true;
+if ~isempty(varargin)
+    if any(strcmpi(varargin,'overwrite'))
+        overwriteBuffer=true;
+    end
 end
 
 % make sure writeable
@@ -185,6 +190,12 @@ z(n)=z0(n);
 m0.z(r0(1):r0(2),c0(1):c0(2))=z;
 m1.z(r1(1):r1(2),c1(1):c1(2))=z;
 clear z0 z1 z;
+
+if ~isempty(varargin)
+    if any(strcmpi(varargin,'zonly'))
+        return
+    end
+end
 
 %% merge z_mad
 if ~any(strcmp(varlist0,'z_madbuff'))
