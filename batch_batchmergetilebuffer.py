@@ -75,7 +75,7 @@ def main():
         ]
         dstfps_old = [fp for pat in dstfps_old_pattern for fp in glob.glob(pat)]
         if dstfps_old:
-            if not os.path.isfile(filename):
+            if len(matfiles) == 0:
                 print("ERROR! Tile mat file does not exist, but other MST results exist matching {}".format(dstfps_old_pattern))
                 continue
             print("{}Removing old MST results matching {}".format('(dryrun) ' if args.dryrun else '', dstfps_old_pattern))
