@@ -23,26 +23,26 @@ end
 %fix_tile_list = {};
 fix_tile_list = {'58_23', '58_24', '59_22', '59_23', '59_24', '60_22', '60_23', '60_24'};
 
-S = shaperead(coastlineShape);
-
-xmin = nan(size(S));
-xmax = xmin;
-ymin = xmin;
-ymax = xmin;
-
-i=1;
-for i=1:length(S)
-    
-    xmin(i) = S(i).BoundingBox(1);
-    xmax(i) = S(i).BoundingBox(2);
-    
-    ymin(i) = S(i).BoundingBox(3);
-    ymax(i) = S(i).BoundingBox(4);
-    
-end
-
-vxtile = [tiles.x0,tiles.x0,tiles.x1,tiles.x1,tiles.x0];
-vytile = [tiles.y0,tiles.y1,tiles.y1,tiles.y0,tiles.y0];
+%S = shaperead(coastlineShape);
+%
+%xmin = nan(size(S));
+%xmax = xmin;
+%ymin = xmin;
+%ymax = xmin;
+%
+%i=1;
+%for i=1:length(S)
+%
+%    xmin(i) = S(i).BoundingBox(1);
+%    xmax(i) = S(i).BoundingBox(2);
+%
+%    ymin(i) = S(i).BoundingBox(3);
+%    ymax(i) = S(i).BoundingBox(4);
+%
+%end
+%
+%vxtile = [tiles.x0,tiles.x0,tiles.x1,tiles.x1,tiles.x0];
+%vytile = [tiles.y0,tiles.y1,tiles.y1,tiles.y0,tiles.y0];
 
 i=1;
 last_print_len=0;

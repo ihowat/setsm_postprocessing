@@ -28,8 +28,10 @@ output_tiles_dir="$ARG_OUTPUT_TILES_DIR"
 project="$ARG_PROJECT"
 waterTileDir="$ARG_WATERTILEDIR"
 make_10m_only="$ARG_MAKE_10M_ONLY"
+keep_subtiles="$ARG_KEEP_SUBTILES"
+use_local="$ARG_USE_LOCAL"
 
-if [ -z "$tileName" ]; then
+if (( $# == 1 )); then
     tileName="$1"
 fi
 if [ -z "$tileName" ]; then
@@ -37,11 +39,37 @@ if [ -z "$tileName" ]; then
     exit 0
 fi
 
-tile_subtiles_dir="${output_tiles_dir}/${tileName}/subtiles/"
-bst_finfile_10m="${output_tiles_dir}/${tileName}/subtiles_10m.fin"
-bst_finfile_2m="${output_tiles_dir}/${tileName}/subtiles_2m.fin"
-mst_finfile_10m="${output_tiles_dir}/${tileName}/${tileName}_10m.fin"
-mst_finfile_2m_template="${output_tiles_dir}/${tileName}/<quadTileName>_2m.fin"
+tile_results_dir="${output_tiles_dir}/${tileName}"
+tile_subtiles_dir="${tile_results_dir}/subtiles/"
+if [ "$use_local" = false ]; then
+    echo "USE_LOCAL flag is FALSE, so regular subtiles folder will be used"
+elif [ "$use_local" = true ]; then
+    if [ -d "$tile_subtiles_dir" ]; then
+        echo "USE_LOCAL flag is TRUE, but subtiles folder already exists and will be used instead"
+        use_local=false
+    else
+        temp_subtiles_dir=''
+        if [ "$system" = 'bw' ]; then
+            temp_subtiles_dir="/tmp/results/${tileName}_${RANDOM}/"
+        fi
+        if [ -n "$temp_subtiles_dir" ]; then
+            echo "USE_LOCAL flag is TRUE, so subtile files will be created in local space"
+            export TEMP_SUBTILE_DIR="$temp_subtiles_dir"
+            tile_subtiles_dir="$temp_subtiles_dir"
+        else
+            echo "USE_LOCAL flag is TRUE, but no setting for system '${system}' so regular subtiles folder will be used"
+            use_local=false
+        fi
+    fi
+fi
+if [ "$use_local" = true ]; then
+    echo "Using local space for subtile file creation"
+fi
+echo "Tile ${tileName} subtiles directory: ${tile_subtiles_dir}"
+bst_finfile_10m="${tile_results_dir}/subtiles_10m.fin"
+bst_finfile_2m="${tile_results_dir}/subtiles_2m.fin"
+mst_finfile_10m="${tile_results_dir}/${tileName}_10m.fin"
+mst_finfile_2m_template="${tile_results_dir}/<quadTileName>_2m.fin"
 
 
 #if [ "$system" = 'pgc' ]; then
@@ -145,6 +173,12 @@ else
 fi
 
 
+if [ ! -d "$tile_results_dir" ]; then
+    echo "Creating tile results dir: ${tile_results_dir}"
+    mkdir -p "$tile_results_dir"
+fi
+
+
 # BST step
 bst_failure=false
 if [ "$run_bst" = true ]; then
@@ -162,6 +196,13 @@ if [ "$run_bst" = true ]; then
         echo "BST jobscript exited with non-success(2) exit status (${cmd_status})"
         bst_failure=true
     fi
+#    if [ ! -d "$tile_subtiles_dir" ]; then
+#        echo "Tile subtiles folder does not exist after BST step: ${tile_subtiles_dir}"
+#        bst_failure=true
+#    elif [ -z "$(find "$tile_subtiles_dir" -mindepth 1 -type f -print -quit 2>/dev/null)" ]; then
+#        echo "No files exist in tile subtiles dir after BST step: ${tile_subtiles_dir}"
+#        bst_failure=true
+#    fi
 fi
 if [ "$bst_failure" = true ]; then
     echo "Exiting before MST step due to BST failure"
@@ -212,14 +253,16 @@ if [ "$make_10m_only" = false ]; then
 fi
 
 
-echo
-if [ "$mst_failure" = true ]; then
-    echo "Will not remove tile subtiles directory due to MST failure"
-    exit 1
-fi
-if [ -d "$tile_subtiles_dir" ]; then
-    echo "Removing tile subtiles directory: ${tile_subtiles_dir}"
-    rm -rf "$tile_subtiles_dir"
-else
-    echo "Cannot remove tile subtiles directory, it does not exist: ${tile_subtiles_dir}"
+if [ "$keep_subtiles" = false ]; then
+    echo
+    if [ "$mst_failure" = true ]; then
+        echo "Will not remove tile subtiles directory due to MST failure"
+        exit 1
+    fi
+    if [ -d "$tile_subtiles_dir" ]; then
+        echo "Removing tile subtiles directory: ${tile_subtiles_dir}"
+        rm -rf "$tile_subtiles_dir"
+    else
+        echo "Cannot remove tile subtiles directory, it does not exist: ${tile_subtiles_dir}"
+    fi
 fi

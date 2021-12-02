@@ -2,6 +2,7 @@
 
 import argparse
 import glob
+import math
 import os
 import socket
 import subprocess
@@ -21,6 +22,7 @@ mst_pyscript = os.path.join(SCRIPT_DIR, 'batch_mosaicSubTiles.py')
 default_matlab_scriptdir = os.path.join(SCRIPT_DIR, '../setsm_postprocessing4')
 default_bst_jobscript = os.path.join(SCRIPT_DIR, 'qsub_buildSubTiles.sh')
 chain_jobscript = os.path.join(SCRIPT_DIR, 'qsub_runBstThenMst.sh')
+batch_jobscript = os.path.join(SCRIPT_DIR, 'qsub_batchRunTiles.sh')
 default_tempdir = os.path.join(SCRIPT_DIR, 'temp')
 default_logdir = '../logs/[DSTDIR_FOLDER_NAME]'  # relative path appended to argument dstdir
 swift_program = os.path.abspath('/projects/sciteam/bazu/tools/swift-2/bin/swift')
@@ -44,7 +46,7 @@ elif hostname.startswith('nunatak'):
     sched_presubmit_cmd = ''
     sched_addl_envvars = ''
     sched_specify_outerr_paths = False
-    sched_addl_vars = "-l walltime=200:00:00,nodes=1:ppn=16,mem=64gb -m n -k oe -j oe"
+    sched_addl_vars = "-l nodes=1:ppn=16,mem=64gb,walltime=200:00:00 -m n -k oe -j oe"
     sched_default_queue = 'old'
 else:
     warnings.warn("Hostname '{}' not recognized. System-specific settings will not be applied.".format(hostname))
@@ -128,6 +130,7 @@ quads = ['1_1', '1_2', '2_1', '2_2']
 
 
 def main():
+    global sched_addl_vars
 
     parser = argparse.ArgumentParser()
     parser.add_argument("dstdir", help="target directory (where tile subfolders will be created)")
@@ -187,6 +190,10 @@ def main():
             help=("Run 10m and 2m mosaicSubTiles processes for each tile after buildSubTiles completes successfully. "
                   "Delete 'subtiles' folder for the tile upon successful completion of 10m and 2m MST processes. "
                   "Only 10m MST process will be run if --make-10m-only option is provided."))
+    parser.add_argument("--chain-mst-keep-subtiles", action='store_true', default=False,
+            help="do not remove tiles' 'subtiles' folders after successful BST+MST steps")
+    parser.add_argument("--chain-mst-no-local", action='store_true', default=False,
+            help="do not use local space on compute nodes for tiles' 'subtiles' folders")
 
     # parser.add_argument('--require-finfiles', action='store_true', default=False,
     #         help="let existence of finfiles dictate reruns")
@@ -215,6 +222,8 @@ def main():
     parser.add_argument("--swift-logdir", default=None,
             help="directory where output job logs from Swift will go (default is ../logs/ from dstdir)")
 
+    parser.add_argument("--tasks-per-job", type=int, default=1,
+            help="Number of tiles to run in a single PBS or Slurm job")
     parser.add_argument("--dryrun", action='store_true', default=False,
             help='print actions without executing')
 
@@ -231,6 +240,21 @@ def main():
     make_10m_only = 'true' if args.make_10m_only else 'false'
     make2m_arg = 'false' if args.make_10m_only else 'true'
     target_res = '10m' if args.make_10m_only else '2m'
+
+    if args.tasks_per_job > 1:
+        if not (args.pbs or args.slurm):
+            parser.error("--tasks-per-job > 1 can only be provided in addition to"
+                         " --pbs or --slurm scheduler job submission options")
+        batch_job_submission = True
+        if args.pbs:
+            if 'nodes=1:' not in sched_addl_vars:
+                parser.error("'nodes=1' must be in PBS resource request for --tasks-per-job > 1")
+            sched_addl_vars = sched_addl_vars.replace('nodes=1', 'nodes={}'.format(args.tasks_per_job))
+        if args.slurm:
+            # TODO: Implement --tasks-per-job for SLURM job submission
+            pass
+    else:
+        batch_job_submission = False
 
     ## Set default arguments by project setting
     if args.project is None and True in [arg is None for arg in
@@ -312,8 +336,11 @@ def main():
     if args.chain_mst and args.project is None:
         parser.error('--chain-mst option requires --project arg is also provided')
 
+    log_time = datetime.now().strftime("%Y%m%d%H%M%S")
     bst_logdir = os.path.join(args.logdir, 'matlab', 'bst', target_res)
     pbs_logdir = os.path.join(args.logdir, 'pbs', 'bst', target_res)
+    if batch_job_submission:
+        pbs_logdir = '{}_batch_{}_{}-tiles'.format(pbs_logdir, log_time, len(tiles))
     swift_logrootdir = os.path.join(args.logdir, 'swift')
     swift_logdir = os.path.join(swift_logrootdir, 'bst', target_res)
     swift_tasklist_dir = os.path.join(swift_logrootdir, 'tasklist')
@@ -326,10 +353,16 @@ def main():
         outdir_list.append(pbs_logdir)
     if args.swift:
         outdir_list.extend([swift_rundir, swift_logdir, swift_tasklist_dir])
-    for outdir in outdir_list:
-        if not os.path.isdir(outdir):
-            print("Creating output directory: {}".format(outdir))
-            os.makedirs(outdir)
+    if not args.dryrun:
+        for outdir in outdir_list:
+            if not os.path.isdir(outdir):
+                print("Creating output directory: {}".format(outdir))
+                os.makedirs(outdir)
+        if batch_job_submission:
+            pbs_batch_tilelist = os.path.join(pbs_logdir, 'tilelist.txt')
+            with open(pbs_batch_tilelist, 'w') as tilelist_fp:
+                for tile in tiles:
+                    tilelist_fp.write(tile+'\n')
 
 
     ## Create temp jobscript with mosaicking args filled in
@@ -414,6 +447,8 @@ def main():
             'output_tiles_dir': args.dstdir,
             'project': args.project,
             'make_10m_only': make_10m_only,
+            'keep_subtiles': str(args.chain_mst_keep_subtiles).lower(),
+            'use_local': str(not args.chain_mst_no_local).lower(),
         }
         if not auto_select_arcticdem_water_tile_dir:
             jobscript_static_args_dict['waterTileDir'] = args.water_tile_dir
@@ -440,11 +475,14 @@ def main():
         with open(jobscript_temp, 'w') as jobscript_fp:
             jobscript_fp.write(jobscript_temp_text)
 
+    tilerun_jobscript = jobscript_temp
+
 
     number_incomplete_tiles = 0
     tiles_to_run = []
     tiles_missing_watermask = []
     tile_waterTileDir_dict = dict()
+    waterTileDir_tilesToRun_dict = dict()
     incomplete_tiles_missing_watermask = []
 
     for tile in tiles:
@@ -590,6 +628,9 @@ def main():
                 incomplete_tiles_missing_watermask.append(tile)
             else:
                 tiles_to_run.append(tile)
+                if water_tile_dir not in waterTileDir_tilesToRun_dict:
+                    waterTileDir_tilesToRun_dict[water_tile_dir] = []
+                waterTileDir_tilesToRun_dict[water_tile_dir].append(tile)
 
 
     if len(tiles_to_run) != number_incomplete_tiles:
@@ -623,6 +664,13 @@ def main():
     print("Sleeping {} seconds before submission".format(sleep_seconds))
     time.sleep(sleep_seconds)
 
+    if not args.dryrun and batch_job_submission:
+        pbs_ran_tilelist = os.path.join(pbs_logdir, 'ran_tiles.txt')
+        with open(pbs_ran_tilelist, 'w') as tilelist_fp:
+            for tile in tiles:
+                tilelist_fp.write(tile+'\n')
+
+
     task_success_rc = 3 if len(tiles_to_run) > 0 else -1
     matlab_cmd_success = None
 
@@ -646,55 +694,79 @@ def main():
         print("Ran {} tiles".format(len(tiles_to_run)))
 
     else:
-        for tasknum, tile in enumerate(tiles_to_run, 1):
 
-            job_name = 'bst_{}'.format(tile)
-            job_outfile = os.path.join(pbs_logdir, tile+'.out')
-            job_errfile = os.path.join(pbs_logdir, tile+'.err')
+        jobnum_total = int(math.ceil(len(tiles_to_run) / float(args.tasks_per_job)))
+        jobnum_fmt = '{:0>'+str(min(3, len(str(jobnum_total))))+'}'
 
-            arg_waterTileDir = None
-            if auto_select_arcticdem_water_tile_dir:
-                arg_waterTileDir = tile_waterTileDir_dict[tile]
+        for water_tile_dir, tiles_to_run in waterTileDir_tilesToRun_dict.items():
+            for jobnum, task_start_idx in enumerate(range(0, len(tiles_to_run), args.tasks_per_job), 1):
 
-            if args.pbs:
-                cmd = r""" {}qsub -N {} -v ARG_TILENAME={}{}{} {} {} {} "{}" """.format(
-                    sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
-                    job_name,
-                    tile,
-                    ',ARG_WATERTILEDIR="{}"'.format(arg_waterTileDir) if arg_waterTileDir is not None else '',
-                    ','+sched_addl_envvars if sched_addl_envvars != '' else '',
-                    '-q {}'.format(args.queue) if args.queue is not None else '',
-                    '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
-                    sched_addl_vars,
-                    jobscript_temp,
-                )
-
-            elif args.slurm:
-                cmd = r""" {}sbatch -J {} -v ARG_TILENAME={}{} {} {} "{}" """.format(
-                    sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
-                    job_name,
-                    tile,
-                    ',ARG_WATERTILEDIR="{}"'.format(arg_waterTileDir) if arg_waterTileDir is not None else '',
-                    ','+sched_addl_envvars if sched_addl_envvars != '' else '',
-                    '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
-                    sched_addl_vars,
-                    jobscript_temp,
-                )
-
-            else:
-                cmd = r""" {}bash "{}" {} """.format(
-                    'export ARG_WATERTILEDIR="{}"'.format(arg_waterTileDir) if arg_waterTileDir is not None else '',
-                    jobscript_temp,
-                    tile,
-                )
-
-            print("{}, {}".format(tasknum, cmd))
-            if not args.dryrun:
-                matlab_cmd_rc = subprocess.call(cmd, shell=True, cwd=(pbs_logdir if args.pbs else None))
-                if matlab_cmd_rc == 2 and matlab_cmd_success is not False:
-                    matlab_cmd_success = True
+                tile_bundle = tiles_to_run[task_start_idx:task_start_idx+args.tasks_per_job]
+                if batch_job_submission:
+                    tile = None
+                    task_name = jobnum_fmt.format(jobnum)
                 else:
-                    matlab_cmd_success = False
+                    tile = tiles_to_run[task_start_idx]
+                    task_name = tile
+                job_name = 'bst_{}'.format(task_name)
+                job_outfile = os.path.join(pbs_logdir, task_name+'.out')
+                job_errfile = os.path.join(pbs_logdir, task_name+'.err')
+
+                arg_waterTileDir = None
+                if auto_select_arcticdem_water_tile_dir:
+                    arg_waterTileDir = water_tile_dir
+
+                if batch_job_submission and len(tile_bundle) < args.tasks_per_job:
+                    sched_addl_vars_inst = sched_addl_vars.replace(
+                        'nodes={}'.format(args.tasks_per_job),
+                        'nodes={}'.format(len(tile_bundle))
+                    )
+                else:
+                    sched_addl_vars_inst = sched_addl_vars
+
+                if args.pbs:
+                    cmd = r""" {}qsub -N {} -v {}{}ARG_TILENAME={}{}{} {} {} {} "{}" """.format(
+                        sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
+                        job_name,
+                        'TILERUN_JOBSCRIPT="{}",'.format(tilerun_jobscript) if batch_job_submission else '',
+                        'IN_PARALLEL=true,' if batch_job_submission else '',
+                        '@'.join(tile_bundle) if batch_job_submission else tile,
+                        ',ARG_WATERTILEDIR="{}"'.format(arg_waterTileDir) if arg_waterTileDir is not None else '',
+                        ','+sched_addl_envvars if sched_addl_envvars != '' else '',
+                        '-q {}'.format(args.queue) if args.queue is not None else '',
+                        '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
+                        sched_addl_vars_inst,
+                        batch_jobscript if batch_job_submission else tilerun_jobscript,
+                    )
+
+                elif args.slurm:
+                    cmd = r""" {}sbatch -J {} -v {}{}ARG_TILENAME={}{}{} {} {} "{}" """.format(
+                        sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
+                        job_name,
+                        'TILERUN_JOBSCRIPT="{}",'.format(tilerun_jobscript) if batch_job_submission else '',
+                        'IN_PARALLEL=true,' if batch_job_submission else '',
+                        '@'.join(tile_bundle) if batch_job_submission else tile,
+                        ',ARG_WATERTILEDIR="{}"'.format(arg_waterTileDir) if arg_waterTileDir is not None else '',
+                        ','+sched_addl_envvars if sched_addl_envvars != '' else '',
+                        '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
+                        sched_addl_vars_inst,
+                        batch_jobscript if batch_job_submission else tilerun_jobscript,
+                    )
+
+                else:
+                    cmd = r""" {}bash "{}" {} """.format(
+                        'export ARG_WATERTILEDIR="{}"'.format(arg_waterTileDir) if arg_waterTileDir is not None else '',
+                        jobscript_temp,
+                        tile,
+                    )
+
+                print("{}, {}".format(jobnum, cmd))
+                if not args.dryrun:
+                    matlab_cmd_rc = subprocess.call(cmd, shell=True, cwd=(pbs_logdir if args.pbs else None))
+                    if matlab_cmd_rc == 2 and matlab_cmd_success is not False:
+                        matlab_cmd_success = True
+                    else:
+                        matlab_cmd_success = False
 
         if args.pbs or args.slurm:
             print("Submitted {} tiles to scheduler".format(number_run_tiles_text))

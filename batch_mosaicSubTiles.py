@@ -537,10 +537,11 @@ def main():
                 job_errfile = os.path.join(pbs_logdir, task_name+'.err')
 
                 if args.pbs:
-                    cmd = r""" {}qsub -N {} -v {}ARG_TILENAME={}{} {} {} {} "{}" """.format(
+                    cmd = r""" {}qsub -N {} -v {}{}ARG_TILENAME={}{} {} {} {} "{}" """.format(
                         sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
                         job_name,
                         'TILERUN_JOBSCRIPT="{}",'.format(tilerun_jobscript) if batch_job_submission else '',
+                        'IN_PARALLEL=false,' if batch_job_submission else '',
                         '@'.join(tile_bundle) if batch_job_submission else tile,
                         ','+sched_addl_envvars if sched_addl_envvars != '' else '',
                         '-q {}'.format(args.queue) if args.queue is not None else '',
@@ -552,10 +553,11 @@ def main():
                 elif args.slurm:
                     job_outfile = job_outfile.replace('pbs', 'slurm')
                     job_errfile = job_errfile.replace('pbs', 'slurm')
-                    cmd = r""" {}sbatch -J {} -v {}ARG_TILENAME={} {} {} "{}" """.format(
+                    cmd = r""" {}sbatch -J {} -v {}{}ARG_TILENAME={} {} {} "{}" """.format(
                         sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
                         job_name,
                         'TILERUN_JOBSCRIPT="{}",'.format(tilerun_jobscript) if batch_job_submission else '',
+                        'IN_PARALLEL=false,' if batch_job_submission else '',
                         '@'.join(tile_bundle) if batch_job_submission else tile,
                         ','+sched_addl_envvars if sched_addl_envvars != '' else '',
                         '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',

@@ -99,17 +99,28 @@ make2m="$ARG_MAKE2M"
 finfile="$ARG_FINFILE"
 logfile="$ARG_LOGFILE"
 runscript="$ARG_RUNSCRIPT"
+set +u; temp_subtile_dir="$TEMP_SUBTILE_DIR"; set -u
+set +u; already_in_aprun="$ALREADY_IN_APRUN"; set -u
+if [ -z "$already_in_aprun" ]; then
+    already_in_aprun=false
+fi
+if [ "$already_in_aprun" = true ]; then
+    echo "BST qsub script is already in aprun"
+fi
 
 if (( $# == 1 )); then
     if [ "$1" = '--make-10m-only' ]; then
         make2m=false
-    elif [ -z "$tileName" ]; then
+    else
         tileName="$1"
     fi
 fi
 if [ -z "$tileName" ]; then
     echo "argument 'tileName' not supplied, exiting"
     exit 0
+fi
+if [ -n "$temp_subtile_dir" ]; then
+    outDir="$temp_subtile_dir"
 fi
 
 utm_tilePrefix=$(echo "$tileName" | grep -Eo '^utm[0-9]{2}[ns]')
@@ -164,7 +175,7 @@ elif [ "$system" = 'bw' ]; then
     MATLAB_WORKING_DIR="/scratch/sciteam/GS_bazu/mosaic_data/matlab_working_dir"
     MATLAB_TEMP_DIR="/scratch/sciteam/GS_bazu/mosaic_data/matlab_temp_dir"
     MATLAB_PROGRAM="/projects/sciteam/bazu/matlab/R2020a/bin/matlab"
-#    export LD_LIBRARY_PATH="/projects/sciteam/bazu/matlab/lib-GLIBC2.12:${LD_LIBRARY_PATH}"
+    export LD_LIBRARY_PATH="/projects/sciteam/bazu/matlab/lib-GLIBC2.12:${LD_LIBRARY_PATH}"
     export MATLABHOST=$(printf 'nid%05d' "$(head -n1 "$PBS_NODEFILE")")
     export LM_LICENSE_FILE="27000@matlab-pgc.cse.umn.edu"
     MATLAB_SETTINGS="-nodisplay -nodesktop -nosplash"
@@ -195,7 +206,7 @@ fi
 
 if [ "$MATLAB_USE_PARPOOL" = true ]; then
     job_working_dir="${MATLAB_WORKING_DIR}"
-    job_temp_dir="${MATLAB_TEMP_DIR}/${JOB_ID}"
+    job_temp_dir="${MATLAB_TEMP_DIR}/${JOB_ID}/${tileName}"
     matlab_parpool_init="\
 pc = parcluster('local'); \
 pc.JobStorageLocation = '${job_temp_dir}'; \
@@ -223,7 +234,7 @@ ${make2m})"
 
 
 task_cmd="${MATLAB_PROGRAM} ${MATLAB_SETTINGS} -r \"${matlab_cmd}\""
-if [ "$system" = 'bw' ]; then
+if [ "$system" = 'bw' ] && [ "$already_in_aprun" = false ]; then
     task_cmd="${APRUN_PREFIX} bash -c '\
 export LD_LIBRARY_PATH=\"/projects/sciteam/bazu/matlab/lib-GLIBC2.12:\${LD_LIBRARY_PATH}\"; \
 $(echo "$task_cmd" | sed "s|'|'\"'\"'|g");'"
