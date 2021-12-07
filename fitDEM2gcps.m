@@ -9,6 +9,8 @@ function dzfit=fitDEM2gcps(x,y,z,px,py,pz,varargin)
 % size * resizeFactor, saving computation time/memory. The result can be
 % resized to the orginal DEM size with imresize(dzfit,size(z)). 
 
+minPoints = 1000;
+
 % get varargins
 resizeFactor=0.01;
 n = find(strcmpi(varargin,'resizefactor'));
@@ -20,7 +22,6 @@ n = find(strcmpi(varargin,'landMask'));
 if ~isempty(n)
     land=varargin{n+1};
 end
-
 
 % interpolate dem to control point coordinates
 zi = interp2(x,y,z,px,py,'*linear');
@@ -38,6 +39,13 @@ dz = zi - pz;
 
 % remove nan points
 n = isnan(dz);
+
+if sum(~n) < minPoints
+    warning('too few control points (%d), returning',sum(~n))
+    dzfit = [];
+    return
+end
+
 px(n) = [];
 py(n) = [];
 dz(n) = [];
@@ -56,15 +64,6 @@ y = imresize(y,resizeFactor);
 
 % calculate surface
 dzfit = sf(x,y);
-
-% This code is for resizing
-%     s=whos(m);
-%     sz = s(strcmp({s.name},'z')).size;
-%     dzfit = imresize(dzfit,sz);
-
-%     m.Properties.Writable = true;
-%     m.z = m.z - dzfit;
-%     m.dzfit = dzfit;
 
 
 
