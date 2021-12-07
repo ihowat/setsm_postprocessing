@@ -23,7 +23,12 @@ for i=1:length(fileNames)
     
     is2name=[is2dir,'/',strrep(fileName,'_10m_reg.mat','_is2.mat')];
     
+    if ~exist(is2name,'file')
+        warning('%s not found, skipping',is2name)
+    end
+    
     m=matfile(fileName);
+    
     is2 =load(is2name);
     
     % get the size of z
@@ -32,6 +37,10 @@ for i=1:length(fileNames)
         dzfit=fitDEM2gcps(m.x,m.y,m.z,is2.x,is2.y,is2.z,'resizeFactor',0.01,'landMask',m.land);
     else
         dzfit=fitDEM2gcps(m.x,m.y,m.z,is2.x,is2.y,is2.z,'resizeFactor',0.01);
+    end
+    
+    if isempty(dzfit)
+        continue
     end
     
     % add downscaled surface to the file
