@@ -40,6 +40,11 @@ i=1;
 for i =1:length(fileNames)
     fprintf('Calculating offset grid for %s .... ',fileNames{i})
     
+    if ~any(~isnan(nN(i,:)))
+             fprintf('no neighboring tiles, skipping\n')
+            continue
+    end
+    
     m0=matfile(fileNames{i});
     if any(strcmp(fields(m0),'dz0'))
             fprintf('dz0 already exists, skipping\n')
@@ -47,7 +52,7 @@ for i =1:length(fileNames)
     end
     
     neighborFiles = cell(8,1);
-    neighborFiles(~isnan(nN(i,:))) = fileNames(nN(i,~isnan(nN(i,:))));
+    neighborFiles(~isnan(nN(i,:))) = fileNames(nN(i,~isnan(nN(i,:)))); 
     
     calcdz0(fileNames{i},neighborFiles,resizeFraction)
     fprintf('done\n')
