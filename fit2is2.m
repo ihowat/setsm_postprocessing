@@ -34,9 +34,9 @@ for i=1:length(fileNames)
     % get the size of z
     s=whos(m);
     if any(strcmp({s.name},'land'))
-        dzfit=fitDEM2gcps(m.x,m.y,m.z,is2.x,is2.y,is2.z,'resizeFactor',0.01,'landMask',m.land);
+        [dzfit,sf]=fitDEM2gcps(m.x,m.y,m.z,is2.x,is2.y,is2.z,'resizeFactor',0.01,'landMask',m.land);
     else
-        dzfit=fitDEM2gcps(m.x,m.y,m.z,is2.x,is2.y,is2.z,'resizeFactor',0.01);
+        [dzfit,sf]=fitDEM2gcps(m.x,m.y,m.z,is2.x,is2.y,is2.z,'resizeFactor',0.01);
     end
     
     if isempty(dzfit)
@@ -46,6 +46,7 @@ for i=1:length(fileNames)
     % add downscaled surface to the file
     m.Properties.Writable = true;
     m.dzfit = dzfit;
+    m.dzfit = sf;
     
     % get the size of z
     sz = s(strcmp({s.name},'z')).size;
@@ -56,7 +57,7 @@ for i=1:length(fileNames)
     % apply offset
     m.z = m.z - dzfit;
     
-    clear dzfit is2 fileName
+    clear dzfit is2 fileName sf
 end
 
 

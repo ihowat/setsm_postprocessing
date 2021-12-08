@@ -1,4 +1,4 @@
-function dzfit=fitDEM2gcps(x,y,z,px,py,pz,varargin)
+function [dzfit,sf]=fitDEM2gcps(x,y,z,px,py,pz,varargin)
 % fitDEM2gcps fit surface to offsets between DEM and ground control points
 %
 % dzfit=fitDEM2gcps(x,y,z,px,py,pz) returns an array dzfit that is a
@@ -28,7 +28,7 @@ zi = interp2(x,y,z,px,py,'*linear');
 
 if exist('land','var')
     if any(~land(:))
-        land = interp2(x,y,land,px,py,'*nearest');
+        land = interp2(x,y,land,px,py,'*nearest',0);
         zi(land ~= 1) = NaN;
         clear land
     end
