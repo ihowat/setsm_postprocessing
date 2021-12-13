@@ -33,9 +33,9 @@ for i=strt:inc:length(tileFiles)
     
     fprintf('%d of %d, %s\n',i,length(tileNames),tileFile)
 
-%     registerTileToIS2(tileFile,is2TileFile)
-%     
-%     applyRegistration(tileFile,[])
+    registerTileToIS2(tileFile,is2TileFile)
+     
+    applyRegistration(tileFile,[])
     
     regTileFile=strrep(tileFile,'.mat','_reg.mat');
     
