@@ -104,9 +104,6 @@ set +u; already_in_aprun="$ALREADY_IN_APRUN"; set -u
 if [ -z "$already_in_aprun" ]; then
     already_in_aprun=false
 fi
-if [ "$already_in_aprun" = true ]; then
-    echo "BST qsub script is already in aprun"
-fi
 
 if (( $# == 1 )); then
     if [ "$1" = '--make-10m-only' ]; then
@@ -175,7 +172,7 @@ elif [ "$system" = 'bw' ]; then
     MATLAB_WORKING_DIR="/scratch/sciteam/GS_bazu/mosaic_data/matlab_working_dir"
     MATLAB_TEMP_DIR="/scratch/sciteam/GS_bazu/mosaic_data/matlab_temp_dir"
     MATLAB_PROGRAM="/projects/sciteam/bazu/matlab/R2020a/bin/matlab"
-    export LD_LIBRARY_PATH="/projects/sciteam/bazu/matlab/lib-GLIBC2.12:${LD_LIBRARY_PATH}"
+#    export LD_LIBRARY_PATH="/projects/sciteam/bazu/matlab/lib-GLIBC2.12:${LD_LIBRARY_PATH}"
     export MATLABHOST=$(printf 'nid%05d' "$(head -n1 "$PBS_NODEFILE")")
     export LM_LICENSE_FILE="27000@matlab-pgc.cse.umn.edu"
     MATLAB_SETTINGS="-nodisplay -nodesktop -nosplash"
@@ -190,10 +187,15 @@ elif [ "$system" = 'bw' ]; then
 
     # Site-specific settings
     if grep -q '^SWIFT_WORKER_PID='; then
-        echo "In a Swift job"
+        echo "BST qsub script is in a Swift job"
     else
-        echo "Not in a Swift job"
-        APRUN_PREFIX="aprun -b -N 1 -d ${CORES_PER_NODE} -cc none --"
+        echo "BST qsub script is not in a Swift job"
+        if [ "$already_in_aprun" = true ]; then
+            echo "BST qsub script is already in aprun"
+        else
+            echo "BST qsub script is not already in aprun"
+            APRUN_PREFIX="aprun -b -N 1 -d ${CORES_PER_NODE} -cc none --"
+        fi
     fi
     #export CRAY_ROOTFS=SHIFTER
     #export UDI="ubuntu:xenial"
@@ -234,7 +236,7 @@ ${make2m})"
 
 
 task_cmd="${MATLAB_PROGRAM} ${MATLAB_SETTINGS} -r \"${matlab_cmd}\""
-if [ "$system" = 'bw' ] && [ "$already_in_aprun" = false ]; then
+if [ "$system" = 'bw' ]; then
     task_cmd="${APRUN_PREFIX} bash -c '\
 export LD_LIBRARY_PATH=\"/projects/sciteam/bazu/matlab/lib-GLIBC2.12:\${LD_LIBRARY_PATH}\"; \
 $(echo "$task_cmd" | sed "s|'|'\"'\"'|g");'"
