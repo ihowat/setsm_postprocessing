@@ -1,19 +1,20 @@
 function batchMergeTileBuffer(tileNeighborIndexFile)
 % batchMergeTileBuffer: mergeTileBuffer to all neighboring files
 %
-% batchMergeTileBuffer(fileNames) where fileNames is a cellstr of files to be merged.
+% batchMergeTileBuffer((tileNeighborIndexFile) where tileNeighborIndexFile 
+% contains the list of fileNames to be merged (fileNames) and the tile
+% neighbor index array nN=[indTop, indBottom, indLeft, indRight], created
+% by tileNeighborIndex 
+
 load(tileNeighborIndexFile,'fileNames','nN');
 
-n0 =[find(~isnan(nN(:,1))); find(~isnan(nN(:,4)))]; %up
-n1 =[find(~isnan(nN(:,1)),1); nN(~isnan(nN(:,4)),4)]; %right
+% find files where indices of top and right files exist
+indTopExists = find(~isnan(nN(:,1)));
+indRightExists = find(~isnan(nN(:,4)));
 
-%fileNames=fileNames(:);
-
-% [ntop,nright] = findNeighborTiles(fileNames);
-% 
-% n0 = [nright(:,1);ntop(:,1)];
-% n1 = [nright(:,2);ntop(:,2)];
-
+% concoctenate vectors of indices of bottom/top and left/right pairs
+n0 =[indTopExists; indRightExists]; %[bottom file0; left file0] 
+n1 = [nN(indTopExists,1); nN(indRightExists,4)]; %[top file1; right file1]
 
 % run mergeTileBuffer on each pair in list
 for i=1:length(n0)
