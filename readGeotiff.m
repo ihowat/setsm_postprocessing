@@ -25,7 +25,12 @@ else
     reportMapSubsetError = false;
 end
 
-Tinfo       = imfinfo(name);
+try
+    Tinfo       = imfinfo(name);
+catch ME
+    name
+    rethrow(ME)
+end
 info.cols   = Tinfo.Width;
 info.rows   = Tinfo.Height;
 info.imsize = Tinfo.Offset;

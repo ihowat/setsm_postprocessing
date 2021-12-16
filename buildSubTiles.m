@@ -245,7 +245,7 @@ if exist('landTile','var')
     
     % check if any land exists in this tile, stop if not
     if ~any(landTile.z(:))
-        fprintf('no land in tile, returning\n')
+        fprintf('ERROR: no land in tile, returning\n')
         return
     end
 end

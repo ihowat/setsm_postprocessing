@@ -75,8 +75,21 @@ fprintf('Indexing subtiles\n')
 % make a cellstr of resolved subtile filenames
 subTileFiles=dir([subTileDir,'/*_',num2str(dx),'m.mat']);
 if isempty(subTileFiles)
-    fprintf('ERROR: No files found matching %s, skipping\n',...
+
+    fprintf('ERROR: No subtile matfiles found matching %s, skipping\n',...
         [subTileDir,'/*_',num2str(dx),'m.mat']);
+
+    subTileFinFiles=dir([subTileDir,'/*_',num2str(dx),'m.fin']);
+    if ~isempty(subTileFinFiles)
+        if length(subTileFinFiles) == 10000
+            fprintf('ERROR (more of a warning): Found all 10000 subtile-is-empty indicator files matching %s\n',...
+                [subTileDir,'/*_',num2str(dx),'m.fin']);
+        else
+            fprintf('ERROR: Found only %d subtile-is-empty indicator files matching %s\n',...
+                length(subTileFinFiles), [subTileDir,'/*_',num2str(dx),'m.fin']);
+        end
+    end
+
     return
 end
 subTileFiles=cellfun( @(x) [subTileDir,'/',x],{subTileFiles.name},'uniformoutput',0);
