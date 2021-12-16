@@ -37,12 +37,14 @@ end
 % subtract to get point offsets
 dz = zi - pz;
 
-% remove nan points
-n = isnan(dz);
+% remove outliers and nan points
+[~,n] = rmoutliers(dz);
+n = n | isnan(dz);
 
 if sum(~n) < minPoints
     warning('too few control points (%d), returning',sum(~n))
     dzfit = [];
+    sf=[];
     return
 end
 
