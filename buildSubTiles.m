@@ -261,53 +261,59 @@ suby1=(y0+subtileSize:subtileSize:y1) + buffer;
 
 subN=numel(subx0);
 
+% determine row and column numbers of subtiles for mosaic indexing
+[NsubTileRows, NsubTileCols] = size(subx0);
+subTileRows = (1:NsubTileRows)';
+subTilesCols = 1:NsubTileCols;
+[subTileCols, subTileRows] = meshgrid(subTilesCols, subTileRows);
+
 % The following code is left commented out after new restart logic was placed
 % inside the parfor loop for safe restart of parallel subtile building.
 
-%%% check for existing subtiles
-%% make a cellstr of resolved subtile filenames
-%if make2mFlag
-%    subTileFiles=dir([outDir,'/*_2m.mat']);
-%else
-%    subTileFiles=dir([outDir,'/*_10m.mat']);
-%end
-%
-%if ~isempty(subTileFiles)
-%    subTileFiles=cellfun( @(x) [outDir,'/',x],{subTileFiles.name},'uniformoutput',0);
-%
-%    % Get column-wise number of subtile from file names - assumes the subtile
-%    % names is {tilex}_{tily}_{subtilenum}_....
-%    [~,subTileName] = cellfun(@fileparts,subTileFiles,'uniformoutput',0);
-%    subTileName=cellfun(@(x) strsplit(x,'_'),subTileName,'uniformoutput',0);
-%    if length(subTileName) > 0 && startsWith(subTileName{1}{1},'utm')
-%        subTileNum = cellfun(@(x) str2num(x{4}),subTileName);
-%    else
-%        subTileNum = cellfun(@(x) str2num(x{3}),subTileName);
-%    end
-%
-%    % sort subtilefiles by ascending subtile number order
-%    [subTileNum,n] = sort(subTileNum); % sort the numbers
-%    subTileFiles = subTileFiles(n); % sort the file list
-%
-%    nstrt = subTileNum(end)+1; % set first subtile next after last exisitng
-%
-%    % check to make sure last file was complete
-%    mvars  = who('-file',subTileFiles{end});
-%    if ~any(ismember(mvars,'za_med'))
-%        % if not, delete and set nstrt to that number
-%        delete(subTileFiles{end})
-%        nstrt =  nstrt - 1;
-%    end
-%    fprintf('subtiles already exist, starting on subtile %d\n',nstrt)
-%end
+% %% check for existing subtiles
+% % make a cellstr of resolved subtile filenames
+% existingSubTileFiles=dir([outDir,'/*_',num2str(res),'m.mat']);
+% if ~isempty(existingSubTileFiles)
+%     
+%     existingSubTileFiles=cellfun( @(x) [outDir,'/',x],{existingSubTileFiles.name},'uniformoutput',0);
+%     
+%     % Get column-wise number of subtile from file names - assumes the subtile
+%     % names is {subRow}_{subCol}_{xm}.mat....
+%     [~,existingSubTileNames] = cellfun(@fileparts,existingSubTileFiles,'uniformoutput',0);
+%     existingSubTileNames=cellfun(@(x) strsplit(x,'_'),existingSubTileNames,'uniformoutput',0);
+%     existingSubTileRows = cellfun(@(x) str2num(x{end-2}),existingSubTileNames);
+%     existingSubTileCols = cellfun(@(x) str2num(x{end-1}),existingSubTileNames);
+%     
+%     existingSubTileNums = sub2ind([NsubTileRows, NsubTileCols],existingSubTileRows(:),existingSubTileCols(:));
+%     
+%     % sort subtilefiles by ascending subtile number order
+%     [existingSubTileNums,n] = sort(existingSubTileNums); % sort the numbers
+%     existingSubTileFiles = existingSubTileFiles(n); % sort the file list
+%     
+%     nstrt = existingSubTileNums(end)+1; % set first subtile next after last exisitng
+%     
+%     % check to make sure last file was complete
+%     mvars  = who('-file',existingSubTileFiles{end});
+%     if ~any(ismember(mvars,'za_med'))
+%         % if not, delete and set nstrt to that number
+%         delete(existingSubTileFiles{end})
+%         nstrt =  nstrt - 1;
+%     end
+%     
+%     if nstrt > subN
+%          fprintf('all subtiles already exist, returning \n')
+%     end
+%     
+%     fprintf('subtiles already exist, starting on subtile %d\n',nstrt)
+% end
 
 %% subtile loop
 parfor n=nstrt:subN
     
     fprintf('subtile %d of %d\n',n,subN)
 
-    outName = [outDir,'/',tileName,'_',num2str(n),'_10m.mat'];
-    finName = [outDir,'/',tileName,'_',num2str(n),'_10m.fin'];
+    outName = [outDir,'/',tileName,'_',num2str(subTileRows(n)),'_',num2str(subTileCols(n)),'_10m.mat'];
+    finName = [outDir,'/',tileName,'_',num2str(subTileRows(n)),'_',num2str(subTileCols(n)),'_10m.fin'];
 
     outName2m = strrep(outName,'_10m.mat','_2m.mat');
     finName2m = strrep(finName,'_10m.fin','_2m.fin');
