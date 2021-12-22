@@ -1,23 +1,20 @@
 function mosaicSubTiles(varargin)
 % mosaicSubTiles mosaic subtiles and write mat and geotiff output
 %
-%%%%% ONLY COMPATIBLE WITH 10K, 1km x 1km subtiles!!!!!
-%
-%
 % mosaicSubTiles(subTileDir,dx,outName) mosaics all of the
 % subtile .mat files in the directory subTileDir into a mosaic with grid
 % resolution dx (2 or 10) and writes matfile output to outName, with tiff
 % output as strrep(outName,'.mat','.tif'). Mosaic extend deteremined
-% from subtile extents.
+% from subtile extents or from extents provided as input args. Subtile
+% names must be in format row_col_*.mat with the row and column number of
+% the subtile in the tile.
 %
-% mosaicSubTiles(...,'quadrant') only mosaics the subtiles with the quadrant of
-% the full tile given by the x_y quad string '1_1','1_2','2_1','2_2'
-%
-% version 2:
 % Subtile alignment from universal LSQ adjustment vertical offsets at
 % subtile buffers. Large errors/offsets are filtered. Subtiles that fail
 % adjustment are added afterward with the median offset from the mosaic
 % removed.
+%
+% %%%%% ONLY COMPATIBLE WITH 1km x 1km subtiles!!!!!
 
 subTileDir = varargin{1};
 dx = varargin{2};
@@ -28,11 +25,6 @@ fprintf('outName = %s\n',outName)
 
 if ~exist(subTileDir,'dir')
     error('Subtiles folder does not exist: %s', subTileDir)
-end
-
-n = find(strcmpi('quadrant',varargin));
-if ~isempty(n)
-    quadrant = varargin{n+1};
 end
 
 projection = '';
@@ -75,75 +67,41 @@ fprintf('Indexing subtiles\n')
 % make a cellstr of resolved subtile filenames
 subTileFiles=dir([subTileDir,'/*_',num2str(dx),'m.mat']);
 if isempty(subTileFiles)
-
-    fprintf('ERROR: No subtile matfiles found matching %s, skipping\n',...
+    fprintf('No files found matching %s, skipping\n',...
         [subTileDir,'/*_',num2str(dx),'m.mat']);
-
-    subTileFinFiles=dir([subTileDir,'/*_',num2str(dx),'m.fin']);
-    if ~isempty(subTileFinFiles)
-        if length(subTileFinFiles) == 10000
-            fprintf('ERROR (more of a warning): Found all 10000 subtile-is-empty indicator files matching %s\n',...
-                [subTileDir,'/*_',num2str(dx),'m.fin']);
-        else
-            fprintf('ERROR: Found only %d subtile-is-empty indicator files matching %s\n',...
-                length(subTileFinFiles), [subTileDir,'/*_',num2str(dx),'m.fin']);
-        end
-    end
-
     return
 end
-subTileFiles=cellfun( @(x) [subTileDir,'/',x],{subTileFiles.name},'uniformoutput',0);
 
-% Get column-wise number of subtile from file names - assumes the subtile
-% names is {tilex}_{tily}_{subtilenum}_....
+subTileFiles=cellfun( @(x) [subTileDir,'/',x],{subTileFiles.name},...
+    'uniformoutput',0);
+
+% Get rows and cols of subtile from file names - assumes the subtile
+% names is *_{row}_{col}_{res}.mat
 [~,subTileName] = cellfun(@fileparts,subTileFiles,'uniformoutput',0);
 subTileName=cellfun(@(x) strsplit(x,'_'),subTileName,'uniformoutput',0);
-if length(subTileName) > 0 && startsWith(subTileName{1}{1},'utm')
-    subTileNum = cellfun(@(x) str2num(x{4}),subTileName);
-else
-    subTileNum = cellfun(@(x) str2num(x{3}),subTileName);
-end
+subTileCol = cellfun(@(x) str2num(x{end-1}),subTileName);
+subTileRow = cellfun(@(x) str2num(x{end-2}),subTileName);
 
-%% Get tile projection information, esp. from UTM tile name
+Ncols = max(subTileCol);
+Nrows = max(subTileRow);
+
+% Get tile projection information, esp. from UTM tile name
 %[tileProjName,projection] = getProjName(subTileName{1}{1},projection);
 
-% sort subtilefiles by ascending subtile number order
-[subTileNum,n] = sort(subTileNum);
-subTileFiles = subTileFiles(n);
+% column-wise subtile number
+subTileNum = sub2ind([Nrows,Ncols],subTileRow,subTileCol);
 
-if exist('quadrant','var')
-    fprintf('selecting subtiles in quadrant %s\n',quadrant)
-    % select subtiles by quadrant
-    switch quadrant
-        case lower('1_1') %lower left quadrant
-            n = mod(subTileNum,100) > 0 & mod(subTileNum,100) <= 51 &...
-                subTileNum <= 5151;
-        case lower('2_1') %upper left quadrant
-            n =  (mod(subTileNum,100) == 0 | mod(subTileNum,100) >= 50) &...
-                subTileNum <= 5200;
-        case lower('1_2') %lower right quadrant
-            n = mod(subTileNum,100) > 0 & mod(subTileNum,100) <= 51 &...
-                subTileNum >= 5001;
-        case lower('2_2') %upper right quadrant
-            n =  (mod(subTileNum,100) == 0 | mod(subTileNum,100) >= 50) & subTileNum >= 5050;
-        otherwise
-            error('quadrant string not recognized')
-    end
-    
-    if ~any(n)
-        fprintf('No subtiles within quadrant %s\n',quadrant)
-        return
-    end
-    
-    subTileNum = subTileNum(n);
-    subTileFiles = subTileFiles(n);
-end
+% % sort subtilefiles by ascending subtile number order
+[subTileNum,n] = sort(subTileNum);
+subTileCol = subTileCol(n);
+subTileRow= subTileRow(n);
+subTileFiles = subTileFiles(n);
 
 NsubTileFiles = length(subTileFiles);
 
 % find buffer size from neighboring tiles
 n = diff(subTileNum);
-n(mod(subTileNum(1:end-1),100) == 0) = 0;
+n(mod(subTileNum(1:end-1),Nrows) == 0) = 0; %DEPENDS ON SUBTILE ROW/COLS
 n = find(n == 1,1,'first');
 if ~isempty(n)
     buffcheck1=load(subTileFiles{n},'y');
@@ -156,31 +114,31 @@ else
 end
 
 fprintf('performing coregistration & adjustment between adjoining subtiles\n')
-dZ = getOffsets(subTileFiles,subTileNum,buff,outName);
+dZ = getOffsets(subTileFiles,subTileNum,buff);
 
-
+% if extent of mosaic not specidied, get from tiles at edges
 if ~exist('x0','var')
-    % get extent of mosaic from tiles at edges
-    % lower-left subtile
-    m = matfile(subTileFiles{1});
-    x0 = m.x(1,1);
 
-    % upper-right subtile
-    m = matfile(subTileFiles{end});
-    x1 = m.x(1,end);
-
-    % find upper right subtile from each 100th file
-    mod100subTileNum = mod(subTileNum,100);
-    mod100subTileNum(mod100subTileNum == 0) = 100;
-
-    [~,nMinRow] =  min(mod100subTileNum);
-    m = matfile(subTileFiles{nMinRow});
-    y0 = m.y(end,1);
-
-    [~,nMaxRow] =  max(mod100subTileNum);
-    m = matfile(subTileFiles{nMaxRow});
-    y1 = m.y(1,1);
-
+    % left
+    [~,n] = min(subTileCol);
+    m = matfile(subTileFiles{n(1)});
+    x0 = min(m.x);
+    
+    % right
+    [~,n] = max(subTileCol);
+    m = matfile(subTileFiles{n(1)});
+    x1 = max(m.x);
+    
+     % bottom
+    [~,n] = min(subTileRow);
+    m = matfile(subTileFiles{n(1)});
+    y0 = min(m.y);
+    
+    % top
+    [~,n] = max(subTileRow);
+    m = matfile(subTileFiles{n(1)});
+    y1 = max(m.y);
+    
 end
 
 % make a polyshape out of boundary for checking subtile overlap
@@ -201,7 +159,6 @@ tmin = zeros(length(y),length(x),'uint16');
 
 % initialize subtile count for use in n-weighted alignment
 subtile_n=1;
-
 
 % initialize count of pixels with data in mosaic for error checking
 Nn=0;
@@ -604,200 +561,3 @@ end
     fprintf('Writing meta.txt\n')
     tileMetav4(outName)
 %end
-
-
-function dZ = getOffsets(subTileFiles,subTileNum,buff,outName)
-
-NsubTileFiles = length(subTileFiles);
-
-% output file for coregistration offsets so that we don't need to
-% recalculate them all if we want to change something
-regFile=strrep(outName,'.mat','tileReg.mat');
-
-% check if coregistration file exists and load it if so
-if exist(regFile,'file')
-    load(regFile)
-else
-    % no coregistration file, so calculate all suntile offsets
-    
-    % iteration output variables
-    nrt = nan(NsubTileFiles-1,1);
-    dzup = nan(NsubTileFiles-1,1);
-    dzrt = nan(NsubTileFiles-1,1);
-    dzup_mad = nan(NsubTileFiles-1,1);
-    dzrt_mad = nan(NsubTileFiles-1,1);
-    N=nan(NsubTileFiles,1);
-    
-    parfor n = 1:NsubTileFiles-1
-        
-        fprintf('subtile %d of %d ',n,NsubTileFiles-1)
-        
-        % make sure this subtile has a za_med var
-        if  ~ismember('za_med',who('-file',subTileFiles{n}))
-            fprintf('variable za_med doesn''t exist, skipping\n')
-            continue
-        end
-        
-        m0 = matfile(subTileFiles{n});
-        N(n) = max(max(m0.N));
-        
-        % check if not top row and the up neighbor subtile exists
-        if mod(subTileNum(n),100) ~= 0 && ...
-                subTileNum(n)+1 == subTileNum(n+1)
-            
-            % check up neighbor has za_med var
-            if ismember('za_med',who('-file',subTileFiles{n+1}))
-                
-                % load top buffer of the bottom (nth) subtile of pair
-                % check to make sure buffer is > 10% land
-                l0 = m0.land(2:2*buff,2:end-1);
-                if sum(l0(:))/numel(l0) > 0.1
-                    z0 = m0.za_med(2:2*buff,2:end-1);
-                    z0(~l0) = NaN;
-                    y0 = m0.y(2:2*buff,:);
-                    x0 = m0.x(:,2:end-1);
-                    
-                    % load bottom buffer of the top (nth+1) subtile of pair
-                    m1 = matfile(subTileFiles{n+1});
-                    z1 = m1.za_med(end-(2*buff-1):end-1,2:end-1);
-                    y1 = m1.y(end-(2*buff-1):end-1,:);
-                    x1 = m1.x(:,2:end-1);
-                    
-                    % check dimensions of z0 and z0 buffers consistent
-                    if ~any(y0 ~= y1) && ~any(x0 ~= x1)
-                        dzn = z0(:)-z1(:);
-                        if sum(~isnan(dzn))/numel(dzn) > 0.1
-                            dzup(n) = mynanmedian(dzn);
-                            dzup_mad(n) = mad(dzn,1);
-                        end
-                    else
-                        warning('inconsistent buffers, offset not computed')
-                    end
-                end
-            end
-        end
-        
-        % check right neighbor exists
-        nrtn = find(subTileNum(n)+100 ==  subTileNum);
-        
-        if isempty(nrtn)
-            fprintf('\n')
-            continue
-        end
-        
-        nrt(n) = nrtn;
-        
-        % check right neighbor has za_med var
-        if ismember('za_med',who('-file',subTileFiles{nrt(n)}))
-            
-            % check to make sure buffer is > 10% land
-            l0 = m0.land(2:end-1,end-(2*buff-1):end-1);
-            if sum(l0(:))/numel(l0) > 0.1
-                
-                % load right buffer of the left (nth) subtile of pair
-                z0 = m0.za_med(2:end-1,end-(2*buff-1):end-1);
-                z0(~l0) = NaN;
-                y0 = m0.y(2:end-1,:);
-                x0 = m0.x(:,end-(2*buff-1):end-1);
-                
-                % load left buffer of the right subtile of pair
-                m1 = matfile(subTileFiles{nrt(n)});
-                z1 = m1.za_med(2:end-1,2:(2*buff));
-                y1 = m1.y(2:end-1,:);
-                x1 = m1.x(:,2:(2*buff));
-                
-                % check dimensions of z0 and z0 buffers consistent
-                if ~any(y0 ~= y1) && ~any(x0 ~= x1)
-                    dzn = z0(:)-z1(:);
-                    if sum(~isnan(dzn))/numel(dzn) > 0.1
-                        dzrt(n) = mynanmedian(dzn);
-                        dzrt_mad(n) = mad(dzn,1);
-                    end
-                else
-                    warning('inconsistent buffers, offset not computed')
-                end
-            end
-        end
-        
-        fprintf('\n')
-    end
-    
-    % get N for the last file
-    n = NsubTileFiles;
-    if ismember('N',who('-file',subTileFiles{n}))
-        m0 = matfile(subTileFiles{n});
-        N(n) = max(max(m0.N));
-    end
-    
-    save(regFile,'nrt','dzup','dzrt','dzup_mad','dzrt_mad','N')
-    
-end
-
-% adjustment
-%build pair indexes
-n1 = [(1:NsubTileFiles-1)';(1:NsubTileFiles-1)'];
-n2 = [(2:NsubTileFiles)';nrt];
-
-% concoctenate offsets/errors
-dz = [dzup;dzrt];
-dze = [dzup_mad;dzrt_mad];
-
-% remove nan pairs or with large offsets and/or mad values
-n = any(isnan([n1 n2 dz dze]),2);
-n = n | abs(dz) > 50 | dze > 2;
-
-n1(n) =[];
-n2(n) =[];
-dz(n) =[];
-dze(n) =[];
-
-Npairs = length(n1);
-
-% Build design and weight matrices
-A = zeros(Npairs,NsubTileFiles); % initialize design matrix
-
-linearInd = sub2ind([Npairs NsubTileFiles], (1:Npairs)', n1);
-A(linearInd) = 1;
-linearInd = sub2ind([Npairs NsubTileFiles], (1:Npairs)', n2);
-A(linearInd) = -1;
-
-% locate missing tiles
-n_missing  = ~any(A) | isnan(N)';
-%
-% remove missing tiles
-A(:,n_missing) = [];
-
-% % add delta=0 lines
-A = [A;diag(ones(1,size(A,2)))];
-dz = [dz;zeros(size(A,2),1)];
-% dze = [dze;ones(size(A,2),1).*4];
-
-dze = [ones(size(dze));ones(size(A,2),1).*100];
-
-% dze = ones(size(dze),'single');
-% dze = [dze;1./sqrt(N(~n_missing))];
-
-% calculate weights
-wz = 1./dze.^2;
-
-% build offdset vector
-dZ = nan(NsubTileFiles,1);
-
-fprintf('performing LSQ adjustment\n')
-
-dZ(~n_missing) = (wz.*A)\(wz.*dz);
-
-save(strrep(outName,'.mat','tileReg.mat'),'dZ','-append');
-
-% test correction
-% dz = z0-z1;
-%
-% dzn = (z0-dZ0)-(z1-dZ1);
-%
-% dzn = z0-dZ0-z1+dZ1;
-%
-% dzn = (z0-z1)-dZ0+dZ1;
-%
-% dzn = dz-dZ0+dZ1;
-%
-% dzn = dz - dZ(n1) + dZ(n2);
