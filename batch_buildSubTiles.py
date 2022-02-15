@@ -229,6 +229,9 @@ def main():
 
     args = parser.parse_args()
 
+    if args.chain_mst_no_local and not args.chain_mst:
+        args.chain_mst = True
+
     if os.path.isfile(args.tiles):
         tilelist_file = args.tiles
         with open(tilelist_file, 'r') as tilelist_fp:
