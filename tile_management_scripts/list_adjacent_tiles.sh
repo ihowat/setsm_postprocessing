@@ -17,7 +17,7 @@ while IFS= read -r tile || [ -n "$tile" ]; do
     for i in $((row-1)) $row $((row+1)); do
         for j in $((col-1)) $col $((col+1)); do
             if { (( i == row )) || (( j == col )); } && { (( i > 0 )) && (( j > 0 )); }; then
-                tile_adj=$(printf '%s%02d_%02d' "$utm_prefix" $i $j )
+                tile_adj=$(printf '%s%02d_%02d' "$utm_prefix" "$i" "$j" )
                 echo "$tile_adj"
             fi
         done
