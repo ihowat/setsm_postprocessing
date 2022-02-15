@@ -55,7 +55,7 @@ end
 
 hillshade=strrep(OutDemName,'dem.tif','dem_shade.tif');
 if ~exist(hillshade,'file');
-    system(['gdaldem hillshade -compute_edges -b 1 -of GTiff -co tiled=yes -co compress=lzw -co bigtiff=if_safer ',...
+    system(['gdaldem hillshade -compute_edges -b 1 -of GTiff -co tiled=yes -co compress=lzw -co bigtiff=yes ',...
         OutDemName,' ',hillshade]);
 end
 
