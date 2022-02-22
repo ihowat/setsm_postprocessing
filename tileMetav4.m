@@ -40,7 +40,7 @@ if ~strcmp(f,f0)
 end
 
 % make outname
-outfile=strrep(f0,'.mat','_meta.txt');
+outfile=strrep(f,'.mat','_meta.txt');
 varlist = who(m);
 fileAtts= dir(m.Properties.Source);
 
@@ -95,10 +95,10 @@ if ~isempty(whos(m,'icesat_dz_N'))
 end
 
 fprintf(fid,'Adjacent Tile Blend Status \n');
-fprintf(fid,'Right edge merged: %s\n', mat2str(any(strcmp(varlist,'mergedRight'))));
-fprintf(fid,'Left edge merged: %s\n', mat2str(any(strcmp(varlist,'mergedLeft'))));
-fprintf(fid,'Top edge merged: %s\n', mat2str(any(strcmp(varlist,'mergedTop'))));
-fprintf(fid,'Bottom edge merged: %s\n', mat2str(any(strcmp(varlist,'mergedBottom'))));
+fprintf(fid,'Right edge merged: %s\n', mat2str(any(strcmp(varlist,'mergedRight')) && m.mergedRight));
+fprintf(fid,'Left edge merged: %s\n', mat2str(any(strcmp(varlist,'mergedLeft')) && m.mergedLeft));
+fprintf(fid,'Top edge merged: %s\n', mat2str(any(strcmp(varlist,'mergedTop')) && m.mergedTop));
+fprintf(fid,'Bottom edge merged: %s\n', mat2str(any(strcmp(varlist,'mergedBottom')) && m.mergedBottom));
 fprintf(fid,'\n');
 
 fprintf(fid,'List of DEMs used in mosaic:\n');
