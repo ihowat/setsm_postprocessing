@@ -9,10 +9,22 @@ function fit2is2(tileFileName,is2FileName,varargin)
 m=matfile(tileFileName);
 s=whos(m);
 
+% get the size of z
+sz = s(strcmp({s.name},'z')).size;
+
 if any(strcmp(fields(m),'dzfitApplied'))
-    if m.dzfitApplied==1 && ~any(strcmp(varargin,'overwrite'))
-        fprintf('dzfit already applied, retutning\n')
-        return
+    if m.dzfitApplied==1
+        if ~any(strcmp(varargin,'overwrite'))
+            fprintf('dzfit already applied, returning\n')
+            return
+        elseif any(strcmpi(fields(m),'dzfit'))
+            fprintf('undoing dzfit\n')
+            m.Properties.Writable = true;
+            dzfit = imresize(m.dzfit,sz);
+            m.z = m.z + dzfit;
+            m.dzfitApplied=false;
+            fprintf('proceeding to recalc and reapply dzfit\n')
+        end
     end
 end
 %load is2 data
@@ -33,9 +45,6 @@ end
 m.Properties.Writable = true;
 m.dzfit = dzfit;
 m.sf = sf;
-
-% get the size of z
-sz = s(strcmp({s.name},'z')).size;
 
 % resize dzfit to z
 dzfit = imresize(dzfit,sz);
