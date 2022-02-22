@@ -1,6 +1,15 @@
-function tileNeighborIndexFile=tileNeighborIndex(tileDir)
+function tileNeighborIndexFile=tileNeighborIndex(tileDir,varargin)
 
-fileNames = selectTilesForMerging(tileDir);
+n = find(strcmpi('resolution',varargin));
+if ~isempty(n)
+    resolution = varargin{n+1};
+    use_res_in_outname = true;
+else
+    resolution = '10m';
+    use_res_in_outname = false;
+end
+
+fileNames = selectTilesForMerging(tileDir,'resolution',resolution);
 
 % find neighbors
 [ntop,nright,ntopRight,nbottomRight] = findNeighborTiles(fileNames);
@@ -15,6 +24,10 @@ nN(ntopRight(:,1),6) = ntopRight(:,2); %top-right
 nN(ntopRight(:,2),7) = ntopRight(:,1); %bottom-left
 nN(nbottomRight(:,1),8) = nbottomRight(:,2); %bottom-right
 
-tileNeighborIndexFile=[tileDir,'/tileNeighborIndex.mat'];
+if use_res_in_outname
+    tileNeighborIndexFile=[tileDir,'/tileNeighborIndex_',resolution,'.mat'];
+else
+    tileNeighborIndexFile=[tileDir,'/tileNeighborIndex.mat'];
+end
 fprintf('writing %s\n', tileNeighborIndexFile)
 save(tileNeighborIndexFile,'fileNames','nN')

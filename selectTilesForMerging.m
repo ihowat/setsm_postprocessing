@@ -1,9 +1,16 @@
-function fileNames= selectTilesForMerging(tileDir)
+function fileNames= selectTilesForMerging(tileDir,varargin)
 
 %tileDir='/Users/ihowat/project/howat.4/rema_mosaic/rema_mosaic_v13e';
 
-unregFiles=dir([tileDir,'/*_10m.mat']);
-%unregFiles=dir([tileDir,'/*/*_10m.mat']);
+n = find(strcmpi('resolution',varargin));
+if ~isempty(n)
+    resolution = varargin{n+1};
+else
+    resolution = '10m';
+end
+
+unregFiles=dir([tileDir,'/*_',resolution,'.mat']);
+%unregFiles=dir([tileDir,'/*/*_',resolution,'.mat']);
 unregFiles=fullfile({unregFiles.folder}, {unregFiles.name});
 
 if ~isempty(unregFiles)
@@ -16,8 +23,8 @@ if ~isempty(unregFiles)
     fileNames = [regFiles(n) unregFiles(~n)];
     
 else
-    fileNames=dir([tileDir,'/*_10m_reg.mat']);
-%    fileNames=dir([tileDir,'/*/*_10m_reg.mat']);
+    fileNames=dir([tileDir,'/*_',resolution,'_reg.mat']);
+%    fileNames=dir([tileDir,'/*/*_',resolution,'_reg.mat']);
     fileNames=fullfile({fileNames.folder}, {fileNames.name});
 end
 
