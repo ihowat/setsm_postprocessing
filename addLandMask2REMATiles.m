@@ -11,9 +11,8 @@ function addLandMask2REMATiles(tileDir,tileDefFile,varargin)
 
 
 fileNames=dir([tileDir,'/*_10m.mat']);
-names={fileNames.name};
-fileNames=cellfun( @(x) [tileDir,'/',x],...
-    names,'uniformoutput',0);
+%fileNames=dir([tileDir,'/*/*_10m.mat']);
+fileNames = fullfile({fileNames.folder}, {fileNames.name});
 
 tileDefs=load(tileDefFile);
 if isfield(tileDefs,'I') && ~isfield(tileDefs,'tileName')
