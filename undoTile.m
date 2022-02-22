@@ -23,13 +23,13 @@ end
 %undo dzfit
 if any(strcmpi(fields(m),'dzfit')) 
     %if m.fitted == 1
-    if ~any(strcmpi(fields(m),'dzfitApplied'))
+    if ~any(strcmpi(fields(m),'dzfitApplied')) || m.dzfitApplied == 1
         fprintf('undoing dzfit\n')
         dzfit = imresize(m.dzfit,sz);
         m.z = m.z + dzfit;
         m.dzfitApplied=false;
     else
-        fprintf('dzfitApplied field, no change made\n')
+        fprintf('dzfitApplied flag is zero, no change made\n')
     end
         
 %     else
@@ -43,5 +43,4 @@ end
 
 
     
-        
         
