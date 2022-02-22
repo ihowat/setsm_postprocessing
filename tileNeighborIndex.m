@@ -16,4 +16,5 @@ nN(ntopRight(:,2),7) = ntopRight(:,1); %bottom-left
 nN(nbottomRight(:,1),8) = nbottomRight(:,2); %bottom-right
 
 tileNeighborIndexFile=[tileDir,'/tileNeighborIndex.mat'];
+fprintf('writing %s\n', tileNeighborIndexFile)
 save(tileNeighborIndexFile,'fileNames','nN')

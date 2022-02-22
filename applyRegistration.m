@@ -45,7 +45,7 @@ if ~isempty(registrationFile)
 else
     if ~any(strcmp(fields(m),'reg'))
         warning('no reg field in %s\n',demMatFile)
-        returrn
+        return
     end
     
     regData.reg=m.reg;

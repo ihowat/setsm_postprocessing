@@ -36,7 +36,7 @@ nbottomRight = ntop;
     mnx=(x0+x1)./2;
     mny=(y0+y1)./2;
 
-fprintf('looping thrrough ranges to find neighbors\n')
+fprintf('looping through ranges to find neighbors\n')
 i=1;
 for i=1:length(fileNames)
     %top
@@ -70,4 +70,3 @@ ntopRight(isnan(ntopRight(:,1)),:) = [];
 nbottomRight(isnan(nbottomRight(:,1)),:) = [];
 
 
-    

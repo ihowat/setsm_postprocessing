@@ -12,7 +12,7 @@ load(tileNeighborIndexFile,'fileNames','nN');
 indTopExists = find(~isnan(nN(:,1)));
 indRightExists = find(~isnan(nN(:,4)));
 
-% concoctenate vectors of indices of bottom/top and left/right pairs
+% concatenate vectors of indices of bottom/top and left/right pairs
 n0 =[indTopExists; indRightExists]; %[bottom file0; left file0] 
 n1 = [nN(indTopExists,1); nN(indRightExists,4)]; %[top file1; right file1]
 
