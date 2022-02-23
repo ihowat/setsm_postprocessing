@@ -1,4 +1,4 @@
-function applyDzTo2m(fileNames,dir2m)
+function applyDzfitTo2m(fileNames,dir2m)
 % applyDzfitTo2m apply the dzfit field from 10m to its 2m quad tiles
 %
 % applyDzfitTo2m(fileNames,dir2m) with the 10m files containing the dzfit
@@ -11,25 +11,30 @@ if ~iscell(fileNames)
     fileNames={fileNames};
 end
 
+dir2m_arg = dir2m;
+
 
 % loop through files (can be done in parallel)
 i=1;
 for i=1:length(fileNames)
     
     % get 10m file name
-    fileName=fileNames{i};
+    fileName10m=fileNames{i};
     
-    [~,name]= fileparts(fileName);
-    
-    fileNames2m = {[dir2m,'/',strrep(name,'10m_reg','1_1_2m_reg.mat')],...
-                   [dir2m,'/',strrep(name,'10m_reg','1_2_2m_reg.mat')],...
-                   [dir2m,'/',strrep(name,'10m_reg','2_1_2m_reg.mat')],...
-                   [dir2m,'/',strrep(name,'10m_reg','2_2_2m_reg.mat')]};
+    [tiledir,filename10m_base,filename10m_ext]= fileparts(fileName10m);
+
+    if isempty(dir2m_arg)
+        dir2m = tiledir;
+    end
+    fileNames2m = {[dir2m,'/',strrep(filename10m_base,'10m_reg','1_1_2m_reg.mat')],...
+                   [dir2m,'/',strrep(filename10m_base,'10m_reg','1_2_2m_reg.mat')],...
+                   [dir2m,'/',strrep(filename10m_base,'10m_reg','2_1_2m_reg.mat')],...
+                   [dir2m,'/',strrep(filename10m_base,'10m_reg','2_2_2m_reg.mat')]};
     
     n = cellfun( @exist, fileNames2m);
     
     if ~any(n)
-        warning('no 2m files found for %s',fileName)
+        warning('no 2m files found for %s',fileName10m)
         continue
     end
     
@@ -73,6 +78,5 @@ end
     
     
         
-    
     
     

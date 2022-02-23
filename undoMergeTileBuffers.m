@@ -13,37 +13,57 @@ end
 %%
 i=1;
 for i =1:length(fileNames)
-    fprintf('De-buffering %s\n',fileNames{i})
-    m=matfile(fileNames{i});
-    
-    m.Properties.Writable = true;
-    
+    check_file = fileNames{i};
+    if ~isfile(check_file)
+        error('Source file does not exist: %s\n', check_file)
+    end
+
+    m = matfile(check_file);
+
+    varlist = who(m);
+    if ~any(strcmp(varlist,'zbuff'))
+        fprintf('Tile has not been merged, skipping %s\n', check_file)
+        continue
+    end
+
     zbuff = m.zbuff;
-    
-    if m.mergedTop
-        m.z(1:21,:) = zbuff{1};
+
+    if all(cellfun(@(x) isempty(x), zbuff))
+        fprintf('Tile zbuff is empty, skipping %s\n', check_file)
+        continue
+    end
+
+    fprintf('De-buffering %s\n',check_file)
+
+    m.Properties.Writable = true;
+
+    if any(strcmp(varlist,'mergedTop')) && m.mergedTop
+        [nrows,~]=size(zbuff{1});
+        m.z(1:nrows,:) = zbuff{1};
         m.mergedTop = false;
     end
-    
-    if m.mergedBottom
-        m.z(end-20:end,:) = zbuff{2};
+
+    if any(strcmp(varlist,'mergedBottom')) && m.mergedBottom
+        [nrows,~]=size(zbuff{2});
+        m.z(end-(nrows-1):end,:) = zbuff{2};
         m.mergedBottom=false;
     end
-    
-    if m.mergedLeft
-        m.z(:,1:21) = zbuff{3};
+
+    if any(strcmp(varlist,'mergedLeft')) && m.mergedLeft
+        [~,ncols]=size(zbuff{3});
+        m.z(:,1:ncols) = zbuff{3};
         m.mergedLeft=false;
     end
-    
-    if m.mergedRight
-        m.z(:,end-20:end) = zbuff{4};
+
+    if any(strcmp(varlist,'mergedRight')) && m.mergedRight
+        [~,ncols]=size(zbuff{4});
+        m.z(:,end-(ncols-1):end) = zbuff{4};
         m.mergedRight=false;
     end
-    
+
     m.zbuff = cell(4,1);
-    
+
 end
 
-        
-        
-        
+
+

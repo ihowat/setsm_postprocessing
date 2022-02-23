@@ -16,8 +16,9 @@ if length(varargin) == 2
 end
 
 tileFiles = dir([tileDir,'/*_10m.mat']);
+%tileFiles = dir([tileDir,'/*/*_10m.mat']);
 tileNames = {tileFiles.name};
-tileFiles = cellfun( @(x) [tileDir,'/',x], tileNames,'uniformoutput',0);
+tileFiles = fullfile({tileFiles.folder}, tileNames);
 tileNames = strrep(tileNames,'_10m.mat','');
 
 tileFiles=tileFiles(:);
