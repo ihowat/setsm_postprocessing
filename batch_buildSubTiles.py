@@ -92,9 +92,9 @@ project_tileDefFile_dict = {
 }
 
 project_databaseFile_dict = {
-    'arcticdem': '/mnt/pgc/data/projects/earthdem/strip_databases/ArcticDEMdatabase4_2m_v4_20210610_terrnva-paths.mat',
+    'arcticdem': '/scratch/sciteam/GS_bazu/mosaic_data/strip_databases/ArcticDEMdatabase4_2m_v4_20210817.mat',
     'rema':      '/mnt/pgc/data/projects/earthdem/strip_databases/rema_strips_v13e.shp',
-    'earthdem':  '/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4_20210101_vida-paths.mat',
+    'earthdem':  '/scratch/sciteam/GS_bazu/mosaic_data/strip_databases/EarthDEMdatabase4_2m_v4_20211014.mat',
 }
 project_waterTileDir_dict = {
     'arcticdem': '/mnt/pgc/data/projects/arcticdem/watermasks/',
