@@ -12,6 +12,10 @@ res=2;
 dbase_in='';
 dbase_out='/scratch/sciteam/GS_bazu/mosaic_data/strip_databases/ArcticDEMdatabase4_2m_v4_20210817_north.mat';
 
+stripFilePrefix='SETSM_s2s041_';
+%stripOrg='strips_v4';
+stripOrg='strips_v4.1';
+
 bwpy_prefix='';
 
 reproject_list = strrep(dbase_out, '.mat', '_reproject_list.txt');
@@ -38,41 +42,41 @@ report_number_of_strips_to_append_but_dont_actually_append = false;
 %%% CHECK THIS SETTING %%%
 
 regionDirs=[
-%    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_*/strips_v4/2m*'),
-%    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_*/strips_v4/2m*'),
-%    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/REMA/region/rema_*/strips_v4/2m*'),
+%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_*/',stripOrg,'/2m*']),
+%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_*/',stripOrg,'/2m*']),
+%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/REMA/region/rema_*/',stripOrg,'/2m*']),
 
-    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_04_greenland_central/strips_v4/2m*'),
-    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_05_greenland_northeast/strips_v4/2m*'),
-    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_06_greenland_northwest/strips_v4/2m*'),
-    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_07_canada_ellesmere/strips_v4/2m*'),
-    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_09_canada_victoria/strips_v4/2m*'),
-    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_10_canada_north_mainland/strips_v4/2m*'),
-    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_14_svalbard/strips_v4/2m*'),
-    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_15_russia_novaya_zemlya/strips_v4/2m*'),
-    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_18_russia_cherskly/strips_v4/2m*'),
-    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_21_russia_yakutiya_east/strips_v4/2m*'),
-    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_23_russia_yakutiya_west/strips_v4/2m*'),
-    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_25_russia_norilsk/strips_v4/2m*'),
-    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_27_russia_murmansk/strips_v4/2m*'),
-    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_29_russia_franz_josef/strips_v4/2m*'),
-    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_30_russia_siberian_islands/strips_v4/2m*'),
-    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_34_alaska_north/strips_v4/2m*'),
+    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_04_greenland_central/',stripOrg,'/2m*']),
+    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_05_greenland_northeast/',stripOrg,'/2m*']),
+    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_06_greenland_northwest/',stripOrg,'/2m*']),
+    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_07_canada_ellesmere/',stripOrg,'/2m*']),
+    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_09_canada_victoria/',stripOrg,'/2m*']),
+    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_10_canada_north_mainland/',stripOrg,'/2m*']),
+    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_14_svalbard/',stripOrg,'/2m*']),
+    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_15_russia_novaya_zemlya/',stripOrg,'/2m*']),
+    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_18_russia_cherskly/',stripOrg,'/2m*']),
+    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_21_russia_yakutiya_east/',stripOrg,'/2m*']),
+    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_23_russia_yakutiya_west/',stripOrg,'/2m*']),
+    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_25_russia_norilsk/',stripOrg,'/2m*']),
+    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_27_russia_murmansk/',stripOrg,'/2m*']),
+    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_29_russia_franz_josef/',stripOrg,'/2m*']),
+    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_30_russia_siberian_islands/',stripOrg,'/2m*']),
+    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_34_alaska_north/',stripOrg,'/2m*']),
 
-%    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_01_iceland/strips_v4/2m*'),
-%    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_02_greenland_southeast/strips_v4/2m*'),
-%    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_03_greenland_southwest/strips_v4/2m*'),
-%    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_08_canada_baffin/strips_v4/2m*'),
-%    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_11_canada_north_hudson/strips_v4/2m*'),
-%    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_12_canada_south_nwt/strips_v4/2m*'),
-%    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_19_russia_magadanskaya/strips_v4/2m*'),
-%    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_20_russia_kamchatka/strips_v4/2m*'),
-%    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_22_russia_central_east/strips_v4/2m*'),
-%    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_24_russia_central_west/strips_v4/2m*'),
-%    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_26_russia_petersburg/strips_v4/2m*'),
-%    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_28_scandinavia/strips_v4/2m*'),
-%    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_31_alaska_south/strips_v4/2m*'),
-%    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_*/strips_v4/2m_psn*'),
+%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_01_iceland/',stripOrg,'/2m*']),
+%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_02_greenland_southeast/',stripOrg,'/2m*']),
+%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_03_greenland_southwest/',stripOrg,'/2m*']),
+%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_08_canada_baffin/',stripOrg,'/2m*']),
+%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_11_canada_north_hudson/',stripOrg,'/2m*']),
+%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_12_canada_south_nwt/',stripOrg,'/2m*']),
+%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_19_russia_magadanskaya/',stripOrg,'/2m*']),
+%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_20_russia_kamchatka/',stripOrg,'/2m*']),
+%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_22_russia_central_east/',stripOrg,'/2m*']),
+%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_24_russia_central_west/',stripOrg,'/2m*']),
+%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_26_russia_petersburg/',stripOrg,'/2m*']),
+%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_28_scandinavia/',stripOrg,'/2m*']),
+%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_31_alaska_south/',stripOrg,'/2m*']),
+%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_*/',stripOrg,'/2m_psn*']),
 ];
 regionDirs=regionDirs([regionDirs.isdir]);
 regionDirs=cellfun(@(regionDir, regionName) [regionDir,'/',regionName], {regionDirs.folder}, {regionDirs.name},...
@@ -208,7 +212,7 @@ for i=1:length(regionDirs)
             [~,stripDnames,~] = cellfun(@fileparts, stripDirs, 'UniformOutput', false);
 
             stripDirs_miss_fin_ind = cellfun(@(x, y) ~isfile([x,'/',y,'.fin']), stripDirs, stripDnames);
-            stripDirs_miss_data_ind = cellfun(@(x, y) ~isfile([x,'/',regexprep(y,'_v\d{6}',''),'_seg1_dem.tif']), stripDirs, stripDnames);
+            stripDirs_miss_data_ind = cellfun(@(x, y) ~isfile([x,'/',stripFilePrefix,regexprep(y,'_v\d{6}',''),'_seg1_dem.tif']), stripDirs, stripDnames);
 
             missing_fin_count = nnz(stripDirs_miss_fin_ind);
             if missing_fin_count > 0
@@ -333,7 +337,7 @@ for i=1:length(regionDirs)
                         end
 
                         if reproject_strip
-                            metaFile_reproj = strrep(metaFile, 'strips_v4/2m', ['strips_v4/2m_',mosaic_zone_ms.name]);
+                            metaFile_reproj = strrep(metaFile, [stripOrg,'/2m'], [stripOrg,'/2m_',mosaic_zone_ms.name]);
                             if ~isfile(metaFile_reproj)
                                 fprintf(reproject_list_fp, "%s %s %d\n", metaFile, mosaic_zone_ms.name, mosaic_zone_ms.epsg);
                             end
