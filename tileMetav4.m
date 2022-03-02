@@ -40,7 +40,7 @@ if ~strcmp(f,f0)
 end
 
 % make outname
-outfile=strrep(f,'.mat','_meta.txt');
+outfile=strrep(f0,'.mat','_meta.txt');
 varlist = who(m);
 fileAtts= dir(m.Properties.Source);
 
