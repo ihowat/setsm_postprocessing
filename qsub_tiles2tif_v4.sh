@@ -4,7 +4,7 @@
 #PBS -m n
 #PBS -k oe
 #PBS -j oe
-#PBS -q old
+#PBS -q batch
 
 echo ________________________________________________________
 echo
@@ -36,7 +36,8 @@ echo
 
 cd $PBS_O_WORKDIR
 
-module load gdal/2.1.3
+#module load gdal/2.1.3
+source ~/.bashrc; conda activate pgc
 module load matlab/2019a
 
 echo $p1
@@ -47,7 +48,7 @@ echo $p5
 
 if [ "${p5}" == "false" ]; then
     echo "Building tifs and meta files"
-    cmd="addpath('${p1}'); addpath('${p4}'); writeTileToTifv4('${p2}','${p3}'); tileMetav4('${p2}'); exit"
+    cmd="addpath('${p1}'); addpath('${p4}'); writeTileToTifv4('${p2}','${p3}','outRasterType','COG'); tileMetav4('${p2}'); exit"
 
 else
     echo "Building meta files only"
