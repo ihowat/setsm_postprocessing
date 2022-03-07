@@ -49,11 +49,15 @@ if ~isempty(n)
     fprintf('Version: %s\n', version)
 end
 
-n = find(strcmpi('exportTif',varargin));
+n = find(strcmpi('outRasterType',varargin));
 if ~isempty(n)
-    exportTif = varargin{n+1};
+    outRasterType = varargin{n+1};
 else
-    exportTif = true;
+    outRasterType = 'GTiff';
+end
+outRasterType_choices = {'browse', 'GTiff', 'COG'};
+if ~strcmp(outRasterType, outRasterType_choices)
+    error("'outRasterType' must be one of the following: {'%s'}", strjoin(outRasterType_choices, "', '"))
 end
 
 n = find(strcmpi('extent',varargin));
@@ -552,7 +556,7 @@ else
 end
 
 % use the tile cropping logic from writeTileToTifv4
-writeTileToTifv4(outName, projection, 'browseOnly', ~exportTif)
+writeTileToTifv4(outName, projection, 'outRasterType', outRasterType)
 
 %% write tiff files
 %z(isnan(z)) = -9999;
@@ -600,7 +604,7 @@ if exist('quadrant','var')
 else
     addInfoToSubtileMosaic(subTileDir,dx,outName);
 end
-%if ~browseOnly
+%if outRasterType ~= 'browse'
     fprintf('Writing meta.txt\n')
     tileMetav4(outName)
 %end
