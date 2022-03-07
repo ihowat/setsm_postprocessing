@@ -229,7 +229,7 @@ def main():
 
     args = parser.parse_args()
 
-    if args.chain_mst_no_local and not args.chain_mst:
+    if args.chain_mst_no_local or args.chain_mst_keep_subtiles:
         args.chain_mst = True
 
     if os.path.isfile(args.tiles):

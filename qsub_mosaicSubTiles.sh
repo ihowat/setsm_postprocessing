@@ -306,15 +306,19 @@ echo
 
 tileRegFile="${outMatFile/.mat/tileReg.mat}"
 tileMetaFile="${outMatFile/.mat/_meta.txt}"
-if [ "$exportTif" = false ] && { [ -f "$tileRegFile" ] || [ -f "$tileMetaFile" ]; }; then
-    echo "Removing unneeded tile result metadata files, since 'exportTif' argument is false"
-    if [ -f "$tileRegFile" ]; then
-        rm -vf "$tileRegFile"
-    fi
-    if [ -f "$tileMetaFile" ]; then
-        rm -vf "$tileMetaFile"
-    fi
-    echo
+#if [ "$exportTif" = false ] && { [ -f "$tileRegFile" ] || [ -f "$tileMetaFile" ]; }; then
+#    echo "Removing unneeded tile result metadata files, since 'exportTif' argument is false"
+#    if [ -f "$tileRegFile" ]; then
+#        rm -vf "$tileRegFile"
+#    fi
+#    if [ -f "$tileMetaFile" ]; then
+#        rm -vf "$tileMetaFile"
+#    fi
+#    echo
+#fi
+if [ -f "$tileRegFile" ]; then
+    echo "Removing unwanted tile registration matfile"
+    rm -v "$tileRegFile"
 fi
 
 
