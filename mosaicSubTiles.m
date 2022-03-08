@@ -133,12 +133,12 @@ if exist('quadrant','var')
         otherwise
             error('quadrant string not recognized')
     end
-    
+
     if ~any(n)
         fprintf('No subtiles within quadrant %s\n',quadrant)
         return
     end
-    
+
     subTileNum = subTileNum(n);
     subTileFiles = subTileFiles(n);
 end
@@ -623,7 +623,7 @@ if exist(regFile,'file')
     load(regFile)
 else
     % no coregistration file, so calculate all suntile offsets
-    
+
     % iteration output variables
     nrt = nan(NsubTileFiles-1,1);
     dzup = nan(NsubTileFiles-1,1);
@@ -631,27 +631,27 @@ else
     dzup_mad = nan(NsubTileFiles-1,1);
     dzrt_mad = nan(NsubTileFiles-1,1);
     N=nan(NsubTileFiles,1);
-    
+
     parfor n = 1:NsubTileFiles-1
-        
+
         fprintf('subtile %d of %d ',n,NsubTileFiles-1)
-        
+
         % make sure this subtile has a za_med var
         if  ~ismember('za_med',who('-file',subTileFiles{n}))
             fprintf('variable za_med doesn''t exist, skipping\n')
             continue
         end
-        
+
         m0 = matfile(subTileFiles{n});
         N(n) = max(max(m0.N));
-        
+
         % check if not top row and the up neighbor subtile exists
         if mod(subTileNum(n),100) ~= 0 && ...
                 subTileNum(n)+1 == subTileNum(n+1)
-            
+
             % check up neighbor has za_med var
             if ismember('za_med',who('-file',subTileFiles{n+1}))
-                
+
                 % load top buffer of the bottom (nth) subtile of pair
                 % check to make sure buffer is > 10% land
                 l0 = m0.land(2:2*buff,2:end-1);
@@ -660,13 +660,13 @@ else
                     z0(~l0) = NaN;
                     y0 = m0.y(2:2*buff,:);
                     x0 = m0.x(:,2:end-1);
-                    
+
                     % load bottom buffer of the top (nth+1) subtile of pair
                     m1 = matfile(subTileFiles{n+1});
                     z1 = m1.za_med(end-(2*buff-1):end-1,2:end-1);
                     y1 = m1.y(end-(2*buff-1):end-1,:);
                     x1 = m1.x(:,2:end-1);
-                    
+
                     % check dimensions of z0 and z0 buffers consistent
                     if ~any(y0 ~= y1) && ~any(x0 ~= x1)
                         dzn = z0(:)-z1(:);
@@ -680,36 +680,36 @@ else
                 end
             end
         end
-        
+
         % check right neighbor exists
         nrtn = find(subTileNum(n)+100 ==  subTileNum);
-        
+
         if isempty(nrtn)
             fprintf('\n')
             continue
         end
-        
+
         nrt(n) = nrtn;
-        
+
         % check right neighbor has za_med var
         if ismember('za_med',who('-file',subTileFiles{nrt(n)}))
-            
+
             % check to make sure buffer is > 10% land
             l0 = m0.land(2:end-1,end-(2*buff-1):end-1);
             if sum(l0(:))/numel(l0) > 0.1
-                
+
                 % load right buffer of the left (nth) subtile of pair
                 z0 = m0.za_med(2:end-1,end-(2*buff-1):end-1);
                 z0(~l0) = NaN;
                 y0 = m0.y(2:end-1,:);
                 x0 = m0.x(:,end-(2*buff-1):end-1);
-                
+
                 % load left buffer of the right subtile of pair
                 m1 = matfile(subTileFiles{nrt(n)});
                 z1 = m1.za_med(2:end-1,2:(2*buff));
                 y1 = m1.y(2:end-1,:);
                 x1 = m1.x(:,2:(2*buff));
-                
+
                 % check dimensions of z0 and z0 buffers consistent
                 if ~any(y0 ~= y1) && ~any(x0 ~= x1)
                     dzn = z0(:)-z1(:);
@@ -722,19 +722,19 @@ else
                 end
             end
         end
-        
+
         fprintf('\n')
     end
-    
+
     % get N for the last file
     n = NsubTileFiles;
     if ismember('N',who('-file',subTileFiles{n}))
         m0 = matfile(subTileFiles{n});
         N(n) = max(max(m0.N));
     end
-    
+
     save(regFile,'nrt','dzup','dzrt','dzup_mad','dzrt_mad','N')
-    
+
 end
 
 % adjustment
