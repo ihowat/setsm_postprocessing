@@ -32,8 +32,8 @@ if isfile(reproject_list) && ~isfile([reproject_list,'.bak'])
 end
 reproject_list_fp = fopen(reproject_list, 'wt');
 
-%mosaic_zones_shp = '/mnt/pgc/data/projects/earthdem/EarthDEM_mosaic_zones_v4.shp';
-mosaic_zones_shp = 'EarthDEM_mosaic_zones_v4.shp';
+%mosaic_zones_shp = '/mnt/pgc/data/projects/earthdem/EarthDEM_mosaic_zones_v2.shp';
+mosaic_zones_shp = 'EarthDEM_mosaic_zones_v2.shp';
 mosaic_zones_mapstruct = shaperead(mosaic_zones_shp);
 %mosaic_zones_mapstruct = shaperead(mosaic_zones_shp, 'UseGeoCoords',true);
 mosaic_zones_polyshape_arr = arrayfun(@(feat) polyshape(feat.X, feat.Y), mosaic_zones_mapstruct);
