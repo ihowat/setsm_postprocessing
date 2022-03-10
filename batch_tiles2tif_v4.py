@@ -35,6 +35,8 @@ def main():
             help="path to referenced Matlab functions (default={}".format(matlab_scripts))
     parser.add_argument("--pbs", action='store_true', default=False,
             help="submit tasks to PBS")
+    parser.add_argument("--hold", action='store_true', default=False,
+            help="when submitting PBS jobs, submit them with held (H) status")
     parser.add_argument("--qsubscript",
             help="qsub script to use in PBS submission (default is {} in script root folder)".format(default_qsub))
     parser.add_argument("--dryrun", action='store_true', default=False,
@@ -137,7 +139,8 @@ def main():
                     i+=1
                     if args.pbs:
                         job_name = 't2t_{}'.format(tq)
-                        cmd = r'qsub -N {} -v p1={},p2={},p3="{}",p4={},p5={} {}'.format(
+                        cmd = r'qsub {} -N {} -v p1={},p2={},p3="{}",p4={},p5={} {}'.format(
+                            '-h' if args.hold else '',
                             job_name,
                             scriptdir,
                             matfile,
