@@ -232,8 +232,10 @@ def main():
     if args.chain_mst_no_local or args.chain_mst_keep_subtiles:
         args.chain_mst = True
 
-    if os.path.isfile(args.tiles):
+    if args.tiles.lower().endswith(('.txt', '.csv')) or os.path.isfile(args.tiles):
         tilelist_file = args.tiles
+        if not os.path.isfile(args.tiles):
+            parser.error("'tiles' argument tilelist file does not exist: {}".format(tilelist_file))
         with open(tilelist_file, 'r') as tilelist_fp:
             tiles = [line for line in tilelist_fp.read().splitlines() if line != '']
     else:

@@ -36,8 +36,10 @@ def main():
 
     args = parser.parse_args()
 
-    if os.path.isfile(args.tiles):
+    if args.tiles.lower().endswith(('.txt', '.csv')) or os.path.isfile(args.tiles):
         tilelist_file = args.tiles
+        if not os.path.isfile(args.tiles):
+            parser.error("'tiles' argument tilelist file does not exist: {}".format(tilelist_file))
         with open(tilelist_file, 'r') as tilelist_fp:
             tiles = [line for line in tilelist_fp.read().splitlines() if line != '']
     else:
