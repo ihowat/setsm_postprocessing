@@ -157,7 +157,7 @@ def main():
                                 matfile,
                             )
                         else:
-                            cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); writeTileToTifv4('{2}','{3}'); tileMetav4('{2}'); exit" """.format(
+                            cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); writeTileToTifv4('{2}','{3}','outRasterType','COG'); tileMetav4('{2}'); exit" """.format(
                                 scriptdir,
                                 args.lib_path,
                                 matfile,
