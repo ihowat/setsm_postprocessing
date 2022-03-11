@@ -1,8 +1,25 @@
 
 import os
 import sys
+import traceback
+import warnings
 
 from osgeo import gdal, osr
+
+
+## GDAL error handler setup
+def GdalErrorHandler(err_level, err_no, err_msg):
+    error_message = (
+        "Caught GDAL error (err_level={}, err_no={}) "
+        "where level >= gdal.CE_Warning({}); error message below:\n{}".format(
+            err_level, err_no, gdal.CE_Warning, err_msg
+        )
+    )
+    if err_level == gdal.CE_Warning:
+        warnings.warn(error_message)
+    if err_level > gdal.CE_Warning:
+        raise RuntimeError(error_message)
+gdal.PushErrorHandler(GdalErrorHandler)
 gdal.UseExceptions()
 
 
@@ -40,13 +57,13 @@ try:
             # Not all projections are the same, return 1
             sys.exit(1)
         elif compare_result != 1:
-            eprint("ERROR: Result of IsSame in proj_issame.py ({}) is not 0 or 1".format(compare_result))
-            eprint("Returning with exit code 2")
-            sys.exit(2)
+            raise RuntimeError("ERROR: Result of IsSame in proj_issame.py ({}) is not 0 or 1".format(compare_result))
 
 except Exception as e:
-    eprint("CAUGHT EXCEPTION in proj_issame.py: '{}'".format(e))
-    eprint("Returning with exit code 2")
+    eprint("CAUGHT EXCEPTION in proj_issame.py, returning with exit status 2")
+    eprint("\nScript arguments were as follows:\n  \"{}\"".format('" "'.join(sys.argv)))
+    eprint("\nError trace is as follows:\n")
+    traceback.print_exc()
     sys.exit(2)
 
 
