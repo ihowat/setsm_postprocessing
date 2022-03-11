@@ -9,7 +9,7 @@ else
     outRasterType = 'GTiff';
 end
 outRasterType_choices = {'browse', 'GTiff', 'COG'};
-if ~strcmp(outRasterType, outRasterType_choices)
+if ~any(strcmp(outRasterType, outRasterType_choices))
     error("'outRasterType' must be one of the following: {'%s'}", strjoin(outRasterType_choices, "', '"))
 end
 

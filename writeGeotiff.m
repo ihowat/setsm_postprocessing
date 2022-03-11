@@ -30,7 +30,7 @@ else
     out_format = 'GTiff';
 end
 out_format_choices = {'GTiff', 'COG'};
-if ~strcmp(out_format, out_format_choices)
+if ~any(strcmp(out_format, out_format_choices))
     error("'out_format' must be one of the following: {'%s'}", strjoin(out_format_choices, "', '"))
 end
 
@@ -54,7 +54,7 @@ elseif strcmp(out_format, 'COG')
     % See https://gdal.org/drivers/raster/cog.html#general-creation-options
     co_predictor_choices = {'NO', 'STANDARD', 'FLOATING_POINT', 'YES'};
 end
-if ~strcmp(out_format, out_format_choices)
+if ~any(strcmp(out_format, out_format_choices))
     error("'co_predictor' must be one of the following: {'%s'}", strjoin(co_predictor_choices, "', '"))
 end
 
