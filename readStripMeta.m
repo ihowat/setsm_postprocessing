@@ -37,8 +37,15 @@ for it=1:length(C)
     
     if isempty(n); continue; end
     
-    name{cnt}=deblank(lower(c(1:n(1)-1)));
-    val{cnt}=deblank(lower(c(n(1)+1:end)));
+    it_name=deblank(lower(c(1:n(1)-1)));
+    it_val=deblank(c(n(1)+1:end));
+
+    name{cnt}=it_name;
+    if strcmp(it_name,'strip projection (proj4)')
+        val{cnt}=it_val;
+    else
+        val{cnt}=lower(it_val);
+    end
     
     % convert numeric vals to nums. warning off due to character length
     % warnings.
@@ -71,6 +78,11 @@ val(n)=strrep(val(n),'fri','');
 val(n)=strrep(val(n),'sat','');
 val(n)=strrep(val(n),'sun','');
 val(n)=cellfun(@datenum,val(n),'uniformoutput',0);
+
+% Fix potential proj4 format issues
+n=find(strcmp(name,'strip_projection_proj4'));
+val(n)=strrep(val(n),'+datum=wgs84','+datum=WGS84');
+
 
 % locate and break out scene metadata
 scene_num=1;
