@@ -6,6 +6,9 @@ import warnings
 
 from osgeo import gdal, osr
 
+gdal.UseExceptions()
+osr.UseExceptions()
+
 
 ## GDAL error handler setup
 def GdalErrorHandler(err_level, err_no, err_msg):
@@ -41,12 +44,20 @@ try:
             srs_compare.ImportFromWkt(raster_ds.GetProjectionRef())
 
         elif item.startswith('EPSG:') or item.isdigit():
-            epsg_code = item
-            srs_compare.ImportFromEPSG(int(epsg_code.replace('EPSG:', '')))
+            epsg_int = int(item.replace('EPSG:', ''))
+            rc = srs_compare.ImportFromEPSG(epsg_int)
+            if rc != 0:
+                raise RuntimeError(
+                    "ERROR: Non-zero return code ({}) from ImportFromEPSG({})".format(rc, epsg_int)
+                )
 
         else:
             proj4_str = item
-            srs_compare.ImportFromProj4(proj4_str)
+            rc = srs_compare.ImportFromProj4(proj4_str)
+            if rc != 0:
+                raise RuntimeError(
+                    "ERROR: Non-zero return code ({}) from ImportFromProj4('{}')".format(rc, proj4_str)
+                )
 
         if srs_base is None:
             srs_base = srs_compare
@@ -57,7 +68,7 @@ try:
             # Not all projections are the same, return 1
             sys.exit(1)
         elif compare_result != 1:
-            raise RuntimeError("ERROR: Result of IsSame in proj_issame.py ({}) is not 0 or 1".format(compare_result))
+            raise RuntimeError("ERROR: Return code from IsSame() in proj_issame.py ({}) is not 0 or 1".format(compare_result))
 
 except Exception as e:
     eprint("CAUGHT EXCEPTION in proj_issame.py, returning with exit status 2")
