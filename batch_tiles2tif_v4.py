@@ -110,7 +110,7 @@ def main():
                     run_tile = False
 
                 elif not args.meta_only and os.path.isfile(dstfp):
-                    if args.rerun:
+                    if args.rerun or not os.path.isfile(metafp):
                         dstfps_old_pattern = [
                             dstfp.replace('_dem.tif', '*.tif'),
                             metafp
