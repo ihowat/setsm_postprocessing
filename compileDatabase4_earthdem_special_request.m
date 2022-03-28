@@ -10,16 +10,21 @@ end
 res=2;
 %dbase_in =[homeDir,'/data4/REMA/polarDEMdatabase_',num2str(res),'m.mat'];
 %dbase_out = '/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4_20220228_equator-tiles.mat';
-dbase_in  = '/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4_20220228_equator-tiles.mat';
-dbase_out = '/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4_20220228_equator-tiles_plus-reproj.mat';
+%dbase_in  = '/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4_20220228_equator-tiles.mat';
+%dbase_out = '/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4_20220228_equator-tiles_plus-reproj.mat';
 
 %%dbase_out = '/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4_20220228_nga-asap-tiles.mat';
 %dbase_in  = '/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4_20220228_nga-asap-tiles.mat';
 %dbase_out = '/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4_20220228_nga-asap-tiles_plus-reproj.mat';
 
+dbase_out = '/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4_20220315_nga-corrupt-tiles.mat';
+%dbase_in  = '/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4_20220315_nga-corrupt-tiles.mat';
+%dbase_out = '/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4_20220315_nga-corrupt-tiles_plus-reproj.mat';
+
 stripFilePrefix='SETSM_s2s041_';
-stripOrg='strips_v4.1_equator';
+%stripOrg='strips_v4.1_equator';
 %stripOrg='strips_v4.1_nga-asap';
+stripOrg='strips_v4.1_nga-corrupt';
 
 bwpy_prefix='';
 
