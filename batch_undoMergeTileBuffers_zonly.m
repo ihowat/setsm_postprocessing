@@ -1,4 +1,4 @@
-function undoMergeTileBuffers(fileNames)
+function undoMergeTileBuffers_zonly(fileNames)
 % undoMergeTileBuffers reverts the tile edge buffers to the original values
 %
 % undoMergeTileBuffers(fileNames) replaces the merged tile buffers, created
