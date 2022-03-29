@@ -15,7 +15,6 @@ def main():
     ## args
     parser = argparse.ArgumentParser()
     parser.add_argument("dstdir", help="target directory")
-    parser.add_argument("dimension", choices=['row','column'], help="dimension on which to group tiles for merging")
     parser.add_argument("tiles",
         help=' '.join([
             "list of mosaic tiles; either specified on command line (comma delimited),",
@@ -23,6 +22,7 @@ def main():
         ])
     )
     parser.add_argument("res", choices=RESOLUTIONS, help="resolution ({})".format(','.join(RESOLUTIONS)))
+    parser.add_argument("dimension", choices=['row','column'], help="dimension on which to group tiles for merging")
     parser.add_argument("--lib-path", default=matlab_scripts,
             help="path to referenced Matlab functions (default={}".format(matlab_scripts))
     parser.add_argument("--pbs", action='store_true', default=False,
