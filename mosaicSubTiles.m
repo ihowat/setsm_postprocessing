@@ -53,9 +53,9 @@ n = find(strcmpi('outRasterType',varargin));
 if ~isempty(n)
     outRasterType = varargin{n+1};
 else
-    outRasterType = 'GTiff';
+    outRasterType = 'full-LZW';
 end
-outRasterType_choices = {'browse', 'GTiff', 'COG'};
+outRasterType_choices = {'browse-LZW', 'browse-COG', 'full-LZW', 'full-COG'};
 if ~any(strcmp(outRasterType, outRasterType_choices))
     error("'outRasterType' must be one of the following: {'%s'}", strjoin(outRasterType_choices, "', '"))
 end
