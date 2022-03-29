@@ -45,14 +45,15 @@ echo $p2
 echo $p3
 echo $p4
 echo $p5
+echo $p6
 
-if [ "${p5}" == "false" ]; then
+if [ "${p3}" == "false" ]; then
     echo "Building tifs and meta files"
-    cmd="addpath('${p1}'); addpath('${p4}'); writeTileToTifv4('${p2}','${p3}','outRasterType','COG'); tileMetav4('${p2}'); exit"
+    cmd="addpath('${p1}'); addpath('${p2}'); writeTileToTifv4('${p4}','${p5}','outRasterType','${p6}'); tileMetav4('${p4}'); exit"
 
 else
     echo "Building meta files only"
-    cmd="addpath('${p1}'); addpath('${p4}'); tileMetav4('${p2}'); exit"
+    cmd="addpath('${p1}'); addpath('${p2}'); tileMetav4('${p4}'); exit"
 
 fi
 
