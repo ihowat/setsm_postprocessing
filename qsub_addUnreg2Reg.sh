@@ -20,6 +20,6 @@ echo $p2
 echo $p3
 echo $p4
 
-cmd="addpath('${p1}'); addpath('${p4}'); ${p2}('${p3}'); exit"
+cmd="try; addpath('${p1}'); addpath('${p4}'); ${p2}('${p3}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 echo $cmd
 time matlab -nojvm -nodisplay -nosplash -r "${cmd}"

@@ -41,7 +41,7 @@ module load matlab/2019a
 echo $p1
 echo $p2
 
-cmd="addpath('~/scratch/repos/setsm_postprocessing4'); batch_applyRegistration('/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/results/output_tiles_symlink_by_region','${p1}','${p2}'); exit"
+cmd="try; addpath('~/scratch/repos/setsm_postprocessing4'); batch_applyRegistration('/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/results/output_tiles_symlink_by_region','${p1}','${p2}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 
 echo $cmd
 time matlab -nojvm -nodisplay -nosplash -r "${cmd}"

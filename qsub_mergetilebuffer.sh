@@ -47,6 +47,6 @@ echo $p5
 
 tiles="${p3//;/','}"
 
-cmd="addpath('${p1}'); addpath('${p5}'); batch_batchMergeTileBuffer('${p2}',{'${tiles}'},'${p4}'); exit"
+cmd="try; addpath('${p1}'); addpath('${p5}'); batch_batchMergeTileBuffer('${p2}',{'${tiles}'},'${p4}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 echo $cmd
 time matlab -nojvm -nodisplay -nosplash -r "${cmd}"

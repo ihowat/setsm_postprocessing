@@ -21,6 +21,6 @@ echo $p3
 echo $p4
 echo $p5
 
-cmd="addpath('${p1}'); addpath('${p4}'); writeTileToTif('${p2}',${p5},'${p3}'); exit"
+cmd="try; addpath('${p1}'); addpath('${p4}'); writeTileToTif('${p2}',${p5},'${p3}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 echo $cmd
 time matlab -nojvm -nodisplay -nosplash -r "${cmd}"

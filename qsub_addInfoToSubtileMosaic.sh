@@ -35,14 +35,14 @@ echo
 if [ -z "${p7}" ]; then
     echo "Quad arg not present. Running full tile"
 
-    echo matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}',${p5},'${p6}'); exit"
-    time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}',${p5},'${p6}'); exit"
+    echo matlab -nojvm -nodisplay -nosplash -r "try; addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}',${p5},'${p6}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+    time matlab -nojvm -nodisplay -nosplash -r "try; addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}',${p5},'${p6}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 
 else
     echo "Running quadrant ${p7}"
 
-    echo matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}',${p5},'${p6}','${p7}'); exit"
-    time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}',${p5},'${p6}','${p7}'); exit"
+    echo matlab -nojvm -nodisplay -nosplash -r "try; addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}',${p5},'${p6}','${p7}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+    time matlab -nojvm -nodisplay -nosplash -r "try; addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}',${p5},'${p6}','${p7}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 
 fi
 

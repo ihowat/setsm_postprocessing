@@ -31,7 +31,7 @@ echo "var5: ${p6}"
 
 echo
 
-echo matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}','${p5}','${p6}'); exit"
-time matlab -nojvm -nodisplay -nosplash -r "addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}','${p5}','${p6}'); exit"
+echo matlab -nojvm -nodisplay -nosplash -r "try; addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}','${p5}','${p6}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+time matlab -nojvm -nodisplay -nosplash -r "try; addpath('${p1}'); addpath('${p2}'); ${p3}('${p4}','${p5}','${p6}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 
 echo "Done"

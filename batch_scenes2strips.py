@@ -99,7 +99,7 @@ def main():
                 
                 ## else run matlab
                 else:
-                    cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{}'); addpath('{}'); {}('{}','{}','{}','{}'); exit" """.format(
+                    cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{}'); addpath('{}'); {}('{}','{}','{}','{}'); catch e; disp(getReport(e)); exit(1); end; exit(0)" """.format(
                         scriptdir,
                         args.lib_path,
                         script,

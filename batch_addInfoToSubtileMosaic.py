@@ -103,7 +103,7 @@ def main():
             ## else run matlab
             else:
                 if task.st == '':
-                    cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); {2}('{3}',{4},'{5}'); exit" """.format(
+                    cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); {2}('{3}',{4},'{5}'); catch e; disp(getReport(e)); exit(1); end; exit(0)" """.format(
                         scriptdir,
                         args.lib_path,
                         matlab_script,
@@ -112,7 +112,7 @@ def main():
                         dstfp,
                     )
                 else:
-                    cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); {2}('{3}',{4},'{5}','{6}'); exit" """.format(
+                    cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); {2}('{3}',{4},'{5}','{6}'); catch e; disp(getReport(e)); exit(1); end; exit(0)" """.format(
                         scriptdir,
                         args.lib_path,
                         matlab_script,

@@ -49,11 +49,11 @@ echo $p6
 
 if [ "${p3}" == "false" ]; then
     echo "Building tifs and meta files"
-    cmd="addpath('${p1}'); addpath('${p2}'); writeTileToTifv4('${p4}','${p5}','outRasterType','${p6}'); tileMetav4('${p4}'); exit"
+    cmd="try; addpath('${p1}'); addpath('${p2}'); writeTileToTifv4('${p4}','${p5}','outRasterType','${p6}'); tileMetav4('${p4}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 
 else
     echo "Building meta files only"
-    cmd="addpath('${p1}'); addpath('${p2}'); tileMetav4('${p4}'); exit"
+    cmd="try; addpath('${p1}'); addpath('${p2}'); tileMetav4('${p4}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 
 fi
 

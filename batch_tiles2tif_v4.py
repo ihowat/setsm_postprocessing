@@ -196,13 +196,13 @@ def main():
                     ## else run matlab
                     else:
                         if args.meta_only:
-                            cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); tileMetav4('{2}'); exit" """.format(
+                            cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); tileMetav4('{2}'); catch e; disp(getReport(e)); exit(1); end; exit(0)" """.format(
                                 scriptdir,
                                 args.lib_path,
                                 matfile,
                             )
                         else:
-                            cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); writeTileToTifv4('{2}','{3}','outRasterType','{4}'); tileMetav4('{2}'); exit" """.format(
+                            cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); writeTileToTifv4('{2}','{3}','outRasterType','{4}'); tileMetav4('{2}'); catch e; disp(getReport(e)); exit(1); end; exit(0)" """.format(
                                 scriptdir,
                                 args.lib_path,
                                 matfile,

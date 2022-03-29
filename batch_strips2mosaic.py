@@ -134,7 +134,7 @@ def main():
                 else:
                     #cmd = """matlab -nodisplay -nosplash -r "addpath('{}'); parpool(4); selectTileByName('{}',{}); exit" """.format(scriptdir, tile, args.res)
                     if args.gcpfile:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); addpath('{1}/intersections'); {2}('{3}','{4}',{5},'{6}'); exit" """.format(
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); addpath('{1}/intersections'); {2}('{3}','{4}',{5},'{6}'); catch e; disp(getReport(e)); exit(1); end; exit(0)" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,
@@ -144,7 +144,7 @@ def main():
                             args.gcpfile
                         )
                     else:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); addpath('{1}/intersections'); {2}('{3}','{4}',{5}); exit" """.format(
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); addpath('{1}/intersections'); {2}('{3}','{4}',{5}); catch e; disp(getReport(e)); exit(1); end; exit(0)" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,
