@@ -6,14 +6,20 @@ n = find(strcmpi('outRasterType',varargin));
 if ~isempty(n)
     outRasterType = varargin{n+1};
 else
-    outRasterType = 'GTiff';
+    outRasterType = 'full-LZW';
 end
-outRasterType_choices = {'browse', 'GTiff', 'COG'};
+outRasterType_choices = {'browse-LZW', 'browse-COG', 'full-LZW', 'full-COG'};
 if ~any(strcmp(outRasterType, outRasterType_choices))
     error("'outRasterType' must be one of the following: {'%s'}", strjoin(outRasterType_choices, "', '"))
 end
 
-if strcmp(outRasterType, 'COG')
+if ismember(outRasterType, {'browse-LZW', 'browse-COG'})
+    browse_only = true;
+else
+    browse_only = false;
+end
+
+if ismember(outRasterType, {'browse-COG', 'full-COG'})
     outRasterType_is_cog = true;
     tif_format = 'COG';
 else
@@ -114,8 +120,10 @@ outNameBase = strrep(tilef,'_reg.mat','.mat');
 fprintf('Writing DEM\n')
 outNameDem = strrep(outNameBase,'.mat','_dem.tif');
 if exist(outNameDem,'file')
+    browse_keep_dem = true;
     fprintf('%s exists, skipping\n',outNameDem);
 else
+    browse_keep_dem = false;
     z=m.z(ny(1):ny(end),nx(1):nx(end));
     % Round DEM values to 1/128 meters to greatly improve compression effectiveness
     z=round(z*128.0)/128.0;
@@ -131,7 +139,7 @@ end
 
 flds=fields(m);
 
-if ~strcmp(outRasterType, 'browse')
+if ~browse_only
     if contains('z_mad',flds)
         fprintf('Writing mad\n')
         outNameTif = strrep(outNameBase,'.mat','_mad.tif');
@@ -296,12 +304,14 @@ else
     end
 
     if dx == 2
+        fprintf('Removing temporary DEM output:\n%s\n', outNameTemp)
         delete(outNameTemp);
     end
 end
 
 
-if strcmp(outRasterType, 'browse')
+if browse_only && ~browse_keep_dem
+    fprintf('Removing temporary DEM output:\n%s\n', outNameDem)
     delete(outNameDem)
 end
 
