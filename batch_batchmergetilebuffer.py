@@ -14,10 +14,10 @@ def main():
 
     ## args
     parser = argparse.ArgumentParser()
-    parser.add_argument("dstdir", help="target directory")
+    parser.add_argument("tiledir", help="target directory")
     parser.add_argument("tiles",
         help=' '.join([
-            "list of mosaic tiles; either specified on command line (comma delimited),",
+            "list of mosaic supertiles; either specified on command line (comma delimited),",
             "or a text file list (each tile on separate line)"
         ])
     )
@@ -39,14 +39,14 @@ def main():
         if not os.path.isfile(args.tiles):
             parser.error("'tiles' argument tilelist file does not exist: {}".format(tilelist_file))
         with open(tilelist_file, 'r') as tilelist_fp:
-            tiles = [line for line in tilelist_fp.read().splitlines() if line != '']
+            supertile_list = [line for line in tilelist_fp.read().splitlines() if line != '']
     else:
-        tiles = args.tiles.split(',')
-    tiles = sorted(list(set(tiles)))
+        supertile_list = args.tiles.split(',')
+    supertile_list = sorted(list(set(supertile_list)))
 
     res_name = '{}m'.format(args.res)
 
-    dstdir = os.path.abspath(args.dstdir)
+    root_tiledir = os.path.abspath(args.tiledir)
     scriptdir = SCRIPT_DIR
 
     ## Verify qsubscript
@@ -57,23 +57,22 @@ def main():
     if not os.path.isfile(qsubpath):
         parser.error("qsub script path is not valid: %s" %qsubpath)
 
-    if not os.path.isdir(dstdir):
-        parser.error("dstdir does not exist: {}".format(dstdir))
+    if not os.path.isdir(root_tiledir):
+        parser.error("tiledir does not exist: {}".format(root_tiledir))
 
     # Test tiles exist and group into mosaic groups
-    mosaic_groups = {}
     existing_tiles = []
-    for t in tiles:
-        filename = "{0}/{1}/{1}_{2}*.mat".format(dstdir, t, res_name)
+    for supertile in supertile_list:
+        filename = "{0}/{1}/{1}_{2}*.mat".format(root_tiledir, supertile, res_name)
         matfiles = glob.glob(filename)
         if len(matfiles) == 0:
-            print("Tile {} {} .mat or reg.mat do not exist: {}".format(t, res_name, filename))
+            print("Tile {} {} .mat or reg.mat do not exist: {}".format(supertile, res_name, filename))
         else:
-            existing_tiles.append(t)
+            existing_tiles.append(supertile)
 
         dstfps_old_pattern = [
-            "{0}/{1}/{1}_{2}*.tif".format(dstdir, t, res_name),
-            "{0}/{1}/{1}_{2}_meta.txt".format(dstdir, t, res_name)
+            "{0}/{1}/{1}_{2}*.tif".format(root_tiledir, supertile, res_name),
+            "{0}/{1}/{1}_{2}_meta.txt".format(root_tiledir, supertile, res_name)
         ]
         dstfps_old = [fp for pat in dstfps_old_pattern for fp in glob.glob(pat)]
         if dstfps_old:
@@ -93,13 +92,15 @@ def main():
         row = tile_parts[-2]
         
         if args.dimension == 'row':
-            key = row
+            key = 'row_{}'.format(row)
         else:
-            key = col
+            key = 'col_{}'.format(col)
 
         if len(tile_parts) == 3:
             mos = tile_parts[0]
             key = '{}_{}'.format(mos, key)
+        else:
+            key = 'polar_{}'.format(key)
             
         if key not in groups:
             groups[key] = [tile]
@@ -124,11 +125,11 @@ def main():
                 ## if pbs, submit to scheduler
                 i+=1
                 if args.pbs:
-                    job_name = 'tbm_{}'.format(key)
+                    job_name = 'tbm10m_{}'.format(key)
                     cmd = r'qsub -N {} -v p1={},p2={},p3="{}",p4={},p5={} {}'.format(
                         job_name,
                         scriptdir,
-                        dstdir,
+                        root_tiledir,
                         tile_str,
                         res_name,
                         args.lib_path,
@@ -143,7 +144,7 @@ def main():
                     cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{}'); addpath('{}'); batch_batchMergeTileBuffer('{}',{{'{}'}},'{}'); catch e; disp(getReport(e)); exit(1); end; exit(0)" """.format(
                         scriptdir,
                         args.lib_path,
-                        dstdir,
+                        root_tiledir,
                         tile_str.replace(";","','"),
                         res_name
                     )
