@@ -31,6 +31,6 @@ for i=1:length(tileList)
     end
 end
 
-batchMergeTileBuffer(tilef);
+batchMergeTileBuffer_old(tilef);
 
 end
