@@ -178,7 +178,7 @@ def main():
                     i+=1
                     if args.pbs:
                         job_name = 't2t_{}'.format(tile_name)
-                        cmd = r'qsub {} -N {} -v p1={},p2={},p3="{}",p4={},p5={},p6={} {}'.format(
+                        cmd = r'qsub {} -N {} -v p1={},p2={},p3={},p4={},p5="{}",p6={} {}'.format(
                             '-h' if args.hold else '',
                             job_name,
                             scriptdir,
