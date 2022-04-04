@@ -15,10 +15,10 @@ def main():
 
     ## args
     parser = argparse.ArgumentParser()
-    parser.add_argument("dstdir", help="target directory")
+    parser.add_argument("tiledir", help="target directory")
     parser.add_argument("tiles",
         help=' '.join([
-            "list of mosaic tiles; either specified on command line (comma delimited),",
+            "list of mosaic supertiles; either specified on command line (comma delimited),",
             "or a text file list (each tile on separate line)"
         ])
     )
@@ -40,14 +40,14 @@ def main():
         if not os.path.isfile(args.tiles):
             parser.error("'tiles' argument tilelist file does not exist: {}".format(tilelist_file))
         with open(tilelist_file, 'r') as tilelist_fp:
-            tiles = [line for line in tilelist_fp.read().splitlines() if line != '']
+            supertile_list = [line for line in tilelist_fp.read().splitlines() if line != '']
     else:
-        tiles = args.tiles.split(',')
-    tiles = sorted(list(set(tiles)))
+        supertile_list = args.tiles.split(',')
+    supertile_list = sorted(list(set(supertile_list)))
 
     res_name = '{}m'.format(args.res)
 
-    dstdir = os.path.abspath(args.dstdir)
+    root_tiledir = os.path.abspath(args.tiledir)
     scriptdir = SCRIPT_DIR
 
     ## Verify qsubscript
@@ -58,27 +58,28 @@ def main():
     if not os.path.isfile(qsubpath):
         parser.error("qsub script path is not valid: %s" %qsubpath)
 
-    if not os.path.isdir(dstdir):
-        parser.error("dstdir does not exist: {}".format(dstdir))
+    if not os.path.isdir(root_tiledir):
+        parser.error("tiledir does not exist: {}".format(root_tiledir))
 
     # Test tiles exist and group into mosaic groups
     mosaic_groups = {}
-    for t in tiles:
-        np = t.split('_')
-        if len(np) == 2:
-            mos = 'None'
-            tnum = t
-        elif len(np) == 3:
-            mos = np[0]
-            tnum = '_'.join(np[1:2])
+    for supertile in supertile_list:
+        supertile_parts = supertile.split('_')
+        if len(supertile_parts) == 2:
+            mos = 'polar'
+            tnum = supertile
+        elif len(supertile_parts) == 3:
+            mos = supertile_parts[0]
+            tnum = '_'.join(supertile_parts[1:2])
+            assert mos.startswith('utm')
         else:
-            print("Tile name does not match a known pattern: {}".format(t))
-            sys.exit(-1)
+            print("Tile name does not match a known pattern: {}".format(supertile))
+            sys.exit(1)
 
         num_quads_missing_mat = 0
         for q in quadnames:
-            tq = "{}_{}".format(t,q)
-            filename = "{}/{}/{}_{}*.mat".format(dstdir, t, tq, res_name)
+            tq = "{}_{}".format(supertile, q)
+            filename = "{}/{}/{}_{}*.mat".format(root_tiledir, supertile, tq, res_name)
             matfiles = glob.glob(filename)
             if len(matfiles) == 0:
                 print("Tile {0} {1} .mat and _reg.mat do not exist: {2}".format(tq, res_name, filename))
@@ -89,8 +90,8 @@ def main():
                 mosaic_groups[mos].append(tq)
 
         dstfps_old_pattern = [
-            "{0}/{1}/{1}_*_{2}*.tif".format(dstdir, t, res_name),
-            "{0}/{1}/{1}_*_{2}_meta.txt".format(dstdir, t, res_name)
+            "{0}/{1}/{1}_*_{2}*.tif".format(root_tiledir, supertile, res_name),
+            "{0}/{1}/{1}_*_{2}_meta.txt".format(root_tiledir, supertile, res_name)
         ]
         dstfps_old = [fp for pat in dstfps_old_pattern for fp in glob.glob(pat)]
         if dstfps_old:
@@ -106,17 +107,30 @@ def main():
     groups = {}
     for mos in mosaic_groups:
         existing_tiles = mosaic_groups[mos]
-        for quad in existing_tiles:
-            np = quad.split('_')
-            o = 0 if mos == 'None' else 1
-            row = '_'.join([np[0+o],np[2+o]])
-            col = '_'.join([np[1+o],np[3+o]])
-            temp_key = row if args.dimension == 'row' else col
-            key = '_'.join([mos,temp_key])
+        for quadtile in existing_tiles:
+            quadtile_parts = quadtile.split('_')
+
+            if mos == 'polar' and len(quadtile_parts) == 4:
+                super_row, super_col, quad_row, quad_col = quadtile_parts
+            elif mos.startswith('utm') and len(quadtile) == 5:
+                quad_mos, super_row, super_col, quad_row, quad_col = quadtile_parts
+                assert quad_mos == mos
+            else:
+                print("Failed to parse row/col from quad tile name: {}".format(quadtile))
+                sys.exit(1)
+
+            row = '_'.join([super_row, quad_row])
+            col = '_'.join([super_col, quad_col])
+
+            if args.dimension == 'row':
+                key = 'row_{}'.format(row)
+            else:
+                key = 'col_{}'.format(col)
+            key = '{}_{}'.format(mos, key)
     
             if key not in groups:
                 groups[key] = []
-            groups[key].append(quad)
+            groups[key].append(quadtile)
 
     i=0
     if len(groups) > 0:
@@ -136,11 +150,11 @@ def main():
                 ## if pbs, submit to scheduler
                 i+=1
                 if args.pbs:
-                    job_name = 'tbm_{}'.format(key)
+                    job_name = 'tbm2m_{}'.format(key)
                     cmd = r'qsub -N {} -v p1={},p2={},p3="{}",p4={},p5={} {}'.format(
                         job_name,
                         scriptdir,
-                        dstdir,
+                        root_tiledir,
                         tile_str,
                         res_name,
                         args.lib_path,
@@ -155,7 +169,7 @@ def main():
                     cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{}'); addpath('{}'); batch_batchMergeTileBuffer('{}',{{'{}'}},'{}'); catch e; disp(getReport(e)); exit(1); end; exit(0)" """.format(
                         scriptdir,
                         args.lib_path,
-                        dstdir,
+                        root_tiledir,
                         tile_str.replace(";","','"),
                         res_name
                     )
