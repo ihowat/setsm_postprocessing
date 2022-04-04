@@ -97,7 +97,7 @@ if ~all(ismember(data_array_names, m_varlist))
 end
 
 % Add data arrays that might be missing from the above list
-z_size = size(m_struct.z);
+z_size = size(m_struct, 'z');
 data_array_names_same_sz = m_varlist(cellfun(@(name) isequal(size(m_struct, name), z_size), m_varlist));
 data_array_names = union(data_array_names, data_array_names_same_sz);
 
@@ -112,11 +112,12 @@ if mergedTop || mergedBottom || mergedLeft || mergedRight
 elseif strcmp(edgeName, 'all')
     fprintf("Tile 'merged{Right&Left&Top&Bottom}=false', indicating tile has not been merged: %s\n", tile_matfile);
     if ignoreMergedVars
-        fprintf(join(["Will attempt to undo merge with possibly existing '*buff' arrays",...
-                      " because 'ignoreMergedVars=true'\n"]), '');
+        fprintf(strjoin(["Will attempt to undo merge with possibly existing '*buff' arrays",...
+                         "because 'ignoreMergedVars=true'\n"]));
     else
-        fprintf(join(["Provide 'ignoreMergedVars=true' if you want to attempt to undo merge with",...
-                      " possibly existing '*buff' arrays\n"]), '');
+        fprintf(strjoin(["Provide 'ignoreMergedVars=true' if you want to attempt to undo merge with",...
+                         "possibly existing '*buff' arrays\n"]));
+        return;
     end
 end
 
@@ -135,11 +136,12 @@ if ~strcmp(edgeName, 'all')
     if indicated_edge_not_merged
         fprintf("Tile 'merged%s=false', indicating tile has not been merged on this edge\n", edgeName);
         if ignoreMergedVars
-            fprintf(join(["Will attempt to undo merge with possibly existing '*buff' arrays",...
-                          " because 'ignoreMergedVars=true'\n"]), '');
+            fprintf(strjoin(["Will attempt to undo merge with possibly existing '*buff' arrays",...
+                             "because 'ignoreMergedVars=true'\n"]));
         else
-            fprintf(join(["Provide 'ignoreMergedVars=true' if you want to attempt to undo merge with",...
-                          " possibly existing '*buff' arrays\n"]), '');
+            fprintf(strjoin(["Provide 'ignoreMergedVars=true' if you want to attempt to undo merge with",...
+                             "possibly existing '*buff' arrays\n"]));
+            return;
         end
     end
 end
@@ -168,7 +170,7 @@ for array_idx = 1:length(reset_array_names)
     data_array_name = reset_array_names{array_idx};     % ex. 'z'
     buff_array_name = [data_array_name,'buff'];         % ex. 'zbuff'
     if ~ismember(buff_array_name, m_varlist)
-        continue
+        continue;
     end
     buff_arrays = getfield(m_struct, buff_array_name);  % four buffer arrays, one for each edge
 
@@ -176,7 +178,7 @@ for array_idx = 1:length(reset_array_names)
         m_struct
         fprintf("Tile '%s' is empty; if '%s' is merged, cannot undo\n", buff_array_name, data_array_name);
         unmerge_failure_general = true;
-        continue
+        continue;
     end
 
     if ~strcmp(edgeName, 'all') && isempty(buff_arrays{edge_n})
@@ -184,7 +186,7 @@ for array_idx = 1:length(reset_array_names)
         fprintf("Tile '%s(%d)' (%s side buffer) is empty; if '%s' is merged, cannot undo\n",...
             buff_array_name, edge_n, edgeName, data_array_name);
         unmerge_failure_general = true;
-        continue
+        continue;
     end
 
     data_array = getfield(m_struct, data_array_name);
