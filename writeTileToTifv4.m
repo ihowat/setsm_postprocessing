@@ -2,6 +2,13 @@ function writeTileToTifv4(tilef,projstr,varargin)
 % Write 2m or 10m dem matfiles to tif
 %   compatible with setsm_postprocesing v4 branch
 
+n = find(strcmpi('overwrite',varargin));
+if ~isempty(n)
+    overwrite = true;
+else
+    overwrite = false;
+end
+
 n = find(strcmpi('outRasterType',varargin));
 if ~isempty(n)
     outRasterType = varargin{n+1};
@@ -119,7 +126,7 @@ outNameBase = strrep(tilef,'_reg.mat','.mat');
 
 fprintf('Writing DEM\n')
 outNameDem = strrep(outNameBase,'.mat','_dem.tif');
-if exist(outNameDem,'file')
+if exist(outNameDem,'file') && ~overwrite
     browse_keep_dem = true;
     fprintf('%s exists, skipping\n',outNameDem);
 else
@@ -143,7 +150,7 @@ if ~browse_only
     if contains('z_mad',flds)
         fprintf('Writing mad\n')
         outNameTif = strrep(outNameBase,'.mat','_mad.tif');
-        if exist(outNameTif,'file')
+        if exist(outNameTif,'file') && ~overwrite
             fprintf('%s exists, skipping\n',outNameTif);
         else
             z_mad=m.z_mad(ny(1):ny(end),nx(1):nx(end));
@@ -164,7 +171,7 @@ if ~browse_only
     if contains('N',flds)
         fprintf('Writing N\n')
         outNameTif = strrep(outNameBase,'.mat','_count.tif');
-        if exist(outNameTif,'file')
+        if exist(outNameTif,'file') && ~overwrite
             fprintf('%s exists, skipping\n',outNameTif);
         else
             N=m.N(ny(1):ny(end),nx(1):nx(end));
@@ -184,7 +191,7 @@ if ~browse_only
     if contains('Nmt',flds)
         fprintf('Writing Nmt\n')
         outNameTif = strrep(outNameBase,'.mat','_countmt.tif');
-        if exist(outNameTif,'file')
+        if exist(outNameTif,'file') && ~overwrite
             fprintf('%s exists, skipping\n',outNameTif);
         else
             Nmt=m.Nmt(ny(1):ny(end),nx(1):nx(end));
@@ -204,7 +211,7 @@ if ~browse_only
     if contains('tmax',flds)
         fprintf('Writing tmax\n')
         outNameTif = strrep(outNameBase,'.mat','_maxdate.tif');
-        if exist(outNameTif,'file')
+        if exist(outNameTif,'file') && ~overwrite
             fprintf('%s exists, skipping\n',outNameTif);
         else
             tmax=m.tmax(ny(1):ny(end),nx(1):nx(end));
@@ -224,7 +231,7 @@ if ~browse_only
     if contains('tmin',flds)
         fprintf('Writing tmin\n')
         outNameTif = strrep(outNameBase,'.mat','_mindate.tif');
-        if exist(outNameTif,'file')
+        if exist(outNameTif,'file') && ~overwrite
             fprintf('%s exists, skipping\n',outNameTif);
         else
             tmin=m.tmin(ny(1):ny(end),nx(1):nx(end));
@@ -247,7 +254,7 @@ fprintf('Writing browse\n')
 
 % if 2m posting, first downsample to 10m
 outNameBrowse = strrep(outNameBase,'.mat','_browse.tif');
-if exist(outNameBrowse,'file')
+if exist(outNameBrowse,'file') && ~overwrite
     fprintf('%s exists, skipping\n',outNameBrowse);
 else
     [epsg,~,~] = getProjstrInfo(projstr);
