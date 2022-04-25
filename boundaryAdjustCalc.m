@@ -239,7 +239,7 @@ r1 = [find(r1,1,'first'),find(r1,1,'last')];
 
 dz1 = zeros(length(r1(1):r1(2)),length(c1(1):c1(2)));
 if any(strcmpi(fields(m1),'adjusted'))
-    if m0.adjusted == 1
+    if m1.adjusted == 1
         dz1=imresize(m1.dz0,size(m1,'z'));
         dz1=dz1(r1(1):r1(2),c1(1):c1(2));
     end
