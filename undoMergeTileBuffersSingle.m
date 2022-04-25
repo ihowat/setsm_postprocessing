@@ -30,7 +30,7 @@ edge_n = [];
 
 edgeName_choices = {'all', 'top', 'bottom', 'left', 'right'};
 if ~ismember(edgeName, edgeName_choices)
-    error("'edgeName' must be one of the following: {'%s'}", strjoin(edgeName_choices, "', '"));
+    error("'edgeName' must be one of the following, but was '%s': {'%s'}", edgeName, strjoin(edgeName_choices, "', '"));
 end
 if strcmp(edgeName, 'all')
     edge_n = [];
@@ -55,7 +55,7 @@ else
     whichArrays = 'all';
 end
 if ~ismember(whichArrays, whichArrays_choices)
-    error("'whichArrays' must be one of the following: {'%s'}", strjoin(whichArrays_choices, "', '"));
+    error("'whichArrays' must be one of the following, but was '%s': {'%s'}", whichArrays, strjoin(whichArrays_choices, "', '"));
 end
 
 n = find(strcmpi('ignoreMergedVars', varargin));

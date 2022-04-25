@@ -16,7 +16,7 @@ for tileFile_idx=1:length(tileFile_list)
     end
     tileFile_cropped = strrep(tileFile, '.mat', '_cropped.mat');
 
-    fprintf("Working on tile file: %s\n", tileFile);
+    fprintf("\nWorking on tile file: %s\n", tileFile);
     if isfile(tileFile_cropped)
         fprintf("Cropped tile already exists, skipping: %s\n", tileFile_cropped);
         continue;

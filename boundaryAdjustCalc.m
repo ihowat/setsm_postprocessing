@@ -18,7 +18,7 @@ m0=matfile(fileName);
 
 if any(strcmpi(fields(m0),'adjusted')) 
     if m0.adjusted == 1
-        fprintf('adjustment applied,undo adjustment before calculating new, skipping')
+        fprintf('adjustment applied, undo adjustment before calculating new, skipping, ')
         return
     end
 end
