@@ -22,6 +22,7 @@ tileName=S{end}(1:5);
 
 % load demMatFile into a matfile object
 m = matfile(demMatFile);
+m_fields = fields(m);
 
 %find this tile
 if ~isempty(registrationFile)
@@ -110,8 +111,17 @@ else
     m1.tmax = applyRegistration2Var(regData.reg.p,m,C,'gridvar','tmax','subsetSize',5000);
     
     % register land mask to mat file if exists
-    if any(strcmp(fields(m),'land'))
+    if any(strcmp(m_fields,'land'))
         m1.land = applyRegistration2Var(regData.reg.p,m,C,'gridvar','land','subsetSize',5000);
+    end
+
+    % additional fields to transfer over
+    add_fields = {'stripList', 'version'};
+    for i=1:length(add_fields)
+        fld = add_fields{i};
+        if any(strcmp(m_fields,fld))
+            eval(['m1.',fld,' = m.',fld,';']);
+        end
     end
 end
 

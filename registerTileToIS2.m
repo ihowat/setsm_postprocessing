@@ -3,6 +3,18 @@ function registerTileToIS2(tileFile,is2TileFile)
 
 m=matfile(tileFile);
 
+% standard resizeFraction is for 10m, scale for 2m and other res
+resizeFraction_10m = 1.0;
+res = m.x(1,2) - m.x(1,1);
+resizeFraction = min(1.0, resizeFraction_10m * (res/10));
+
+% Erik decided to disable the automatic downsample capability for the
+% 2022 REMAv2 mosaic production after a brief analysis showed that
+% downsampling the 2m during registration resulted in an inconsitent shift
+% between the 10m and 2m versions of mosaic tiles.
+resizeFraction = 1.0;
+
+
 if any(strcmp(fields(m),'reg'))
     fprintf('reg already exists, skipping\n')
     clear m
@@ -21,10 +33,16 @@ is2=load(is2TileFile,'x','y','z','t');
 try
     %load DEM
     load(tileFile,'x','y','z','land');
-    
 catch
     warning('cant read %s\n',tileFile)
     return
+end
+
+if resizeFraction ~= 1.0
+    x = imresize(x, resizeFraction);
+    y = imresize(y, resizeFraction);
+    z = imresize(z, resizeFraction);
+    land = imresize(land, resizeFraction, 'nearest');
 end
 
 if any(~land(:))
