@@ -1,15 +1,48 @@
 function tileNeighborIndexFile=tileNeighborIndex(tileDir,varargin)
 
-n = find(strcmpi('resolution',varargin));
-if ~isempty(n)
-    resolution = varargin{n+1};
-    use_res_in_outname = true;
-else
-    resolution = '10m';
-    use_res_in_outname = false;
+if ~isfolder(tileDir)
+    error("input 'tileDir' folder does not exist: %s", tileDir);
 end
 
-fileNames = selectTilesForMerging(tileDir,'resolution',resolution);
+org = 'osu';
+resolution = '10m';
+outfile = [];
+
+if ~isempty(varargin)
+    org_choices = {'osu', 'pgc'};
+    n = find(strcmpi('org', varargin));
+    if ~isempty(n)
+        org = varargin{n+1};
+    end
+    if ~ismember(org, org_choices)
+        error("'org' must be one of the following, but was '%s': {'%s'}", org, strjoin(org_choices, "', '"));
+    end
+
+    resolution_choices = {'10m', '2m'};
+    n = find(strcmpi('resolution', varargin));
+    if ~isempty(n)
+        resolution = varargin{n+1};
+    end
+    if ~ismember(resolution, resolution_choices)
+        error("'resolution' must be one of the following, but was '%s': {'%s'}", resolution, strjoin(resolution_choices, "', '"));
+    end
+
+    n = find(strcmpi('outfile', varargin));
+    if ~isempty(n)
+        outfile = varargin{n+1};
+    end
+end
+
+if strcmp(org, 'osu')
+    use_res_in_outname = false;
+else
+    use_res_in_outname = true;
+end
+if strcmp(resolution, '2m')
+    use_res_in_outname = true;
+end
+
+fileNames = selectTilesForMerging(tileDir,varargin{:});
 
 % find neighbors
 [ntop,nright,ntopRight,nbottomRight] = findNeighborTiles(fileNames);
@@ -24,7 +57,9 @@ nN(ntopRight(:,1),6) = ntopRight(:,2); %top-right
 nN(ntopRight(:,2),7) = ntopRight(:,1); %bottom-left
 nN(nbottomRight(:,1),8) = nbottomRight(:,2); %bottom-right
 
-if use_res_in_outname
+if ~isempty(outfile)
+    tileNeighborIndexFile=outfile;
+elseif use_res_in_outname
     tileNeighborIndexFile=[tileDir,'/tileNeighborIndex_',resolution,'.mat'];
 else
     tileNeighborIndexFile=[tileDir,'/tileNeighborIndex.mat'];
