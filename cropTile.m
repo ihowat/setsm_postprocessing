@@ -120,6 +120,10 @@ for tileFile_idx=1:length(tileFile_list)
         fprintf("Writing cropped tile file: %s\n", tileFile_cropped);
         m1 = matfile(tileFile_cropped);
 
+        m1.cropped = true;
+        m1.precrop_x = m.x;
+        m1.precrop_y = m.y;
+
         % write cropped x and y vectors
         m1.x = m.x(1,IndX(1):IndX(2));
         m1.y = m.y(1,IndY(1):IndY(2));
