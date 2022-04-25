@@ -52,16 +52,17 @@ if exist('quadrant','var')
     % select subtiles by quadrant
     switch quadrant
         case lower('1_1') %lower left quadrant
-            n = mod(subTileNum,100) > 0 & mod(subTileNum,100) <= 51 &...
-                subTileNum <= 5151;
+            n = mod(subTileNum,100) >= 1 & mod(subTileNum,100) <= 51 &...
+                subTileNum <= 5100;
         case lower('2_1') %upper left quadrant
-            n =  (mod(subTileNum,100) == 0 | mod(subTileNum,100) >= 50) &...
-                subTileNum <= 5200;
+            n =  (mod(subTileNum,100) >= 50 | mod(subTileNum,100) == 0) &...
+                subTileNum <= 5100;
         case lower('1_2') %lower right quadrant
-            n = mod(subTileNum,100) > 0 & mod(subTileNum,100) <= 51 &...
-                subTileNum >= 5001;
+            n = mod(subTileNum,100) >= 1 & mod(subTileNum,100) <= 51 &...
+                subTileNum > 4900;
         case lower('2_2') %upper right quadrant
-            n =  (mod(subTileNum,100) == 0 | mod(subTileNum,100) >= 50) & subTileNum >= 5050;
+            n =  (mod(subTileNum,100) >= 50 | mod(subTileNum,100) == 0) &...
+                subTileNum > 4900;
         otherwise
             error('quadrant string not recognized')
     end
