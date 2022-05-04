@@ -196,6 +196,8 @@ end
 
 fprintf('merging tiles...\n')
 
+W0_feather_zone = (W0 > 0) & (W0 < 1);
+
 %% merge z
 if ~any(strcmp(varlist0,'zbuff'))
 	m0.zbuff = cell(4,1);
@@ -225,9 +227,9 @@ end
 
 z=(z0.*W0)+(z1.*(1-W0));
 
-n=isnan(z0) & ~isnan(z1);
+n=isnan(z0) & ~isnan(z1) & ~W0_feather_zone;
 z(n)=z1(n);
-n=~isnan(z0) & isnan(z1);
+n=~isnan(z0) & isnan(z1) & ~W0_feather_zone;
 z(n)=z0(n);
 
 m0.z(r0(1):r0(2),c0(1):c0(2))=z;
@@ -271,9 +273,9 @@ end
 
 z_mad=(z_mad0.*W0)+(z_mad1.*(1-W0));
 
-n=isnan(z_mad0) & ~isnan(z_mad1);
+n=isnan(z_mad0) & ~isnan(z_mad1) & ~W0_feather_zone;
 z_mad(n)=z_mad1(n);
-n=~isnan(z_mad0) & isnan(z_mad1);
+n=~isnan(z_mad0) & isnan(z_mad1) & ~W0_feather_zone;
 z_mad(n)=z_mad0(n);
 
 m0.z_mad(r0(1):r0(2),c0(1):c0(2))=z_mad;
@@ -310,9 +312,9 @@ N1=single(N1);
 
 N=(N0.*W0)+(N1.*(1-W0));
 
-n= N0 == 0 & N1 ~= 0;
+n= N0 == 0 & N1 ~= 0 & ~W0_feather_zone;
 N(n)=N1(n);
-n= N0 ~= 0 & N1 == 0;
+n= N0 ~= 0 & N1 == 0 & ~W0_feather_zone;
 N(n)=N0(n);
 
 N=uint8(N);
@@ -351,9 +353,9 @@ Nmt1=single(Nmt1);
 
 Nmt=(Nmt0.*W0)+(Nmt1.*(1-W0));
 
-n= Nmt0 == 0 & Nmt1 ~= 0;
+n= Nmt0 == 0 & Nmt1 ~= 0 & ~W0_feather_zone;
 Nmt(n)=Nmt1(n);
-n= Nmt0 ~= 0 & Nmt1 == 0;
+n= Nmt0 ~= 0 & Nmt1 == 0 & ~W0_feather_zone;
 Nmt(n)=Nmt0(n);
 
 Nmt=uint8(Nmt);
@@ -392,9 +394,9 @@ tmin1=single(tmin1);
 
 tmin=(tmin0.*W0)+(tmin1.*(1-W0));
 
-n= tmin0 == 0 & tmin1 ~= 0;
+n= tmin0 == 0 & tmin1 ~= 0 & ~W0_feather_zone;
 tmin(n)=tmin1(n);
-n= tmin0 ~= 0 & tmin1 == 0;
+n= tmin0 ~= 0 & tmin1 == 0 & ~W0_feather_zone;
 tmin(n)=tmin0(n);
 
 tmin=uint16(tmin);
@@ -433,9 +435,9 @@ tmax1=single(tmax1);
 
 tmax=(tmax0.*W0)+(tmax1.*(1-W0));
 
-n= tmax0 == 0 & tmax1 ~= 0;
+n= tmax0 == 0 & tmax1 ~= 0 & ~W0_feather_zone;
 tmax(n)=tmax1(n);
-n= tmax0 ~= 0 & tmax1 == 0;
+n= tmax0 ~= 0 & tmax1 == 0 & ~W0_feather_zone;
 tmax(n)=tmax0(n);
 
 tmax=uint16(tmax);
