@@ -46,9 +46,17 @@ else
 end
 
 overwriteBuffer=false;
+preciseCorners=true;
+cornersSource='adj_side';
 if ~isempty(varargin)
     if any(strcmpi(varargin,'overwrite'))
         overwriteBuffer=true;
+    end
+    if any(strcmpi(varargin,'preciseCorners'))
+        preciseCorners=true;
+    end
+    if any(strcmpi(varargin,'cornersSourceSameSide'))
+        cornersSource='same_side';
     end
 end
 
@@ -88,6 +96,16 @@ sz0=info0.size;
 varlist0 = who(m0);
 varlist1 = who(m1);
 
+n_top = 1;
+n_bottom = 2;
+n_left = 3;
+n_right = 4;
+
+n_top_left = 1;
+n_top_right = 2;
+n_bottom_right = 3;
+n_bottom_left = 4;
+
 %if c0(1) > 1 % merging on f0's right boundary [old method can't account
 %for deviations in tile sizes]
 %if y1m > min(m0.y) && y1m < max(m0.y) && x1m > max(m0.x) [rev1 fails in
@@ -95,14 +113,16 @@ varlist1 = who(m1);
 if diff(c0) < diff(r0) && c0(2) == sz0(2)
     disp('Detected merge attempt on 1st tile RIGHT edge & 2nd tile LEFT edge')
     if  any(strcmp(varlist0,'mergedRight')) && any(strcmp(varlist1,'mergedLeft')) && ~overwriteBuffer
-        if m0.mergedRight && m1.mergedLeft
+        rightNeedsRemerge = any(strcmp(varlist0,'rightNeedsRemerge')) && m0.rightNeedsRemerge;
+        leftNeedsRemerge = any(strcmp(varlist1,'leftNeedsRemerge')) && m1.leftNeedsRemerge;
+        if m0.mergedRight && m1.mergedLeft && ~(rightNeedsRemerge || leftNeedsRemerge)
             disp('already merged');
             return;
         end
     end
 
-    n0 = 4;
-    n1 = 3;
+    n0 = n_right;
+    n1 = n_left;
 
     [w_r0,w_c0,w_r1,w_c1,failure,unequal_water_issue] = adjustFeatherZone(m0,m1,r0,c0,r1,c1,'right','left',n0,n1,max_feather_halfwidth,min_feather_halfwidth);
     if unequal_water_issue
@@ -115,22 +135,21 @@ if diff(c0) < diff(r0) && c0(2) == sz0(2)
     W0 = [ones(1,w_c0(1)-c0(1)), linspace(1,0,diff(w_c0)+1), zeros(1,c0(2)-w_c0(2))];
     W0 = repmat(W0,diff(r0)+1,1);
 
-    m0.mergedRight=true;
-    m1.mergedLeft=true;
-
 %elseif c0(2) < sz0(2) % merging on f0's left boundary
 %elseif y1m > min(m0.y) && y1m < max(m0.y) && x1m < min(m0.x)
 elseif diff(c0) < diff(r0) && c0(1) == 1
     disp('Detected merge attempt on 1st tile LEFT edge & 2nd tile RIGHT edge')
     if  any(strcmp(varlist0,'mergedLeft')) && any(strcmp(varlist1,'mergedRight')) && ~overwriteBuffer
-        if m0.mergedLeft && m1.mergedRight
+        leftNeedsRemerge = any(strcmp(varlist0,'leftNeedsRemerge')) && m0.leftNeedsRemerge;
+        rightNeedsRemerge = any(strcmp(varlist1,'rightNeedsRemerge')) && m1.rightNeedsRemerge;
+        if m0.mergedLeft && m1.mergedRight && ~(leftNeedsRemerge || rightNeedsRemerge)
             disp('already merged');
             return;
         end
     end
 
-    n0 = 3;
-    n1 = 4;
+    n0 = n_left;
+    n1 = n_right;
 
     [w_r0,w_c0,w_r1,w_c1,failure,unequal_water_issue] = adjustFeatherZone(m0,m1,r0,c0,r1,c1,'left','right',n0,n1,max_feather_halfwidth,min_feather_halfwidth);
     if unequal_water_issue
@@ -143,22 +162,21 @@ elseif diff(c0) < diff(r0) && c0(1) == 1
     W0 = [zeros(1,w_c0(1)-c0(1)), linspace(0,1,diff(w_c0)+1), ones(1,c0(2)-w_c0(2))];
     W0 = repmat(W0,diff(r0)+1,1);
 
-    m0.mergedLeft=true;
-    m1.mergedRight=true;
-
 %elseif r0(2) < sz0(1) % merging on f0's top boundary
 %elseif x1m > min(m0.x) && x1m < max(m0.x) && y1m > max(m0.y)
 elseif diff(c0) > diff(r0) && r0(1) == 1
     disp('Detected merge attempt on 1st tile TOP edge & 2nd tile BOTTOM edge')
     if  any(strcmp(varlist0,'mergedTop')) && any(strcmp(varlist1,'mergedBottom')) && ~overwriteBuffer
-        if m0.mergedTop && m1.mergedBottom
+        topNeedsRemerge = any(strcmp(varlist0,'topNeedsRemerge')) && m0.topNeedsRemerge;
+        bottomNeedsRemerge = any(strcmp(varlist1,'bottomNeedsRemerge')) && m1.bottomNeedsRemerge;
+        if m0.mergedTop && m1.mergedBottom && ~(topNeedsRemerge || bottomNeedsRemerge)
             disp('already merged');
             return;
         end
     end
 
-    n0 = 1;
-    n1 = 2;
+    n0 = n_top;
+    n1 = n_bottom;
 
     [w_r0,w_c0,w_r1,w_c1,failure,unequal_water_issue] = adjustFeatherZone(m0,m1,r0,c0,r1,c1,'top','bottom',n0,n1,max_feather_halfwidth,min_feather_halfwidth);
     if unequal_water_issue
@@ -171,22 +189,21 @@ elseif diff(c0) > diff(r0) && r0(1) == 1
     W0 = [zeros(1,w_r0(1)-r0(1)), linspace(0,1,diff(w_r0)+1), ones(1,r0(2)-w_r0(2))];
     W0 = repmat(W0(:),1,diff(c0)+1);
 
-    m0.mergedTop=true;
-    m1.mergedBottom=true;
-
 %elseif r0(1) > 1 % merging on f0's bottom boundary
 %elseif x1m > min(m0.x) && x1m < max(m0.x) && y1m < min(m0.y)
 elseif diff(c0) > diff(r0) && r0(2) == sz0(1)
     disp('Detected merge attempt on 1st tile BOTTOM edge & 2nd tile TOP edge')
     if  any(strcmp(varlist0,'mergedBottom')) && any(strcmp(varlist1,'mergedTop')) && ~overwriteBuffer
-        if m0.mergedBottom && m1.mergedTop
+        bottomNeedsRemerge = any(strcmp(varlist0,'bottomNeedsRemerge')) && m0.bottomNeedsRemerge;
+        topNeedsRemerge = any(strcmp(varlist1,'topNeedsRemerge')) && m1.topNeedsRemerge;
+        if m0.mergedBottom && m1.mergedTop && ~(bottomNeedsRemerge || topNeedsRemerge)
             disp('already merged');
             return;
         end
     end
 
-    n0 = 2;
-    n1 = 1;
+    n0 = n_bottom;
+    n1 = n_top;
 
     [w_r0,w_c0,w_r1,w_c1,failure,unequal_water_issue] = adjustFeatherZone(m0,m1,r0,c0,r1,c1,'bottom','top',n0,n1,max_feather_halfwidth,min_feather_halfwidth);
     if unequal_water_issue
@@ -198,9 +215,6 @@ elseif diff(c0) > diff(r0) && r0(2) == sz0(1)
 
     W0 = [ones(1,w_r0(1)-r0(1)), linspace(1,0,diff(w_r0)+1), zeros(1,r0(2)-w_r0(2))];
     W0 = repmat(W0(:),1,diff(c0)+1);
-
-    m0.mergedBottom=true;
-    m1.mergedTop=true;
 
 else
     error('cant determine side being merged')
@@ -237,6 +251,15 @@ if isempty(z1)
     m1.zbuff(n1,1) = {z1};
 end
 
+if preciseCorners
+    cacheOriginalCorners(m0, n0, 'z', cornersSource);
+    cacheOriginalCorners(m1, n1, 'z', cornersSource);
+    if n0 == n_right || n0 == n_left
+        z0 = resetBuffCorners(m0, n0, 'z', z0);
+        z1 = resetBuffCorners(m1, n1, 'z', z1);
+    end
+end
+
 z=(z0.*W0)+(z1.*(1-W0));
 
 n=isnan(z0) & ~isnan(z1) & ~W0_feather_zone;
@@ -246,6 +269,14 @@ z(n)=z0(n);
 
 m0.z(r0(1):r0(2),c0(1):c0(2))=z;
 m1.z(r1(1):r1(2),c1(1):c1(2))=z;
+
+if preciseCorners
+    if n0 == n_right || n0 == n_left
+        burnCornersIntoAdjBuffs(m0, n0, 'z', z);
+        burnCornersIntoAdjBuffs(m1, n1, 'z', z);
+    end
+end
+
 clear z0 z1 z;
 
 %%
@@ -283,6 +314,15 @@ if isempty(z_mad1)
         m1.z_madbuff(n1,1) = {z_mad1};
 end
 
+if preciseCorners
+    cacheOriginalCorners(m0, n0, 'z_mad', cornersSource);
+    cacheOriginalCorners(m1, n1, 'z_mad', cornersSource);
+    if n0 == n_right || n0 == n_left
+        z_mad0 = resetBuffCorners(m0, n0, 'z_mad', z_mad0);
+        z_mad1 = resetBuffCorners(m1, n1, 'z_mad', z_mad1);
+    end
+end
+
 z_mad=(z_mad0.*W0)+(z_mad1.*(1-W0));
 
 n=isnan(z_mad0) & ~isnan(z_mad1) & ~W0_feather_zone;
@@ -292,6 +332,14 @@ z_mad(n)=z_mad0(n);
 
 m0.z_mad(r0(1):r0(2),c0(1):c0(2))=z_mad;
 m1.z_mad(r1(1):r1(2),c1(1):c1(2))=z_mad;
+
+if preciseCorners
+    if n0 == n_right || n0 == n_left
+        burnCornersIntoAdjBuffs(m0, n0, 'z_mad', z_mad);
+        burnCornersIntoAdjBuffs(m1, n1, 'z_mad', z_mad);
+    end
+end
+
 clear z_mad0 z_mad1 z_mad;
 
 %% merge N
@@ -322,6 +370,15 @@ end
 N0=single(N0);
 N1=single(N1);
 
+if preciseCorners
+    cacheOriginalCorners(m0, n0, 'N', cornersSource);
+    cacheOriginalCorners(m1, n1, 'N', cornersSource);
+    if n0 == n_right || n0 == n_left
+        N0 = resetBuffCorners(m0, n0, 'N', N0);
+        N1 = resetBuffCorners(m1, n1, 'N', N1);
+    end
+end
+
 N=(N0.*W0)+(N1.*(1-W0));
 
 n= N0 == 0 & N1 ~= 0 & ~W0_feather_zone;
@@ -333,6 +390,14 @@ N=uint8(N);
 
 m0.N(r0(1):r0(2),c0(1):c0(2))=N;
 m1.N(r1(1):r1(2),c1(1):c1(2))=N;
+
+if preciseCorners
+    if n0 == n_right || n0 == n_left
+        burnCornersIntoAdjBuffs(m0, n0, 'N', N);
+        burnCornersIntoAdjBuffs(m1, n1, 'N', N);
+    end
+end
+
 clear N0 N1 N;
 
 %% merge Nmt
@@ -363,6 +428,15 @@ end
 Nmt0=single(Nmt0);
 Nmt1=single(Nmt1);
 
+if preciseCorners
+    cacheOriginalCorners(m0, n0, 'Nmt', cornersSource);
+    cacheOriginalCorners(m1, n1, 'Nmt', cornersSource);
+    if n0 == n_right || n0 == n_left
+        Nmt0 = resetBuffCorners(m0, n0, 'Nmt', Nmt0);
+        Nmt1 = resetBuffCorners(m1, n1, 'Nmt', Nmt1);
+    end
+end
+
 Nmt=(Nmt0.*W0)+(Nmt1.*(1-W0));
 
 n= Nmt0 == 0 & Nmt1 ~= 0 & ~W0_feather_zone;
@@ -374,6 +448,14 @@ Nmt=uint8(Nmt);
 
 m0.Nmt(r0(1):r0(2),c0(1):c0(2))=Nmt;
 m1.Nmt(r1(1):r1(2),c1(1):c1(2))=Nmt;
+
+if preciseCorners
+    if n0 == n_right || n0 == n_left
+        burnCornersIntoAdjBuffs(m0, n0, 'Nmt', Nmt);
+        burnCornersIntoAdjBuffs(m1, n1, 'Nmt', Nmt);
+    end
+end
+
 clear Nmt0 Nmt1 Nmt;
 
 %% merge tmin
@@ -404,6 +486,15 @@ end
 tmin0=single(tmin0);
 tmin1=single(tmin1);
 
+if preciseCorners
+    cacheOriginalCorners(m0, n0, 'tmin', cornersSource);
+    cacheOriginalCorners(m1, n1, 'tmin', cornersSource);
+    if n0 == n_right || n0 == n_left
+        tmin0 = resetBuffCorners(m0, n0, 'tmin', tmin0);
+        tmin1 = resetBuffCorners(m1, n1, 'tmin', tmin1);
+    end
+end
+
 tmin=(tmin0.*W0)+(tmin1.*(1-W0));
 
 n= tmin0 == 0 & tmin1 ~= 0 & ~W0_feather_zone;
@@ -415,6 +506,14 @@ tmin=uint16(tmin);
 
 m0.tmin(r0(1):r0(2),c0(1):c0(2))=tmin;
 m1.tmin(r1(1):r1(2),c1(1):c1(2))=tmin;
+
+if preciseCorners
+    if n0 == n_right || n0 == n_left
+        burnCornersIntoAdjBuffs(m0, n0, 'tmin', tmin);
+        burnCornersIntoAdjBuffs(m1, n1, 'tmin', tmin);
+    end
+end
+
 clear tmin0 tmin1 tmin;
 
 %% merge tmax
@@ -445,6 +544,15 @@ end
 tmax0=single(tmax0);
 tmax1=single(tmax1);
 
+if preciseCorners
+    cacheOriginalCorners(m0, n0, 'tmax', cornersSource);
+    cacheOriginalCorners(m1, n1, 'tmax', cornersSource);
+    if n0 == n_right || n0 == n_left
+        tmax0 = resetBuffCorners(m0, n0, 'tmax', tmax0);
+        tmax1 = resetBuffCorners(m1, n1, 'tmax', tmax1);
+    end
+end
+
 tmax=(tmax0.*W0)+(tmax1.*(1-W0));
 
 n= tmax0 == 0 & tmax1 ~= 0 & ~W0_feather_zone;
@@ -456,11 +564,640 @@ tmax=uint16(tmax);
 
 m0.tmax(r0(1):r0(2),c0(1):c0(2))=tmax;
 m1.tmax(r1(1):r1(2),c1(1):c1(2))=tmax;
+
+if preciseCorners
+    if n0 == n_right || n0 == n_left
+        burnCornersIntoAdjBuffs(m0, n0, 'tmax', tmax);
+        burnCornersIntoAdjBuffs(m1, n1, 'tmax', tmax);
+    end
+end
+
 clear tmax0 tmax1 tmax;
 
 fprintf('tile merge complete\n')
 
-clear cleanup_locks
+if n0 == n_right
+    m0.mergedRight = true;
+elseif n0 == n_left
+    m0.mergedLeft = true;
+elseif n0 == n_top
+    m0.mergedTop = true;
+elseif n0 == n_bottom
+    m0.mergedBottom = true;
+end
+if n1 == n_right
+    m1.mergedRight = true;
+elseif n1 == n_left
+    m1.mergedLeft = true;
+elseif n1 == n_top
+    m1.mergedTop = true;
+elseif n1 == n_bottom
+    m1.mergedBottom = true;
+end
+
+if preciseCorners
+    if n0 == n_right
+        m0.rightNeedsRemerge = false;
+    elseif n0 == n_left
+        m0.leftNeedsRemerge = false;
+    elseif n0 == n_top
+        m0.topNeedsRemerge = false;
+    elseif n0 == n_bottom
+        m0.bottomNeedsRemerge = false;
+    end
+    if n1 == n_right
+        m1.rightNeedsRemerge = false;
+    elseif n1 == n_left
+        m1.leftNeedsRemerge = false;
+    elseif n1 == n_top
+        m1.topNeedsRemerge = false;
+    elseif n1 == n_bottom
+        m1.bottomNeedsRemerge = false;
+    end
+end
+
+clear cleanup_locks;
+
+
+
+function cacheOriginalCorners(m0, n0, data_arr_name, source)
+
+n_top = 1;
+n_bottom = 2;
+n_left = 3;
+n_right = 4;
+
+n_top_left = 1;
+n_top_right = 2;
+n_bottom_right = 3;
+n_bottom_left = 4;
+
+if n0 == n_top
+    working_tile_position = 'bottom';
+elseif n0 == n_bottom
+    working_tile_position = 'top';
+elseif n0 == n_left
+    working_tile_position = 'right';
+elseif n0 == n_right
+    working_tile_position = 'left';
+end
+
+data_buff_name = [data_arr_name, 'buff'];
+data_corners_name = [data_arr_name, 'buffcorners'];
+
+varlist0 = who(m0);
+if ~ismember(data_corners_name, varlist0)
+    setfield(m0, data_corners_name, cell(4,1));
+end
+
+if n0 == n_right
+    buff_r = [];
+    
+    corn_arr = getfield(m0, data_corners_name, {n_top_right,1});
+    corn_arr = corn_arr{1};
+    if isempty(corn_arr)
+        buff_t = getfield(m0, data_buff_name, {n_top,1});
+        buff_t = buff_t{1};
+        if ~isempty(buff_t)
+            if isempty(buff_r)
+                buff_r = getfield(m0, data_buff_name, {n_right,1});
+                buff_r = buff_r{1};
+            end
+            corn_nrows = size(buff_t, 1);
+            corn_ncols = size(buff_r, 2);
+            if strcmp(source, 'adj_side')
+                corn_source_edge = 'top';
+                corn_arr = buff_t(:, (end-corn_ncols+1):end);
+            elseif strcmp(source, 'same_side')
+                corn_source_edge = 'right';
+                corn_arr = buff_r(1:corn_nrows, :);
+            end
+            fprintf("Caching %s tile's '%s' array top-right original corner from %s edge %s array\n", working_tile_position, data_arr_name, corn_source_edge, data_buff_name);
+            setfield(m0, data_corners_name, {n_top_right,1}, {corn_arr});
+        end
+        clear buff_t;
+    end
+    
+    corn_arr = getfield(m0, data_corners_name, {n_bottom_right,1});
+    corn_arr = corn_arr{1};
+    if isempty(corn_arr)
+        buff_b = getfield(m0, data_buff_name, {n_bottom,1});
+        buff_b = buff_b{1};
+        if ~isempty(buff_b)
+            if isempty(buff_r)
+                buff_r = getfield(m0, data_buff_name, {n_right,1});
+                buff_r = buff_r{1};
+            end
+            corn_nrows = size(buff_b, 1);
+            corn_ncols = size(buff_r, 2);
+            if strcmp(source, 'adj_side')
+                corn_source_edge = 'bottom';
+                corn_arr = buff_b(:, (end-corn_ncols+1):end);
+            elseif strcmp(source, 'same_side')
+                corn_source_edge = 'right';
+                corn_arr = buff_r((end-corn_nrows+1):end, :);
+            end
+            fprintf("Caching %s tile's '%s' array bottom-right original corner from %s edge %s array\n", working_tile_position, data_arr_name, corn_source_edge, data_buff_name);
+            setfield(m0, data_corners_name, {n_bottom_right,1}, {corn_arr});
+        end
+        clear buff_b;
+    end
+
+elseif n0 == n_left
+    buff_l = [];
+    
+    corn_arr = getfield(m0, data_corners_name, {n_top_left,1});
+    corn_arr = corn_arr{1};
+    if isempty(corn_arr)
+        buff_t = getfield(m0, data_buff_name, {n_top,1});
+        buff_t = buff_t{1};
+        if ~isempty(buff_t)
+            if isempty(buff_l)
+                buff_l = getfield(m0, data_buff_name, {n_left,1});
+                buff_l = buff_l{1};
+            end
+            corn_nrows = size(buff_t, 1);
+            corn_ncols = size(buff_l, 2);
+            if strcmp(source, 'adj_side')
+                corn_source_edge = 'top';
+                corn_arr = buff_t(:, 1:corn_ncols);
+            elseif strcmp(source, 'same_side')
+                corn_source_edge = 'left';
+                corn_arr = buff_l(1:corn_nrows, :);
+            end
+            fprintf("Caching %s tile's '%s' array top-left original corner from %s edge %s array\n", working_tile_position, data_arr_name, corn_source_edge, data_buff_name);
+            setfield(m0, data_corners_name, {n_top_left,1}, {corn_arr});
+        end
+        clear buff_t;
+    end
+    
+    corn_arr = getfield(m0, data_corners_name, {n_bottom_left,1});
+    corn_arr = corn_arr{1};
+    if isempty(corn_arr)
+        buff_b = getfield(m0, data_buff_name, {n_bottom,1});
+        buff_b = buff_b{1};
+        if ~isempty(buff_b)
+            if isempty(buff_l)
+                buff_l = getfield(m0, data_buff_name, {n_left,1});
+                buff_l = buff_l{1};
+            end
+            corn_nrows = size(buff_b, 1);
+            corn_ncols = size(buff_l, 2);
+            if strcmp(source, 'adj_side')
+                corn_source_edge = 'bottom';
+                corn_arr = buff_b(:, 1:corn_ncols);
+            elseif strcmp(source, 'same_side')
+                corn_source_edge = 'left';
+                corn_arr = buff_l((end-corn_nrows+1):end, :);
+            end
+            fprintf("Caching %s tile's '%s' array bottom-left original corner from %s edge %s array\n", working_tile_position, data_arr_name, corn_source_edge, data_buff_name);
+            setfield(m0, data_corners_name, {n_bottom_left,1}, {corn_arr});
+        end
+        clear buff_b;
+    end
+    
+elseif n0 == n_top
+    buff_t = [];
+    
+    corn_arr = getfield(m0, data_corners_name, {n_top_right,1});
+    corn_arr = corn_arr{1};
+    if isempty(corn_arr)
+        buff_r = getfield(m0, data_buff_name, {n_right,1});
+        buff_r = buff_r{1};
+        if ~isempty(buff_r)
+            if isempty(buff_t)
+                buff_t = getfield(m0, data_buff_name, {n_top,1});
+                buff_t = buff_t{1};
+            end
+            corn_nrows = size(buff_t, 1);
+            corn_ncols = size(buff_r, 2);
+            if strcmp(source, 'adj_side')
+                corn_source_edge = 'right';
+                corn_arr = buff_r(1:corn_nrows, :);
+            elseif strcmp(source, 'same_side')
+                corn_source_edge = 'top';
+                corn_arr = buff_t(:, (end-corn_ncols+1):end);
+            end
+            fprintf("Caching %s tile's '%s' array top-right original corner from %s edge %s array\n", working_tile_position, data_arr_name, corn_source_edge, data_buff_name);
+            setfield(m0, data_corners_name, {n_top_right,1}, {corn_arr});
+        end
+        clear buff_r;
+    end
+    
+    corn_arr = getfield(m0, data_corners_name, {n_top_left,1});
+    corn_arr = corn_arr{1};
+    if isempty(corn_arr)
+        buff_l = getfield(m0, data_buff_name, {n_left,1});
+        buff_l = buff_l{1};
+        if ~isempty(buff_l)
+            if isempty(buff_t)
+                buff_t = getfield(m0, data_buff_name, {n_top,1});
+                buff_t = buff_t{1};
+            end
+            corn_nrows = size(buff_t, 1);
+            corn_ncols = size(buff_l, 2);
+            if strcmp(source, 'adj_side')
+                corn_source_edge = 'left';
+                corn_arr = buff_l(1:corn_nrows, :);
+            elseif strcmp(source, 'same_side')
+                corn_source_edge = 'top';
+                corn_arr = buff_t(:, 1:corn_ncols);
+            end
+            fprintf("Caching %s tile's '%s' array top-left original corner from %s edge %s array\n", working_tile_position, data_arr_name, corn_source_edge, data_buff_name);
+            setfield(m0, data_corners_name, {n_top_left,1}, {corn_arr});
+        end
+        clear buff_l;
+    end
+    
+elseif n0 == n_bottom
+    buff_b = [];
+    
+    corn_arr = getfield(m0, data_corners_name, {n_bottom_right,1});
+    corn_arr = corn_arr{1};
+    if isempty(corn_arr)
+        buff_r = getfield(m0, data_buff_name, {n_right,1});
+        buff_r = buff_r{1};
+        if ~isempty(buff_r)
+            if isempty(buff_b)
+                buff_b = getfield(m0, data_buff_name, {n_bottom,1});
+                buff_b = buff_b{1};
+            end
+            corn_nrows = size(buff_b, 1);
+            corn_ncols = size(buff_r, 2);
+            if strcmp(source, 'adj_side')
+                corn_source_edge = 'right';
+                corn_arr = buff_r((end-corn_nrows+1):end, :);
+            elseif strcmp(source, 'same_side')
+                corn_source_edge = 'bottom';
+                corn_arr = buff_b(:, (end-corn_ncols+1):end);
+            end
+            fprintf("Caching %s tile's '%s' array bottom-right original corner from %s edge %s array\n", working_tile_position, data_arr_name, corn_source_edge, data_buff_name);
+            setfield(m0, data_corners_name, {n_bottom_right,1}, {corn_arr});
+        end
+        clear buff_r;
+    end
+    
+    corn_arr = getfield(m0, data_corners_name, {n_bottom_left,1});
+    corn_arr = corn_arr{1};
+    if isempty(corn_arr)
+        buff_l = getfield(m0, data_buff_name, {n_left,1});
+        buff_l = buff_l{1};
+        if ~isempty(buff_l)
+            if isempty(buff_b)
+                buff_b = getfield(m0, data_buff_name, {n_bottom,1});
+                buff_b = buff_b{1};
+            end
+            corn_nrows = size(buff_b, 1);
+            corn_ncols = size(buff_l, 2);
+            if strcmp(source, 'adj_side')
+                corn_source_edge = 'left';
+                corn_arr = buff_l((end-corn_nrows+1):end, :);
+            elseif strcmp(source, 'same_side')
+                corn_source_edge = 'bottom';
+                corn_arr = buff_b(:, 1:corn_ncols);
+            end
+            fprintf("Caching %s tile's '%s' array bottom-left original corner from %s edge %s array\n", working_tile_position, data_arr_name, corn_source_edge, data_buff_name);
+            setfield(m0, data_corners_name, {n_bottom_left,1}, {corn_arr});
+        end
+        clear buff_l;
+    end
+
+end
+
+
+
+function [buff_arr] = resetBuffCorners(m0, n0, data_arr_name, buff_arr)
+
+n_top = 1;
+n_bottom = 2;
+n_left = 3;
+n_right = 4;
+
+n_top_left = 1;
+n_top_right = 2;
+n_bottom_right = 3;
+n_bottom_left = 4;
+
+if n0 == n_top
+    working_tile_position = 'bottom';
+elseif n0 == n_bottom
+    working_tile_position = 'top';
+elseif n0 == n_left
+    working_tile_position = 'right';
+elseif n0 == n_right
+    working_tile_position = 'left';
+end
+
+data_buff_name = [data_arr_name, 'buff'];
+data_corners_name = [data_arr_name, 'buffcorners'];
+
+varlist0 = who(m0);
+if ~ismember(data_corners_name, varlist0)
+    setfield(m0, data_corners_name, cell(4,1));
+    error("Tile '%s' variable has not been set", data_corners_name);
+end
+
+if ~ismember('origCornersList', varlist0)
+    m0.origCornersList = struct;
+end
+if ~ismember(data_buff_name, fields(m0.origCornersList))
+    m0.origCornersList = setfield(m0.origCornersList, data_buff_name, struct);
+end
+origCornersList = getfield(m0.origCornersList, data_buff_name);
+origCornersVarlist = fields(origCornersList);
+
+modified_buff_arr = false;
+
+if n0 == n_right
+
+    rightTopCornerIsOrig = ismember('rightTopCornerIsOrig', origCornersVarlist) && origCornersList.rightTopCornerIsOrig;
+    if ~rightTopCornerIsOrig
+        corn_arr = getfield(m0, data_corners_name, {n_top_right,1});
+        corn_arr = corn_arr{1};
+        if ~isempty(corn_arr)
+            fprintf("Resetting %s tile's right-side %s array top-right corner values to original corner values\n", working_tile_position, data_buff_name);
+            [corn_nrows, corn_ncols] = size(corn_arr);
+            buff_arr(1:corn_nrows, :) = corn_arr;
+            origCornersList.rightTopCornerIsOrig = true;
+            modified_buff_arr = true;
+        end
+    end
+
+    rightBottomCornerIsOrig = ismember('rightBottomCornerIsOrig', origCornersVarlist) && origCornersList.rightBottomCornerIsOrig;
+    if ~rightBottomCornerIsOrig
+        corn_arr = getfield(m0, data_corners_name, {n_bottom_right,1});
+        corn_arr = corn_arr{1};
+        if ~isempty(corn_arr)
+            fprintf("Resetting %s tile's right-side %s array bottom-right corner values to original corner values\n", working_tile_position, data_buff_name);
+            [corn_nrows, corn_ncols] = size(corn_arr);
+            buff_arr((end-corn_nrows+1):end, :) = corn_arr;
+            origCornersList.rightBottomCornerIsOrig = true;
+            modified_buff_arr = true;
+        end
+    end
+
+elseif n0 == n_left
+
+    leftTopCornerIsOrig = ismember('leftTopCornerIsOrig', origCornersVarlist) && origCornersList.leftTopCornerIsOrig;
+    if ~leftTopCornerIsOrig
+        corn_arr = getfield(m0, data_corners_name, {n_top_left,1});
+        corn_arr = corn_arr{1};
+        if ~isempty(corn_arr)
+            fprintf("Resetting %s tile's left-side %s array top-left corner values to original corner values\n", working_tile_position, data_buff_name);
+            [corn_nrows, corn_ncols] = size(corn_arr);
+            buff_arr(1:corn_nrows, :) = corn_arr;
+            origCornersList.leftTopCornerIsOrig = true;
+            modified_buff_arr = true;
+        end
+    end
+
+    leftBottomCornerIsOrig = ismember('leftBottomCornerIsOrig', origCornersVarlist) && origCornersList.leftBottomCornerIsOrig;
+    if ~leftBottomCornerIsOrig
+        corn_arr = getfield(m0, data_corners_name, {n_bottom_left,1});
+        corn_arr = corn_arr{1};
+        if ~isempty(corn_arr)
+            fprintf("Resetting %s tile's left-side %s array bottom-left corner values to original corner values\n", working_tile_position, data_buff_name);
+            [corn_nrows, corn_ncols] = size(corn_arr);
+            buff_arr((end-corn_nrows+1):end, :) = corn_arr;
+            origCornersList.leftBottomCornerIsOrig = true;
+            modified_buff_arr = true;
+        end
+    end
+
+elseif n0 == n_top
+
+    topRightCornerIsOrig = ismember('topRightCornerIsOrig', origCornersVarlist) && origCornersList.topRightCornerIsOrig;
+    if ~topRightCornerIsOrig
+        corn_arr = getfield(m0, data_corners_name, {n_top_right,1});
+        corn_arr = corn_arr{1};
+        if ~isempty(corn_arr)
+            fprintf("Resetting %s tile's top-side %s array top-right corner values to original corner values\n", working_tile_position, data_buff_name);
+            [corn_nrows, corn_ncols] = size(corn_arr);
+            buff_arr(:, (end-corn_ncols+1):end) = corn_arr;
+            origCornersList.topRightCornerIsOrig = true;
+            modified_buff_arr = true;
+        end
+    end
+
+    topLeftCornerIsOrig = ismember('topLeftCornerIsOrig', origCornersVarlist) && origCornersList.topLeftCornerIsOrig;
+    if ~topLeftCornerIsOrig
+        corn_arr = getfield(m0, data_corners_name, {n_top_left,1});
+        corn_arr = corn_arr{1};
+        if ~isempty(corn_arr)
+            fprintf("Resetting %s tile's top-side %s array top-left corner values to original corner values\n", working_tile_position, data_buff_name);
+            [corn_nrows, corn_ncols] = size(corn_arr);
+            buff_arr(:, 1:corn_ncols) = corn_arr;
+            origCornersList.topLeftCornerIsOrig = true;
+            modified_buff_arr = true;
+        end
+    end
+
+elseif n0 == n_bottom
+
+    bottomRightCornerIsOrig = ismember('bottomRightCornerIsOrig', origCornersVarlist) && origCornersList.bottomRightCornerIsOrig;
+    if ~bottomRightCornerIsOrig
+        corn_arr = getfield(m0, data_corners_name, {n_bottom_right,1});
+        corn_arr = corn_arr{1};
+        if ~isempty(corn_arr)
+            fprintf("Resetting %s tile's bottom-side %s array bottom-right corner values to original corner values\n", working_tile_position, data_buff_name);
+            [corn_nrows, corn_ncols] = size(corn_arr);
+            buff_arr(:, (end-corn_ncols+1):end) = corn_arr;
+            origCornersList.bottomRightCornerIsOrig = true;
+            modified_buff_arr = true;
+        end
+    end
+
+    bottomLeftCornerIsOrig = ismember('bottomLeftCornerIsOrig', origCornersVarlist) && origCornersList.bottomLeftCornerIsOrig;
+    if ~bottomLeftCornerIsOrig
+        corn_arr = getfield(m0, data_corners_name, {n_bottom_left,1});
+        corn_arr = corn_arr{1};
+        if ~isempty(corn_arr)
+            fprintf("Resetting %s tile's bottom-side %s array bottom-left corner values to original corner values\n", working_tile_position, data_buff_name);
+            [corn_nrows, corn_ncols] = size(corn_arr);
+            buff_arr(:, 1:corn_ncols) = corn_arr;
+            origCornersList.bottomLeftCornerIsOrig = true;
+            modified_buff_arr = true;
+        end
+    end
+
+end
+
+if modified_buff_arr
+    fprintf("Saving resetBuffCorners result to tile '%s' variable\n", data_buff_name);
+    m0.origCornersList = setfield(m0.origCornersList, data_buff_name, origCornersList);
+    setfield(m0, data_buff_name, {n0,1}, {buff_arr});
+end
+
+
+
+function burnCornersIntoAdjBuffs(m0, n0, data_arr_name, buff_arr)
+
+n_top = 1;
+n_bottom = 2;
+n_left = 3;
+n_right = 4;
+
+n_top_left = 1;
+n_top_right = 2;
+n_bottom_right = 3;
+n_bottom_left = 4;
+
+if n0 == n_top
+    working_tile_position = 'bottom';
+elseif n0 == n_bottom
+    working_tile_position = 'top';
+elseif n0 == n_left
+    working_tile_position = 'right';
+elseif n0 == n_right
+    working_tile_position = 'left';
+end
+
+data_buff_name = [data_arr_name, 'buff'];
+data_corners_name = [data_arr_name, 'buffcorners'];
+
+varlist0 = who(m0);
+if ~ismember(data_corners_name, varlist0)
+    setfield(m0, data_corners_name, cell(4,1));
+    error("Tile '%s' variable has not been set", data_corners_name);
+end
+
+if n0 == n_right
+    buff_r = buff_arr;
+    clear buff_arr;
+
+    corn_arr = getfield(m0, data_corners_name, {n_top_right,1});
+    corn_arr = corn_arr{1};
+    if ~isempty(corn_arr)
+        [corn_nrows, corn_ncols] = size(corn_arr);
+        buff_t = getfield(m0, data_buff_name, {n_top,1});
+        buff_t = buff_t{1};
+        if ~isempty(buff_t)
+            fprintf("Burning %s tile's right-side %s array top-right corner values into top-side array\n", working_tile_position, data_buff_name);
+            fprintf("WARNING! %s tile will need to be remerged on the top side!\n", working_tile_position);
+            buff_t(:, (end-corn_ncols+1):end) = buff_r(1:corn_nrows, :);
+            setfield(m0, data_buff_name, {n_top,1}, {buff_t});
+            m0.topNeedsRemerge = true;
+        end
+    end
+
+    corn_arr = getfield(m0, data_corners_name, {n_bottom_right,1});
+    corn_arr = corn_arr{1};
+    if ~isempty(corn_arr)
+        [corn_nrows, corn_ncols] = size(corn_arr);
+        buff_b = getfield(m0, data_buff_name, {n_bottom,1});
+        buff_b = buff_b{1};
+        if ~isempty(buff_b)
+            fprintf("Burning %s tile's right-side %s array bottom-right corner values into bottom-side array\n", working_tile_position, data_buff_name);
+            fprintf("WARNING! %s tile will need to be remerged on the bottom side!\n", working_tile_position);
+            buff_b(:, (end-corn_ncols+1):end) = buff_r((end-corn_nrows+1):end, :);
+            setfield(m0, data_buff_name, {n_bottom,1}, {buff_b});
+            m0.bottomNeedsRemerge = true;
+        end
+    end
+
+elseif n0 == n_left
+    buff_l = buff_arr;
+    clear buff_arr;
+
+    corn_arr = getfield(m0, data_corners_name, {n_top_left,1});
+    corn_arr = corn_arr{1};
+    if ~isempty(corn_arr)
+        [corn_nrows, corn_ncols] = size(corn_arr);
+        buff_t = getfield(m0, data_buff_name, {n_top,1});
+        buff_t = buff_t{1};
+        if ~isempty(buff_t)
+            fprintf("Burning %s tile's left-side %s array top-left corner values into top-side array\n", working_tile_position, data_buff_name);
+            fprintf("WARNING! %s tile will need to be remerged on the top side!\n", working_tile_position);
+            buff_t(:, 1:corn_ncols) = buff_l(1:corn_nrows, :);
+            setfield(m0, data_buff_name, {n_top,1}, {buff_t});
+            m0.topNeedsRemerge = true;
+        end
+    end
+
+    corn_arr = getfield(m0, data_corners_name, {n_bottom_left,1});
+    corn_arr = corn_arr{1};
+    if ~isempty(corn_arr)
+        [corn_nrows, corn_ncols] = size(corn_arr);
+        buff_b = getfield(m0, data_buff_name, {n_bottom,1});
+        buff_b = buff_b{1};
+        if ~isempty(buff_b)
+            fprintf("Burning %s tile's left-side %s array bottom-left corner values into bottom-side array\n", working_tile_position, data_buff_name);
+            fprintf("WARNING! %s tile will need to be remerged on the bottom side!\n", working_tile_position);
+            buff_b(:, 1:corn_ncols) = buff_l((end-corn_nrows+1):end, :);
+            setfield(m0, data_buff_name, {n_bottom,1}, {buff_b});
+            m0.bottomNeedsRemerge = true;
+        end
+    end
+
+elseif n0 == n_top
+    buff_t = buff_arr;
+    clear buff_arr;
+
+    corn_arr = getfield(m0, data_corners_name, {n_top_right,1});
+    corn_arr = corn_arr{1};
+    if ~isempty(corn_arr)
+        [corn_nrows, corn_ncols] = size(corn_arr);
+        buff_r = getfield(m0, data_buff_name, {n_right,1});
+        buff_r = buff_r{1};
+        if ~isempty(buff_r)
+            fprintf("Burning %s tile's top-side %s array top-right corner values into right-side array\n", working_tile_position, data_buff_name);
+            fprintf("WARNING! %s tile will need to be remerged on the right side!\n", working_tile_position);
+            buff_r(1:corn_nrows, :) = buff_t(:, (end-corn_ncols+1):end);
+            setfield(m0, data_buff_name, {n_right,1}, {buff_r});
+            m0.rightNeedsRemerge = true;
+        end
+    end
+
+    corn_arr = getfield(m0, data_corners_name, {n_top_left,1});
+    corn_arr = corn_arr{1};
+    if ~isempty(corn_arr)
+        [corn_nrows, corn_ncols] = size(corn_arr);
+        buff_l = getfield(m0, data_buff_name, {n_left,1});
+        buff_l = buff_l{1};
+        if ~isempty(buff_l)
+            fprintf("Burning %s tile's top-side %s array top-left corner values into left-side array\n", working_tile_position, data_buff_name);
+            fprintf("WARNING! %s tile will need to be remerged on the left side!\n", working_tile_position);
+            buff_l(1:corn_nrows, :) = buff_t(:, 1:corn_ncols);
+            setfield(m0, data_buff_name, {n_left,1}, {buff_l});
+            m0.leftNeedsRemerge = true;
+        end
+    end
+
+elseif n0 == n_bottom
+    buff_b = buff_arr;
+    clear buff_arr;
+
+    corn_arr = getfield(m0, data_corners_name, {n_bottom_right,1});
+    corn_arr = corn_arr{1};
+    if ~isempty(corn_arr)
+        [corn_nrows, corn_ncols] = size(corn_arr);
+        buff_r = getfield(m0, data_buff_name, {n_right,1});
+        buff_r = buff_r{1};
+        if ~isempty(buff_r)
+            fprintf("Burning %s tile's bottom-side %s array bottom-right corner values into right-side array\n", working_tile_position, data_buff_name);
+            fprintf("WARNING! %s tile will need to be remerged on the right side!\n", working_tile_position);
+            buff_r((end-corn_nrows+1):end, :) = buff_b(:, (end-corn_ncols+1):end);
+            setfield(m0, data_buff_name, {n_right,1}, {buff_r});
+            m0.rightNeedsRemerge = true;
+        end
+    end
+
+    corn_arr = getfield(m0, data_corners_name, {n_bottom_left,1});
+    corn_arr = corn_arr{1};
+    if ~isempty(corn_arr)
+        [corn_nrows, corn_ncols] = size(corn_arr);
+        buff_l = getfield(m0, data_buff_name, {n_left,1});
+        buff_l = buff_l{1};
+        if ~isempty(buff_l)
+            fprintf("Burning %s tile's bottom-side %s array bottom-left corner values into left-side array\n", working_tile_position, data_buff_name);
+            fprintf("WARNING! %s tile will need to be remerged on the left side!\n", working_tile_position);
+            buff_l((end-corn_nrows+1):end, :) = buff_b(:, 1:corn_ncols);
+            setfield(m0, data_buff_name, {n_left,1}, {buff_l});
+            m0.leftNeedsRemerge = true;
+        end
+    end
+
+end
 
 
 

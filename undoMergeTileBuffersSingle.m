@@ -170,8 +170,21 @@ elseif strcmp(whichArrays, 'all-but-z')
 end
 
 for array_idx = 1:length(reset_array_names)
-    data_array_name = reset_array_names{array_idx};     % ex. 'z'
-    buff_array_name = [data_array_name,'buff'];         % ex. 'zbuff'
+    data_array_name = reset_array_names{array_idx};         % ex. 'z'
+    buff_array_name = [data_array_name,'buff'];             % ex. 'zbuff'
+    corners_array_name = [data_array_name,'buffcorners'];   % ex. 'zbuffcorners'
+    % TODO: If -buffcorners array exists, it contains the *original*
+    % corner values for the buffer zones. We should use this to ensure
+    % the data arrays are reset to the true original values in the corners,
+    % instead of assuming that the left and right buffers contain the original
+    % values in the the corners.
+    % If you're not aware, doing a 'row' merge followed by a 'column' merge results
+    % in the top and bottom buffers containing row-merged values at the ends of their
+    % buffer arrays (at the corners of the tile). This is kinda both a feature and an issue,
+    % because it results in a continuous feather merge, but can be the source of artificial
+    % seamlines when the order of row/column merging is not consistent across the mosaic.
+    % With the new "preciseCorners" option to mergeTileBuffer.m (should be enabled by default),
+    % we attempt to properly handle this corner issue.
     if ~ismember(buff_array_name, m_varlist)
         continue;
     end
