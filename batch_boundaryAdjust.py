@@ -27,18 +27,18 @@ DEFAULT_TILE_INDEX = "<tiledir>/../tile_index_files/<tiledir-name>/tileNeighborI
 class RawTextArgumentDefaultsHelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter): pass
 
 def get_arg_parser():
-    
+
     parser = argparse.ArgumentParser(
         formatter_class=RawTextArgumentDefaultsHelpFormatter,
         description=wrap_multiline_str("""
-            Feather-merge the edges of raster data arrays in
-            Matlab '<tilename>_<resolution>.mat' DEM mosaic tile files
-            with the edges of bordering tiles.
+            Apply an interpolated offset to the overlap area (both edge 
+            borders and corners) of Matlab '<tilename>_<resolution>(_reg).mat'
+            DEM mosaic tile files to make the tile boundaries match.
         """)
     )
-    
+
     ## Positional args
-    
+
     parser.add_argument(
         'tiledir',
         type=str,
@@ -81,7 +81,8 @@ def get_arg_parser():
     parser.add_argument(
         '--process-group',
         type=str,
-        choices=['all', 'block', 'stripe-1', 'stripe-2', 'stripe-3', 'row', 'column'],
+        # choices=['all', 'block', 'stripe-1', 'stripe-2', 'stripe-3'],
+        choices=['all', 'stripe-1', 'stripe-2', 'stripe-3'],
         default=None,
         help="Per-job grouping of tiles for processing."
     )
@@ -92,19 +93,19 @@ def get_arg_parser():
         default=MATLAB_LIBDIR,
         help="Path to directory containing necessary Matlab functions."
     )
-    
+
     parser.add_argument(
         '--dryrun',
         action='store_true',
         help="Print actions without executing."
     )
-    
+
     ## Argument groups
-    
+
     jobscript_utils.argparse_add_job_scheduler_group(parser, config_group=SCRIPT_FNAME)
 
     return parser
-    
+
 
 def main():
 
@@ -248,7 +249,8 @@ def main():
         task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
             addpath('{SCRIPT_DIR}');
             addpath('{script_args.matlib}');
-            batchMergeTileBuffer('{script_args.tile_index}', 'tiles',{tilelist_cellarr} {matscript_args});
+            batch_boundaryAdjustCalc('{script_args.tile_index}', 'tiles',{tilelist_cellarr} {matscript_args});
+            batch_boundaryAdjustApply('{script_args.tile_index}', 'tiles',{tilelist_cellarr} {matscript_args});
         """))
 
         submit_cmd = job_handler.add_task_cmd(task_cmd, job_id)
