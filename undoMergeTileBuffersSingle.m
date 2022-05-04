@@ -91,6 +91,9 @@ data_array_names = {
     'tmin',
     'tmax',
 };
+exclude_array_names = {
+    'land',
+};
 if ~all(ismember(data_array_names, m_varlist))
     data_array_names
     error("One or more expected data arrays do not exist in tile struct")
@@ -99,7 +102,7 @@ end
 % Add data arrays that might be missing from the above list
 z_size = size(m_struct, 'z');
 data_array_names_same_sz = m_varlist(cellfun(@(name) isequal(size(m_struct, name), z_size), m_varlist));
-data_array_names = union(data_array_names, data_array_names_same_sz);
+data_array_names = setdiff(union(data_array_names, data_array_names_same_sz), exclude_array_names);
 
 buff_array_names = cellfun(@(name) [name,'buff'], data_array_names, 'UniformOutput',false);
 
