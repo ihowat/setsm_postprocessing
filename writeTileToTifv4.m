@@ -36,8 +36,8 @@ end
 
 fprintf('Source: %s\n',tilef);
 
-% output tile buffer in pixels
-buffer = 10;
+% output tile buffer in meters
+buffer_meters = 100;
 
 % load m file and get coordinate vectors
 m=matfile(tilef);
@@ -109,11 +109,12 @@ nx(end) = nx(end)-1;
 ny(end) = ny(end)-1;
 
 % add standard tile buffer
-if buffer > 0
-    nx(1) = max(nx(1)-buffer, 1);
-    nx(2) = min(nx(2)+buffer, length(x));
-    ny(1) = max(ny(1)-buffer, 1);
-    ny(2) = min(ny(2)+buffer, length(y));
+if buffer_meters > 0
+    buffer_px = buffer_meters / dx;
+    nx(1) = max(nx(1)-buffer_px, 1);
+    nx(2) = min(nx(2)+buffer_px, length(x));
+    ny(1) = max(ny(1)-buffer_px, 1);
+    ny(2) = min(ny(2)+buffer_px, length(y));
 end
 
 %crop coordinate vectors
