@@ -45,6 +45,16 @@ module load matlab/2019a
 tiledir="$ARG_TILEDIR"
 tiledef_file="/mnt/pgc/data/projects/earthdem/tiledef_files/PGC_Imagery_Mosaic_Tiles_Arctic.mat"
 
+## Validate arguments
+if [ ! -d "$tiledir" ]; then
+    echo "Tiledir does not exist: ${tiledir}"
+    exit 1
+fi
+if [ ! -f "$tiledef_file" ]; then
+    echo "Tiledef file does not exist: ${tiledef_file}"
+    exit 1
+fi
+
 matlab_cmd="try; addpath('/mnt/pgc/data/common/repos/setsm_postprocessing4'); addLandMask2ArcticDEMTiles('${tiledir}', '${tiledef_file}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 #matlab_cmd="try; addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4'); addLandMask2ArcticDEMTiles('${tiledir}', '${tiledef_file}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 

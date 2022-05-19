@@ -58,6 +58,12 @@ if [ -z "$resolution" ]; then
     resolution='10m';
 #    resolution='2m';
 fi
+
+if [ ! -d "$tiledir" ]; then
+    echo "Root tiledir does not exist: ${tiledir}"
+    exit 1
+fi
+
 tile_index_dir="${tiledir}/../tile_index_files/$(basename "$tiledir")"
 tile_index_file="${tile_index_dir}/tileNeighborIndex_${resolution}.mat"
 

@@ -44,6 +44,12 @@ module load matlab/2019a
 ## Arguments/Options
 tile_neighbor_index_file="/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/results/tile_index_files/output_tiles/tileNeighborIndex_10m.mat"
 
+## Validate arguments
+if [ ! -f "$tile_neighbor_index_file" ]; then
+    echo "Tile neighbor index file does not exist: ${tile_neighbor_index_file}"
+    exit 1
+fi
+
 matlab_cmd="try; addpath('/mnt/pgc/data/common/repos/setsm_postprocessing4'); batch_boundaryAdjustCalc('${tile_neighbor_index_file}'); batch_boundaryAdjustApply('${tile_neighbor_index_file}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 #matlab_cmd="try; addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4'); batch_boundaryAdjustCalc('${tile_neighbor_index_file}'); batch_boundaryAdjustApply('${tile_neighbor_index_file}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 
