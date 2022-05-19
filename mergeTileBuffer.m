@@ -266,6 +266,8 @@ n=isnan(z0) & ~isnan(z1) & ~W0_feather_zone;
 z(n)=z1(n);
 n=~isnan(z0) & isnan(z1) & ~W0_feather_zone;
 z(n)=z0(n);
+n=(isnan(z0) | isnan(z1)) & W0_feather_zone;
+z(n)=nan;
 
 m0.z(r0(1):r0(2),c0(1):c0(2))=z;
 m1.z(r1(1):r1(2),c1(1):c1(2))=z;
@@ -329,6 +331,8 @@ n=isnan(z_mad0) & ~isnan(z_mad1) & ~W0_feather_zone;
 z_mad(n)=z_mad1(n);
 n=~isnan(z_mad0) & isnan(z_mad1) & ~W0_feather_zone;
 z_mad(n)=z_mad0(n);
+n=(isnan(z_mad0) | isnan(z_mad1)) & W0_feather_zone;
+z_mad(n)=nan;
 
 m0.z_mad(r0(1):r0(2),c0(1):c0(2))=z_mad;
 m1.z_mad(r1(1):r1(2),c1(1):c1(2))=z_mad;
@@ -385,6 +389,8 @@ n= N0 == 0 & N1 ~= 0 & ~W0_feather_zone;
 N(n)=N1(n);
 n= N0 ~= 0 & N1 == 0 & ~W0_feather_zone;
 N(n)=N0(n);
+n= (N0 == 0 | N1 == 0) & W0_feather_zone;
+N(n)=0;
 
 N=uint8(N);
 
@@ -443,6 +449,8 @@ n= Nmt0 == 0 & Nmt1 ~= 0 & ~W0_feather_zone;
 Nmt(n)=Nmt1(n);
 n= Nmt0 ~= 0 & Nmt1 == 0 & ~W0_feather_zone;
 Nmt(n)=Nmt0(n);
+n= (Nmt0 == 0 | Nmt1 == 0) & W0_feather_zone;
+Nmt(n)=0;
 
 Nmt=uint8(Nmt);
 
@@ -501,6 +509,8 @@ n= tmin0 == 0 & tmin1 ~= 0 & ~W0_feather_zone;
 tmin(n)=tmin1(n);
 n= tmin0 ~= 0 & tmin1 == 0 & ~W0_feather_zone;
 tmin(n)=tmin0(n);
+n= (tmin0 == 0 | tmin1 == 0) & W0_feather_zone;
+tmin(n)=0;
 
 tmin=uint16(tmin);
 
@@ -559,6 +569,8 @@ n= tmax0 == 0 & tmax1 ~= 0 & ~W0_feather_zone;
 tmax(n)=tmax1(n);
 n= tmax0 ~= 0 & tmax1 == 0 & ~W0_feather_zone;
 tmax(n)=tmax0(n);
+n= (tmax0 == 0 | tmax1 == 0) & W0_feather_zone;
+tmax(n)=0;
 
 tmax=uint16(tmax);
 
