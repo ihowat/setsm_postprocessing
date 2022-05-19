@@ -9,7 +9,7 @@ find v2/results/output_tiles/ -mindepth 2 -maxdepth 2 -type f ! \( -name "*_10m.
 # Crop 2m tiles, which had 1100m quad-internal buffer, to 100m buffer on all four edges
 for tiledir in v2/results/output_tiles/*/ ; do qsub -v "ARG_TILEDIR=${tiledir}" ~/scratch/repos/setsm_postprocessing_pgc/qsub_cropTiles.sh ; done
     
-# Rename cropped output .mat files, overwriting uncropped
+# Rename cropped output .mat files, backing up uncropped
 find v2/results/output_tiles/ -mindepth 2 -maxdepth 2 -type f -name "*_cropped.mat" -exec bash -c 'tilef_crop={}; tilef_orig="${tilef_crop%_cropped.mat}.mat"; mv "$tilef_orig" "${tilef_orig}.bak"; mv "$tilef_crop" "$tilef_orig";' \;
 
 
@@ -59,3 +59,9 @@ python ~/scratch/repos/setsm_postprocessing_pgc/batch_boundaryAdjust.py v2/resul
 python ~/scratch/repos/setsm_postprocessing_pgc/batch_mergeTileBuffer.py v2/results/output_tiles/ v2/tilelists/rema_tiles_all_complete.txt 2 --pbs --process-group row
 # wait until all jobs finish...
 python ~/scratch/repos/setsm_postprocessing_pgc/batch_mergeTileBuffer.py v2/results/output_tiles/ v2/tilelists/rema_tiles_all_complete.txt 2 --pbs --process-group column
+
+
+
+## Export tile data array GeoTIFFs and meta.txt file
+
+python ~/scratch/repos/setsm_postprocessing_pgc/batch_tiles2tif_v4.py v2/results/output_tiles/ v2/tilelists/rema_tiles_all_complete.txt rema 2 --pbs --process-by supertile-dir
