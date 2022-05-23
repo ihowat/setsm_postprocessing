@@ -1,5 +1,6 @@
 
 import math
+import re
 
 
 class InvalidArgumentError(Exception):
@@ -13,32 +14,28 @@ class TileNameError(Exception):
         super(Exception, self).__init__(msg)
 
 
+supertile_pattern = re.compile(r"""((?P<mosaic>utm\d{2}[ns])_)?
+                                   (?P<super_row>\d{2})_
+                                   (?P<super_col>\d{2})(?P<special_tag>s?)""", re.X)
+
+
 def parse_supertile_name(tile_name):
-    tile_parts = tile_name.split('_')
-    mosaic, super_row, super_col = None, None, None
-
-    tile_name_valid = True
-
-    if len(tile_parts) == 3:
-        utm_zone, super_row, super_col = tile_parts
-        mosaic = utm_zone
-    elif len(tile_parts) == 2:
-        super_row, super_col = tile_parts
-        mosaic = 'polar'
-    else:
-        tile_name_valid = False
-
-    for num in [super_row, super_col]:
-        if not num.isdigit():
-            tile_name_valid = False
-            break
-
-    if not tile_name_valid:
+    match = re.fullmatch(supertile_pattern, tile_name)
+    if match is None:
         raise TileNameError(
             "Invalid supertile name: '{}'".format(tile_name)
         )
 
-    return mosaic, super_row, super_col
+    match_groups = match.groupdict()
+    mosaic = match_groups['mosaic']
+    super_row = match_groups['super_row']
+    super_col = match_groups['super_col']
+    special_tag = match_groups['special_tag']
+
+    if mosaic is None:
+        mosaic = 'polar'
+
+    return mosaic, super_row, super_col, special_tag
 
 
 def group_supertiles_all_together(tile_list):
@@ -46,7 +43,7 @@ def group_supertiles_all_together(tile_list):
     group_args_dict = None
 
     for supertile in tile_list:
-        mosaic, super_row, super_col = parse_supertile_name(supertile)
+        mosaic, super_row, super_col, special_tag = parse_supertile_name(supertile)
         group_key = '{}_XX_YY'.format(mosaic)
         if group_key not in group_tiles_dict:
             group_tiles_dict[group_key] = []
@@ -67,7 +64,7 @@ def group_supertiles_by_block(tile_list, block_size=3):
 
     for supertile in tile_list:
 
-        mosaic, super_row, super_col = parse_supertile_name(supertile)
+        mosaic, super_row, super_col, special_tag = parse_supertile_name(supertile)
 
         super_row = int(super_row)
         super_col = int(super_col)
@@ -75,7 +72,7 @@ def group_supertiles_by_block(tile_list, block_size=3):
         row_key = '{:02d}'.format(int(math.floor(max(0, super_row-1) / float(block_size))*block_size + 1))
         col_key = '{:02d}'.format(int(math.floor(max(0, super_col-1) / float(block_size))*block_size + 1))
 
-        group_key = '{}_{}_{}'.format(mosaic, row_key, col_key)
+        group_key = '{}_{}_{}{}'.format(mosaic, row_key, col_key, special_tag)
 
         if group_key not in group_tiles_dict:
             group_tiles_dict[group_key] = []
@@ -103,7 +100,7 @@ def group_supertiles_by_stripe(
 
     for supertile in tile_list:
 
-        mosaic, super_row, super_col = parse_supertile_name(supertile)
+        mosaic, super_row, super_col, special_tag = parse_supertile_name(supertile)
 
         super_row = int(super_row)
         super_col = int(super_col)
@@ -123,7 +120,7 @@ def group_supertiles_by_stripe(
         else:
             continue
 
-        group_key = '{}_{}_{}'.format(mosaic, row_key, col_key)
+        group_key = '{}_{}_{}{}'.format(mosaic, row_key, col_key, special_tag)
 
         if group_key not in group_tiles_dict:
             group_tiles_dict[group_key] = []
@@ -150,7 +147,7 @@ def group_supertiles_by_quad_stripes_2gap(
 
     for supertile in tile_list:
 
-        mosaic, super_row, super_col = parse_supertile_name(supertile)
+        mosaic, super_row, super_col, special_tag = parse_supertile_name(supertile)
 
         super_row = int(super_row)
         super_col = int(super_col)
@@ -187,7 +184,7 @@ def group_supertiles_by_quad_stripes_2gap(
 
         group_key = '_'.join([
             mosaic,
-            super_row_key, super_col_key,
+            super_row_key, super_col_key+special_tag,
             quad_row_key, quad_col_key
         ])
 
@@ -220,7 +217,7 @@ def group_supertiles_by_quad_stripes_0gap(
 
     for supertile in tile_list:
 
-        mosaic, super_row, super_col = parse_supertile_name(supertile)
+        mosaic, super_row, super_col, special_tag = parse_supertile_name(supertile)
 
         super_row = int(super_row)
         super_col = int(super_col)
@@ -249,7 +246,7 @@ def group_supertiles_by_quad_stripes_0gap(
 
             group_key = '_'.join([
                 mosaic,
-                super_row_key, super_col_key,
+                super_row_key, super_col_key+special_tag,
                 quad_row_key, quad_col_key
             ])
 
