@@ -78,6 +78,25 @@ def get_arg_parser():
         action='store_true',
         help="Export tile metadata only."
     )
+    parser.add_argument(
+        '--tile-nocrop',
+        action='store_true',
+        help=wrap_multiline_str("""
+            Export full tile data arrays, without cropping to
+            nearest multiple of 100km/50km (10m/2m tiles) in x/y
+            coordinate values.
+        """)
+    )
+    parser.add_argument(
+        '--tile-buffer-meters',
+        type=int,
+        default=100,
+        help=wrap_multiline_str("""
+            Size of tile overlap buffer for exported rasters (meters),
+            where the buffer is applied after cropping to nearest
+            multiple of 100km/50km (10m/2m tiles) in x/y coordinate values.
+        """)
+    )
     
     parser.add_argument(
         '--rerun',
@@ -179,7 +198,17 @@ def main():
 
     tif_output_is_browse = script_args.tif_output in ('browse-LZW', 'browse-COG')
 
-    batch_t2t_metaonly_args = ", 'metaOnly'" if script_args.meta_only else ''
+    single_t2t_args = wrap_multiline_str(f"""
+        'resolution','{res_name}',
+        'outRasterType','{script_args.tif_output}',
+        'bufferMeters',{script_args.tile_buffer_meters}
+    """)
+    if script_args.tile_nocrop:
+        single_t2t_args += ", 'noCrop'"
+
+    batch_t2t_args = single_t2t_args
+    if script_args.meta_only:
+        batch_t2t_args += ", 'metaOnly'"
 
     jobscript_utils.adjust_args(script_args, arg_parser)
     jobscript_utils.create_dirs(script_args, arg_parser)
@@ -324,7 +353,7 @@ def main():
 
                 task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
                     {matlab_addpath}
-                    batch_tiles2tif_v4('{supertile_dir}', '{tile_projstr}', 'resolution','{res_name}', 'outRasterType','{script_args.tif_output}' {batch_t2t_metaonly_args});
+                    batch_tiles2tif_v4('{supertile_dir}', '{tile_projstr}', {batch_t2t_args});
                 """))
 
             else:
@@ -339,7 +368,7 @@ def main():
                 else:
                     task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
                         {matlab_addpath}
-                        writeTileToTifv4('{tile_matfile}', '{tile_projstr}', 'outRasterType','{script_args.tif_output}');
+                        writeTileToTifv4('{tile_matfile}', '{tile_projstr}', {single_t2t_args});
                         tileMetav4('{tile_matfile}');
                     """))
 
