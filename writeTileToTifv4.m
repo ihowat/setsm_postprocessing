@@ -2,6 +2,21 @@ function writeTileToTifv4(tilef,projstr,varargin)
 % Write 2m or 10m dem matfiles to tif
 %   compatible with setsm_postprocesing v4 branch
 
+n = find(strcmpi('noCrop',varargin));
+if ~isempty(n)
+    noCrop = true;
+else
+    noCrop = false;
+end
+
+% output tile buffer in meters
+n = find(strcmpi('bufferMeters',varargin));
+if ~isempty(n)
+    bufferMeters = varargin{n+1};
+else
+    bufferMeters = 100;
+end
+
 n = find(strcmpi('overwrite',varargin));
 if ~isempty(n)
     overwrite = true;
@@ -36,9 +51,6 @@ end
 
 fprintf('Source: %s\n',tilef);
 
-% output tile buffer in meters
-buffer_meters = 100;
-
 % load m file and get coordinate vectors
 m=matfile(tilef);
 x=m.x;
@@ -49,25 +61,30 @@ y=m.y;
 dx = x(2)-x(1);
 
 %find buffer size
-if dx == 2 % 2m posting, using quarter tile (50km) boundaries
-    nx = find(mod(x,50000) == 0);
-    ny = find(mod(y,50000) == 0);
-elseif dx == 10 % 10m posting, using full tile (100km) boundaries
-    nx = find(mod(x,100000) == 0);
-    ny = find(mod(y,100000) == 0);
-    % EarthDEM UTM mosaic 100km tile edges fall on 50km intervals
-    if length(nx) == 1
-        nx = find(mod(x,50000) == 0);
-        if length(nx) == 3
-            nx = [nx(1) nx(end)];
-        end
-        ny = find(mod(y,50000) == 0);
-        if length(ny) == 3
-            ny = [ny(1) ny(end)];
-        end
-    end
+if noCrop;
+    nx = [];
+    ny = [];
 else
-    error('not compatible with a tile grid size of %dm',dx)
+    if dx == 2 % 2m posting, using quarter tile (50km) boundaries
+        nx = find(mod(x,50000) == 0);
+        ny = find(mod(y,50000) == 0);
+    elseif dx == 10 % 10m posting, using full tile (100km) boundaries
+        nx = find(mod(x,100000) == 0);
+        ny = find(mod(y,100000) == 0);
+        % EarthDEM UTM mosaic 100km tile edges fall on 50km intervals
+        if length(nx) == 1
+            nx = find(mod(x,50000) == 0);
+            if length(nx) == 3
+                nx = [nx(1) nx(end)];
+            end
+            ny = find(mod(y,50000) == 0);
+            if length(ny) == 3
+                ny = [ny(1) ny(end)];
+            end
+        end
+    else
+        error('not compatible with a tile grid size of %dm',dx)
+    end
 end
 
 % if no index values returned, assume all tile data lies within tile
@@ -109,8 +126,8 @@ nx(end) = nx(end)-1;
 ny(end) = ny(end)-1;
 
 % add standard tile buffer
-if buffer_meters > 0
-    buffer_px = buffer_meters / dx;
+if bufferMeters > 0
+    buffer_px = bufferMeters / dx;
     nx(1) = max(nx(1)-buffer_px, 1);
     nx(2) = min(nx(2)+buffer_px, length(x));
     ny(1) = max(ny(1)-buffer_px, 1);
