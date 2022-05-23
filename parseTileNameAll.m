@@ -7,7 +7,7 @@ quad_row = [];
 quad_col = [];
 suffix = [];
 
-tilename_re = '(?<prefix>utm\d{2}[ns]_)?(?<supertile>\d{2}_\d{2})(?<quadtile>_\d_\d)?';
+tilename_re = '(?<prefix>utm\d{2}[ns]_)?(?<supertile>\d{2}_\d{2}s?)(?<quadtile>_\d_\d)?';
 if allow_suffix
     tilename_re = ['^', tilename_re, '(?<suffix>.*$)'];
 else
@@ -25,8 +25,8 @@ end
 if isfield(tokens, 'supertile') && ~isempty(tokens.supertile)
     supertile = tokens.supertile;
     parts = split(supertile, '_');
-    super_row = str2double(parts{1});
-    super_col = str2double(parts{2});
+    super_row = parts{1};
+    super_col = parts{2};
 end
 if isfield(tokens, 'quadtile') && ~isempty(tokens.quadtile)
     quadtile = strip(tokens.quadtile, 'left', '_');

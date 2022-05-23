@@ -7,7 +7,7 @@ supertile = [];
 quadtile = [];
 suffix = [];
 
-tilename_re = '(?<prefix>utm\d{2}[ns]_)?(?<supertile>\d{2}_\d{2})(?<quadtile>_\d_\d)?';
+tilename_re = '(?<prefix>utm\d{2}[ns]_)?(?<supertile>\d{2}_\d{2}s?)(?<quadtile>_\d_\d)?';
 if allow_suffix
     tilename_re = ['^', tilename_re, '(?<suffix>.*$)'];
 else
