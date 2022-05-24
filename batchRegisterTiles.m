@@ -9,30 +9,56 @@ function batchRegisterTiles(tileDir,is2Dir,varargin)
 
 strt=1;
 inc=1;
-if length(varargin) == 2
+resolution='10m';
+
+if length(varargin) == 2 && ~isnan(str2double(varargin{1})) && ~isnan(str2double(varargin{2}))
     strt=varargin{1};
     inc= varargin{2};
-    fprintf('processing every %d tile, starting at %d\n',inc,strt)
+
+elseif ~isempty(varargin)
+    n=find(strcmpi(varargin,'start'));
+    if ~isempty(n)
+        strt=varargin{n+1};
+    end
+
+    n=find(strcmpi(varargin,'inc'));
+    if ~isempty(n)
+        inc=varargin{n+1};
+    end
+
+    resolution_choices = {'10m', '2m'};
+    n = find(strcmpi('resolution', varargin));
+    if ~isempty(n)
+        resolution = varargin{n+1};
+    end
+    if ~ismember(resolution, resolution_choices)
+        error("'resolution' must be one of the following, but was '%s': {'%s'}", resolution, strjoin(resolution_choices, "', '"));
+    end
 end
 
-tileFiles = dir([tileDir,'/*_10m.mat']);
-%tileFiles = dir([tileDir,'/*/*_10m.mat']);
+fprintf('processing every %d tile, starting at %d\n',inc,strt)
+
+tileFiles = dir(sprintf('%s/*_%s.mat', tileDir, resolution));
+%tileFiles = dir([tileDir,'/*.mat']);
 tileNames = {tileFiles.name};
 tileFiles = fullfile({tileFiles.folder}, tileNames);
-tileNames = strrep(tileNames,'_10m.mat','');
+tileNames10m = cellfun(@(x) get10mTileName(x), tileNames, 'UniformOutput',false);
 
 tileFiles=tileFiles(:);
-tileNames=tileNames(:);
+tileNames10m=tileNames10m(:);
 
 i=strt;
 for i=strt:inc:length(tileFiles)
-    
+
     % get this tile name and set is2 file name from it
-    tileName = tileNames{i};
     tileFile=tileFiles{i};
-    is2TileFile = [is2Dir,'/',tileName,'_is2.mat'];
+    if endsWith(tileFile, '_reg.mat')
+        continue
+    end
+    tileName10m = tileNames10m{i};
+    is2TileFile = [is2Dir,'/',tileName10m,'_is2.mat'];
     
-    fprintf('%d of %d, %s\n',i,length(tileNames),tileFile)
+    fprintf('%d of %d, %s\n',i,length(tileNames10m),tileFile)
 
     registerTileToIS2(tileFile,is2TileFile)
      
@@ -44,6 +70,3 @@ for i=strt:inc:length(tileFiles)
         fit2is2(regTileFile,is2TileFile)
     end
 end
-    
-    
-    

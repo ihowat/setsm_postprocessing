@@ -16,7 +16,7 @@ for tileFile_idx=1:length(tileFile_list)
     end
     tileFile_cropped = strrep(tileFile, '.mat', '_cropped.mat');
 
-    fprintf("Working on tile file: %s\n", tileFile);
+    fprintf("\nWorking on tile file: %s\n", tileFile);
     if isfile(tileFile_cropped)
         fprintf("Cropped tile already exists, skipping: %s\n", tileFile_cropped);
         continue;
@@ -119,6 +119,10 @@ for tileFile_idx=1:length(tileFile_list)
         % create new matfile
         fprintf("Writing cropped tile file: %s\n", tileFile_cropped);
         m1 = matfile(tileFile_cropped);
+
+        m1.cropped = true;
+        m1.precrop_x = m.x;
+        m1.precrop_y = m.y;
 
         % write cropped x and y vectors
         m1.x = m.x(1,IndX(1):IndX(2));

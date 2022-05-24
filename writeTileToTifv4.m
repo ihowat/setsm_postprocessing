@@ -2,6 +2,28 @@ function writeTileToTifv4(tilef,projstr,varargin)
 % Write 2m or 10m dem matfiles to tif
 %   compatible with setsm_postprocesing v4 branch
 
+n = find(strcmpi('noCrop',varargin));
+if ~isempty(n)
+    noCrop = true;
+else
+    noCrop = false;
+end
+
+% output tile buffer in meters
+n = find(strcmpi('bufferMeters',varargin));
+if ~isempty(n)
+    bufferMeters = varargin{n+1};
+else
+    bufferMeters = 100;
+end
+
+n = find(strcmpi('overwrite',varargin));
+if ~isempty(n)
+    overwrite = true;
+else
+    overwrite = false;
+end
+
 n = find(strcmpi('outRasterType',varargin));
 if ~isempty(n)
     outRasterType = varargin{n+1};
@@ -10,7 +32,7 @@ else
 end
 outRasterType_choices = {'browse-LZW', 'browse-COG', 'full-LZW', 'full-COG'};
 if ~any(strcmp(outRasterType, outRasterType_choices))
-    error("'outRasterType' must be one of the following: {'%s'}", strjoin(outRasterType_choices, "', '"))
+    error("'outRasterType' must be one of the following, but was '%s': {'%s'}", outRasterType, strjoin(outRasterType_choices, "', '"))
 end
 
 if ismember(outRasterType, {'browse-LZW', 'browse-COG'})
@@ -29,9 +51,6 @@ end
 
 fprintf('Source: %s\n',tilef);
 
-% output tile buffer in pixels
-buffer = 10;
-
 % load m file and get coordinate vectors
 m=matfile(tilef);
 x=m.x;
@@ -42,25 +61,30 @@ y=m.y;
 dx = x(2)-x(1);
 
 %find buffer size
-if dx == 2 % 2m posting, using quarter tile (50km) boundaries
-    nx = find(mod(x,50000) == 0);
-    ny = find(mod(y,50000) == 0);
-elseif dx == 10 % 10m posting, using full tile (100km) boundaries
-    nx = find(mod(x,100000) == 0);
-    ny = find(mod(y,100000) == 0);
-    % EarthDEM UTM mosaic 100km tile edges fall on 50km intervals
-    if length(nx) == 1
-        nx = find(mod(x,50000) == 0);
-        if length(nx) == 3
-            nx = [nx(1) nx(end)];
-        end
-        ny = find(mod(y,50000) == 0);
-        if length(ny) == 3
-            ny = [ny(1) ny(end)];
-        end
-    end
+if noCrop;
+    nx = [];
+    ny = [];
 else
-    error('not compatible with a tile grid size of %dm',dx)
+    if dx == 2 % 2m posting, using quarter tile (50km) boundaries
+        nx = find(mod(x,50000) == 0);
+        ny = find(mod(y,50000) == 0);
+    elseif dx == 10 % 10m posting, using full tile (100km) boundaries
+        nx = find(mod(x,100000) == 0);
+        ny = find(mod(y,100000) == 0);
+        % EarthDEM UTM mosaic 100km tile edges fall on 50km intervals
+        if length(nx) == 1
+            nx = find(mod(x,50000) == 0);
+            if length(nx) == 3
+                nx = [nx(1) nx(end)];
+            end
+            ny = find(mod(y,50000) == 0);
+            if length(ny) == 3
+                ny = [ny(1) ny(end)];
+            end
+        end
+    else
+        error('not compatible with a tile grid size of %dm',dx)
+    end
 end
 
 % if no index values returned, assume all tile data lies within tile
@@ -102,11 +126,12 @@ nx(end) = nx(end)-1;
 ny(end) = ny(end)-1;
 
 % add standard tile buffer
-if buffer > 0
-    nx(1) = max(nx(1)-buffer, 1);
-    nx(2) = min(nx(2)+buffer, length(x));
-    ny(1) = max(ny(1)-buffer, 1);
-    ny(2) = min(ny(2)+buffer, length(y));
+if bufferMeters > 0
+    buffer_px = bufferMeters / dx;
+    nx(1) = max(nx(1)-buffer_px, 1);
+    nx(2) = min(nx(2)+buffer_px, length(x));
+    ny(1) = max(ny(1)-buffer_px, 1);
+    ny(2) = min(ny(2)+buffer_px, length(y));
 end
 
 %crop coordinate vectors
@@ -119,7 +144,7 @@ outNameBase = strrep(tilef,'_reg.mat','.mat');
 
 fprintf('Writing DEM\n')
 outNameDem = strrep(outNameBase,'.mat','_dem.tif');
-if exist(outNameDem,'file')
+if exist(outNameDem,'file') && ~overwrite
     browse_keep_dem = true;
     fprintf('%s exists, skipping\n',outNameDem);
 else
@@ -143,7 +168,7 @@ if ~browse_only
     if contains('z_mad',flds)
         fprintf('Writing mad\n')
         outNameTif = strrep(outNameBase,'.mat','_mad.tif');
-        if exist(outNameTif,'file')
+        if exist(outNameTif,'file') && ~overwrite
             fprintf('%s exists, skipping\n',outNameTif);
         else
             z_mad=m.z_mad(ny(1):ny(end),nx(1):nx(end));
@@ -164,7 +189,7 @@ if ~browse_only
     if contains('N',flds)
         fprintf('Writing N\n')
         outNameTif = strrep(outNameBase,'.mat','_count.tif');
-        if exist(outNameTif,'file')
+        if exist(outNameTif,'file') && ~overwrite
             fprintf('%s exists, skipping\n',outNameTif);
         else
             N=m.N(ny(1):ny(end),nx(1):nx(end));
@@ -184,7 +209,7 @@ if ~browse_only
     if contains('Nmt',flds)
         fprintf('Writing Nmt\n')
         outNameTif = strrep(outNameBase,'.mat','_countmt.tif');
-        if exist(outNameTif,'file')
+        if exist(outNameTif,'file') && ~overwrite
             fprintf('%s exists, skipping\n',outNameTif);
         else
             Nmt=m.Nmt(ny(1):ny(end),nx(1):nx(end));
@@ -204,7 +229,7 @@ if ~browse_only
     if contains('tmax',flds)
         fprintf('Writing tmax\n')
         outNameTif = strrep(outNameBase,'.mat','_maxdate.tif');
-        if exist(outNameTif,'file')
+        if exist(outNameTif,'file') && ~overwrite
             fprintf('%s exists, skipping\n',outNameTif);
         else
             tmax=m.tmax(ny(1):ny(end),nx(1):nx(end));
@@ -224,7 +249,7 @@ if ~browse_only
     if contains('tmin',flds)
         fprintf('Writing tmin\n')
         outNameTif = strrep(outNameBase,'.mat','_mindate.tif');
-        if exist(outNameTif,'file')
+        if exist(outNameTif,'file') && ~overwrite
             fprintf('%s exists, skipping\n',outNameTif);
         else
             tmin=m.tmin(ny(1):ny(end),nx(1):nx(end));
@@ -247,7 +272,7 @@ fprintf('Writing browse\n')
 
 % if 2m posting, first downsample to 10m
 outNameBrowse = strrep(outNameBase,'.mat','_browse.tif');
-if exist(outNameBrowse,'file')
+if exist(outNameBrowse,'file') && ~overwrite
     fprintf('%s exists, skipping\n',outNameBrowse);
 else
     [epsg,~,~] = getProjstrInfo(projstr);

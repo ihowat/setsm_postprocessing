@@ -10,6 +10,9 @@ function [ntop,nright,ntopRight,nbottomRight] = findNeighborTiles(fileNames)
 
 fileNames=fileNames(:);
 
+% capture UTM mosaic zone prefix to keep zones separate
+utmzone = cellfun(@(x) getTileNamePrefix(x), fileNames, 'UniformOutput',false);
+
 % loop through each tile and get extents
 x0 = nan(size(fileNames));
 x1= nan(size(fileNames));
@@ -40,25 +43,25 @@ fprintf('looping through ranges to find neighbors\n')
 i=1;
 for i=1:length(fileNames)
     %top
-    n = find(y0(i) < y0 & y1(i) >= y0 & mnx(i) > x0 & mnx(i) < x1);
+    n = find(strcmp(utmzone{i}, utmzone) & y0(i) < y0 & y1(i) >= y0 & mnx(i) > x0 & mnx(i) < x1);
     if ~isempty(n)
         ntop(i,:) = [i,n];
     end
 
     %right
-    n = find(x0(i) < x0 & x1(i) >= x0 & mny(i) > y0 & mny(i) < y1);
+    n = find(strcmp(utmzone{i}, utmzone) & x0(i) < x0 & x1(i) >= x0 & mny(i) > y0 & mny(i) < y1);
     if ~isempty(n)
         nright(i,:) = [i,n];
     end
     
     %top-right
-    n = find(y0(i) < y0 & y1(i) >= y0 & x0(i) < x0 & x1(i) >= x0 & mnx > x1(i) & mny > y1(i));
+    n = find(strcmp(utmzone{i}, utmzone) & y0(i) < y0 & y1(i) >= y0 & x0(i) < x0 & x1(i) >= x0 & mnx > x1(i) & mny > y1(i));
     if ~isempty(n)
         ntopRight(i,:) = [i,n];
     end
 
     %bottom-right
-    n = find(y0(i) > y0 & y0(i) <= y1 & x0(i) < x0 & x1(i) >= x0 & mnx > x1(i) & mny < y0(i));
+    n = find(strcmp(utmzone{i}, utmzone) & y0(i) > y0 & y0(i) <= y1 & x0(i) < x0 & x1(i) >= x0 & mnx > x1(i) & mny < y0(i));
     if ~isempty(n)
         nbottomRight(i,:) = [i,n];
     end  
@@ -68,5 +71,3 @@ ntop(isnan(ntop(:,1)),:) = [];
 nright(isnan(nright(:,1)),:) = [];
 ntopRight(isnan(ntopRight(:,1)),:) = [];
 nbottomRight(isnan(nbottomRight(:,1)),:) = [];
-
-

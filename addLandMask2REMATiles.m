@@ -10,8 +10,8 @@ function addLandMask2REMATiles(tileDir,tileDefFile,varargin)
 % end
 
 
-fileNames=dir([tileDir,'/*_10m.mat']);
-%fileNames=dir([tileDir,'/*/*_10m.mat']);
+%fileNames=dir([tileDir,'/*_10m.mat']);
+fileNames=dir([tileDir,'/*.mat']);
 fileNames = fullfile({fileNames.folder}, {fileNames.name});
 
 tileDefs=load(tileDefFile);

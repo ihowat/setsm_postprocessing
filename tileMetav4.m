@@ -6,6 +6,7 @@ function tileMetav4(f,varargin)
 
 project='Unspecified';
 tileVersion='Unspecified';
+overwrite=false;
 
 % Parse varargins
 n = find(strcmpi(varargin,'project'));
@@ -18,6 +19,12 @@ n = find(strcmpi(varargin,'tileVersion'));
 if ~isempty(n)
     tileVersion = varargin{n+1};
     fprintf('tileVersion = %s\n',tileVersion)
+end
+
+n = find(strcmpi(varargin,'overwrite'));
+if ~isempty(n)
+    overwrite = true;
+    fprintf('overwrite = %s\n',overwrite)
 end
 
 %% first test if input arg is either a valid filename or mat file handle
@@ -45,7 +52,7 @@ varlist = who(m);
 fileAtts= dir(m.Properties.Source);
 
 % test if exists, skip if does
-if exist(outfile,'file') 
+if exist(outfile,'file') && ~overwrite
     fprintf('%s exists, skipping\n',outfile);
     return;
 end

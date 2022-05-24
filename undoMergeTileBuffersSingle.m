@@ -30,7 +30,7 @@ edge_n = [];
 
 edgeName_choices = {'all', 'top', 'bottom', 'left', 'right'};
 if ~ismember(edgeName, edgeName_choices)
-    error("'edgeName' must be one of the following: {'%s'}", strjoin(edgeName_choices, "', '"));
+    error("'edgeName' must be one of the following, but was '%s': {'%s'}", edgeName, strjoin(edgeName_choices, "', '"));
 end
 if strcmp(edgeName, 'all')
     edge_n = [];
@@ -55,7 +55,7 @@ else
     whichArrays = 'all';
 end
 if ~ismember(whichArrays, whichArrays_choices)
-    error("'whichArrays' must be one of the following: {'%s'}", strjoin(whichArrays_choices, "', '"));
+    error("'whichArrays' must be one of the following, but was '%s': {'%s'}", whichArrays, strjoin(whichArrays_choices, "', '"));
 end
 
 n = find(strcmpi('ignoreMergedVars', varargin));
@@ -91,6 +91,9 @@ data_array_names = {
     'tmin',
     'tmax',
 };
+exclude_array_names = {
+    'land',
+};
 if ~all(ismember(data_array_names, m_varlist))
     data_array_names
     error("One or more expected data arrays do not exist in tile struct")
@@ -99,7 +102,7 @@ end
 % Add data arrays that might be missing from the above list
 z_size = size(m_struct, 'z');
 data_array_names_same_sz = m_varlist(cellfun(@(name) isequal(size(m_struct, name), z_size), m_varlist));
-data_array_names = union(data_array_names, data_array_names_same_sz);
+data_array_names = setdiff(union(data_array_names, data_array_names_same_sz), exclude_array_names);
 
 buff_array_names = cellfun(@(name) [name,'buff'], data_array_names, 'UniformOutput',false);
 
@@ -167,8 +170,21 @@ elseif strcmp(whichArrays, 'all-but-z')
 end
 
 for array_idx = 1:length(reset_array_names)
-    data_array_name = reset_array_names{array_idx};     % ex. 'z'
-    buff_array_name = [data_array_name,'buff'];         % ex. 'zbuff'
+    data_array_name = reset_array_names{array_idx};         % ex. 'z'
+    buff_array_name = [data_array_name,'buff'];             % ex. 'zbuff'
+    corners_array_name = [data_array_name,'buffcorners'];   % ex. 'zbuffcorners'
+    % TODO: If -buffcorners array exists, it contains the *original*
+    % corner values for the buffer zones. We should use this to ensure
+    % the data arrays are reset to the true original values in the corners,
+    % instead of assuming that the left and right buffers contain the original
+    % values in the the corners.
+    % If you're not aware, doing a 'row' merge followed by a 'column' merge results
+    % in the top and bottom buffers containing row-merged values at the ends of their
+    % buffer arrays (at the corners of the tile). This is kinda both a feature and an issue,
+    % because it results in a continuous feather merge, but can be the source of artificial
+    % seamlines when the order of row/column merging is not consistent across the mosaic.
+    % With the new "preciseCorners" option to mergeTileBuffer.m (should be enabled by default),
+    % we attempt to properly handle this corner issue.
     if ~ismember(buff_array_name, m_varlist)
         continue;
     end

@@ -31,7 +31,7 @@ else
 end
 out_format_choices = {'GTiff', 'COG'};
 if ~any(strcmp(out_format, out_format_choices))
-    error("'out_format' must be one of the following: {'%s'}", strjoin(out_format_choices, "', '"))
+    error("'out_format' must be one of the following, but was '%s': {'%s'}", out_format, strjoin(out_format_choices, "', '"))
 end
 
 n = find(strcmpi('co_predictor',varargin));
@@ -55,7 +55,7 @@ elseif strcmp(out_format, 'COG')
     co_predictor_choices = {'NO', 'STANDARD', 'FLOATING_POINT', 'YES'};
 end
 if ~any(strcmp(out_format, out_format_choices))
-    error("'co_predictor' must be one of the following: {'%s'}", strjoin(co_predictor_choices, "', '"))
+    error("'co_predictor' must be one of the following, but was '%s': {'%s'}", out_format, strjoin(co_predictor_choices, "', '"))
 end
 
 if strcmp(out_format, 'COG')

@@ -7,18 +7,21 @@ function boundaryAdjustCalc(fileName,neighborFiles,varargin)
 % left, right, top-left, top-right, bottom-left, bottom-right, with empty
 % cells indicating no file.
 
-resizeFraction=0.1;
+m0=matfile(fileName);
+
+% standard resizeFraction is for 10m, scale for 2m and other res
+resizeFraction_10m = 0.1;
+res = m0.x(1,2) - m0.x(1,1);
+resizeFraction = min(1.0, resizeFraction_10m * (res/10));
 
 n=find(strcmpi(varargin,'resizeFraction'));
 if ~isempty(n)
     resizeFraction=varargin{n+1};
 end
 
-m0=matfile(fileName);
-
 if any(strcmpi(fields(m0),'adjusted')) 
     if m0.adjusted == 1
-        fprintf('adjustment applied,undo adjustment before calculating new, skipping')
+        fprintf('adjustment applied, undo adjustment before calculating new, skipping, ')
         return
     end
 end
@@ -239,7 +242,7 @@ r1 = [find(r1,1,'first'),find(r1,1,'last')];
 
 dz1 = zeros(length(r1(1):r1(2)),length(c1(1):c1(2)));
 if any(strcmpi(fields(m1),'adjusted'))
-    if m0.adjusted == 1
+    if m1.adjusted == 1
         dz1=imresize(m1.dz0,size(m1,'z'));
         dz1=dz1(r1(1):r1(2),c1(1):c1(2));
     end
