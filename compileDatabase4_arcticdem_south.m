@@ -82,9 +82,7 @@ regionDirs=regionDirs([regionDirs.isdir]);
 regionDirs=cellfun(@(regionDir, regionName) [regionDir,'/',regionName], {regionDirs.folder}, {regionDirs.name},...
     'UniformOutput',false);
 
-matches = regexp(regionDirs, '.*/2m_utm\d{2}[ns]$');
-%matches = regexp(regionDirs, '.*/2m_psn$');
-regionDirs = regionDirs(cellfun('isempty', matches));
+regionDirs = regionDirs((~cellfun('isempty', regexp(regionDirs, '.*/2m$')) | (~cellfun('isempty', regexp(regionDirs, '.*/2m_psn$')))));
 
 
 if exist('dbase_in', 'var') && ~isempty(dbase_in)
