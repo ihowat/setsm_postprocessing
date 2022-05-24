@@ -1,11 +1,13 @@
 
 %coastlineShape = '/mnt/pgc/data/projects/arcticdem/coastline/GSHHS_f_L1_3413.shp';
-coastlineShape = '/mnt/pgc/data/projects/arcticdem/coastline/GSHHS_f_L1_GIMPgl_3413_clipArcDEMbuff100km.shp';
+%coastlineShape = '/mnt/pgc/data/projects/arcticdem/coastline/GSHHS_f_L1_GIMPgl_3413_clipArcDEMbuff100km.shp';
 %coastlineShape = 'E:\scratch\data\coastlines\GSHHS_f_L1_GIMPgl_3413_clipArcDEMbuff100km.shp';
 %coastlineShape = 'E:\scratch\data\coastlines\GSHHS_f_L1_3413.shp';
+coastlineShape = '/mnt/pgc/data/scratch/erik/sub_antarctic_coastline_high_res_polygon_v1.0.shp';
 
-tilefile = '/mnt/pgc/data/projects/earthdem/tiledef_files/PGC_Imagery_Mosaic_Tiles_Arctic_coast.mat'; %PGC/NGA Tile definition file
+%tilefile = '/mnt/pgc/data/projects/earthdem/tiledef_files/PGC_Imagery_Mosaic_Tiles_Arctic_coast.mat'; %PGC/NGA Tile definition file
 %tilefile = 'V:/pgc/data/projects/earthdem/tiledef_files/PGC_Imagery_Mosaic_Tiles_Arctic_coast.mat'; %PGC/NGA Tile definition file
+tilefile = '/mnt/pgc/data/projects/earthdem/tiledef_files/rema_tile_definitions_plus_sgssi2.mat'; %PGC/NGA Tile definition file
 
 if exist('land','var')
     clear land
@@ -21,7 +23,7 @@ else
 end
 
 fix_tile_list = {};
-%fix_tile_list = {'58_23', '58_24', '59_22', '59_23', '59_24', '60_22', '60_23', '60_24'};
+%fix_tile_list = {'63_13'};
 
 S = shaperead(coastlineShape);
 
