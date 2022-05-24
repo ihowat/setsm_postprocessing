@@ -12,6 +12,12 @@ res=2;
 dbase_in='';
 dbase_out='/scratch/sciteam/GS_bazu/mosaic_data/strip_databases/REMAdatabase4_2m_v4_20201105.mat';
 
+stripFilePrefix='SETSM_s2s041_';
+%stripOrg='strips_v4';
+stripOrg='strips_v4.1';
+
+bwpy_prefix='';
+
 reproject_list = strrep(dbase_out, '.mat', '_reproject_list.txt');
 if isfile(reproject_list) && ~isfile([reproject_list,'.bak'])
     reproject_list_stat = dir(reproject_list);
@@ -36,9 +42,9 @@ report_number_of_strips_to_append_but_dont_actually_append = false;
 %%% CHECK THIS SETTING %%%
 
 regionDirs=[
-%    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_*/strips_v4/2m*'),
-%    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_*/strips_v4/2m*'),
-    dir('/scratch/sciteam/GS_bazu/elev/dem/setsm/REMA/region/rema_*/strips_v4/2m*'),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_*/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_*/',stripOrg,'/2m*']),
+    dir(['/mnt/pgc/data/elev/dem/setsm/REMA/region/rema_*/',stripOrg,'/2m*']),
 ];
 regionDirs=regionDirs([regionDirs.isdir]);
 regionDirs=cellfun(@(regionDir, regionName) [regionDir,'/',regionName], {regionDirs.folder}, {regionDirs.name},...
@@ -170,7 +176,7 @@ for i=1:length(regionDirs)
             [~,stripDnames,~] = cellfun(@fileparts, stripDirs, 'UniformOutput', false);
 
             stripDirs_miss_fin_ind = cellfun(@(x, y) ~isfile([x,'/',y,'.fin']), stripDirs, stripDnames);
-            stripDirs_miss_data_ind = cellfun(@(x, y) ~isfile([x,'/',regexprep(y,'_v\d{6}',''),'_seg1_dem.tif']), stripDirs, stripDnames);
+            stripDirs_miss_data_ind = cellfun(@(x, y) ~isfile([x,'/',stripFilePrefix,regexprep(y,'_v\d{6}',''),'_seg1_dem.tif']), stripDirs, stripDnames);
 
             missing_fin_count = nnz(stripDirs_miss_fin_ind);
             if missing_fin_count > 0
@@ -295,7 +301,7 @@ for i=1:length(regionDirs)
                         end
 
                         if reproject_strip
-                            metaFile_reproj = strrep(metaFile, 'strips_v4/2m', ['strips_v4/2m_',mosaic_zone_ms.name]);
+                            metaFile_reproj = strrep(metaFile, [stripOrg,'/2m'], [stripOrg,'/2m_',mosaic_zone_ms.name]);
                             if ~isfile(metaFile_reproj)
                                 fprintf(reproject_list_fp, "%s %s %d\n", metaFile, mosaic_zone_ms.name, mosaic_zone_ms.epsg);
                             end
