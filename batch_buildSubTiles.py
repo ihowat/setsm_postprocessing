@@ -81,19 +81,19 @@ earthdem_tilePrefix_key = '<tilePrefix>'
 project_refDemFile_dict = {
     'arcticdem': None,
     'earthdem':  '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_UTM_90m/TDX_UTM_Mosaic_{}_90m.tif'.format(earthdem_tilePrefix_key),
-    'rema':      '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_Antarctica_90m/TanDEM_Antarctica_Mosaic.tif',
+    'rema':      '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_Antarctica_90m/old_mosaic/TanDEM_Antarctica_Mosaic.tif',
 }
 
 earthdem_hemisphere_key = '<hemisphere>'
 project_tileDefFile_dict = {
     'arcticdem': '/mnt/pgc/data/projects/earthdem/tiledef_files/PGC_Imagery_Mosaic_Tiles_Arctic.mat',
-    'rema':      '/mnt/pgc/data/projects/earthdem/tiledef_files/rema_tile_definitions.mat',
+    'rema':      '/mnt/pgc/data/projects/earthdem/tiledef_files/rema_tile_definitions_plus_sgssi2.mat',
     'earthdem':  '/mnt/pgc/data/projects/earthdem/tiledef_files/PGC_UTM_Mosaic_Tiles_{}.mat'.format(earthdem_hemisphere_key),
 }
 
 project_databaseFile_dict = {
     'arcticdem': '/scratch/sciteam/GS_bazu/mosaic_data/strip_databases/ArcticDEMdatabase4_2m_v4_20210817.mat',
-    'rema':      '/mnt/pgc/data/projects/earthdem/strip_databases/rema_strips_v13e.shp',
+    'rema':      '/mnt/pgc/data/projects/earthdem/strip_databases/REMAdatabase4_2m_v4.1_20220511.mat',
     'earthdem':  '/scratch/sciteam/GS_bazu/mosaic_data/strip_databases/EarthDEMdatabase4_2m_v4_20211014.mat',
 }
 project_waterTileDir_dict = {
