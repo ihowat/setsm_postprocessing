@@ -10,7 +10,7 @@ end
 res=2;
 %dbase_in =[homeDir,'/data4/REMA/polarDEMdatabase_',num2str(res),'m.mat'];
 dbase_in='';
-dbase_out='/scratch/sciteam/GS_bazu/mosaic_data/strip_databases/REMAdatabase4_2m_v4_20201105.mat';
+dbase_out='/mnt/pgc/data/projects/earthdem/strip_databases/REMAdatabase4_2m_v4.1_20220511.mat';
 
 stripFilePrefix='SETSM_s2s041_';
 %stripOrg='strips_v4';

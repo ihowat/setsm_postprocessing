@@ -9,8 +9,8 @@ end
 
 res=2;
 %dbase_in =[homeDir,'/data4/REMA/polarDEMdatabase_',num2str(res),'m.mat'];
-dbase_in='/scratch/sciteam/GS_bazu/mosaic_data/strip_databases/EarthDEMdatabase4_2m_v4_20211014_east.mat';
-dbase_out='/scratch/sciteam/GS_bazu/mosaic_data/strip_databases/EarthDEMdatabase4_2m_v4_20211014_east_plus_reproj.mat';
+%dbase_in='/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4.1_20220511_east.mat';
+dbase_out='/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4.1_20220511_east.mat';
 
 stripFilePrefix='SETSM_s2s041_';
 %stripOrg='strips_v4';
@@ -42,36 +42,36 @@ report_number_of_strips_to_append_but_dont_actually_append = false;
 %%% CHECK THIS SETTING %%%
 
 regionDirs=[
-%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_*/',stripOrg,'/2m*']),
-%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_*/',stripOrg,'/2m*']),
-%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/REMA/region/rema_*/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_*/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_*/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/REMA/region/rema_*/',stripOrg,'/2m*']),
 
-%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/ArcticDEM/region/arcticdem_*/',stripOrg,'/2m_utm*']),
-%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_01_southwest_canada/',stripOrg,'/2m*']),
-%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_02_southeast_canada/',stripOrg,'/2m*']),
-%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_09_europe/',stripOrg,'/2m*']),
-%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_14_southern_russia/',stripOrg,'/2m*']),
-%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_18_korea_and_japan/',stripOrg,'/2m*']),
-%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_23_pacific/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_*/',stripOrg,'/2m_utm*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_01_southwest_canada/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_02_southeast_canada/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_09_europe/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_14_southern_russia/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_18_korea_and_japan/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_23_pacific/',stripOrg,'/2m*']),
 
-%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_03_conus/',stripOrg,'/2m*']),
-%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_04_great_lakes/',stripOrg,'/2m*']),
-%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_05_mexico_and_caribbean/',stripOrg,'/2m*']),
-%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_06_andes/',stripOrg,'/2m*']),
-%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_07_northern_south_america/',stripOrg,'/2m*']),
-%    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_08_southern_south_america/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_03_conus/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_04_great_lakes/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_05_mexico_and_caribbean/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_06_andes/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_07_northern_south_america/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_08_southern_south_america/',stripOrg,'/2m*']),
 
-    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_10_west_africa/',stripOrg,'/2m*']),
-    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_11_east_africa/',stripOrg,'/2m*']),
-    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_12_southern_africa/',stripOrg,'/2m*']),
-    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_13_middle_east/',stripOrg,'/2m*']),
-    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_15_belarus/',stripOrg,'/2m*']),
-    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_16_hma/',stripOrg,'/2m*']),
-    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_17_china/',stripOrg,'/2m*']),
-    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_19_india/',stripOrg,'/2m*']),
-    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_20_se_asia/',stripOrg,'/2m*']),
-    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_21_madagascar/',stripOrg,'/2m*']),
-    dir(['/scratch/sciteam/GS_bazu/elev/dem/setsm/EarthDEM/region/earthdem_22_australia/',stripOrg,'/2m*']),
+    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_10_west_africa/',stripOrg,'/2m*']),
+    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_11_east_africa/',stripOrg,'/2m*']),
+    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_12_southern_africa/',stripOrg,'/2m*']),
+    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_13_middle_east/',stripOrg,'/2m*']),
+    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_15_belarus/',stripOrg,'/2m*']),
+    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_16_hma/',stripOrg,'/2m*']),
+    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_17_china/',stripOrg,'/2m*']),
+    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_19_india/',stripOrg,'/2m*']),
+    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_20_se_asia/',stripOrg,'/2m*']),
+    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_21_madagascar/',stripOrg,'/2m*']),
+    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_22_australia/',stripOrg,'/2m*']),
 ];
 regionDirs=regionDirs([regionDirs.isdir]);
 regionDirs=cellfun(@(regionDir, regionName) [regionDir,'/',regionName], {regionDirs.folder}, {regionDirs.name},...
