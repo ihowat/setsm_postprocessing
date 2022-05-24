@@ -43,15 +43,20 @@ module load matlab/2019a
 
 ## Arguments/Options
 tiledir="$ARG_TILEDIR"
+is2dir="/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/from_unity/altimetryByTile/";
 
 ## Validate arguments
 if [ ! -d "$tiledir" ]; then
     echo "Tiledir does not exist: ${tiledir}"
     exit 1
 fi
+if [ ! -d "$is2dir" ]; then
+    echo "is2dir does not exist: ${is2dir}"
+    exit 1
+fi
 
-matlab_cmd="try; addpath('/mnt/pgc/data/common/repos/setsm_postprocessing4'); matfile_list=dir(['${tiledir}','/*.mat']); matfile_paths=fullfile({matfile_list.folder},{matfile_list.name}); cropTile(matfile_paths); catch e; disp(getReport(e)); exit(1); end; exit(0)"
-#matlab_cmd="try; addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4'); matfile_list=dir(['${tiledir}','/*.mat']); matfile_paths=fullfile({matfile_list.folder},{matfile_list.name}); cropTile(matfile_paths); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+matlab_cmd="try; addpath('/mnt/pgc/data/common/repos/setsm_postprocessing4'); batchRegisterTiles('${tiledir}', '${is2dir}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+#matlab_cmd="try; addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4'); batchRegisterTiles('${tiledir}', '${is2dir}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 
 echo "Argument tile directory: ${tiledir}"
 echo "Matlab command: \"${matlab_cmd}\""

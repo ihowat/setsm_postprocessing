@@ -1,10 +1,10 @@
 #!/bin/bash
 
-#PBS -l walltime=100:00:00,nodes=1:ppn=4,mem=30gb
+#PBS -l walltime=10:00:00,nodes=1:ppn=2,mem=8gb
 #PBS -m n
 #PBS -k oe
 #PBS -j oe
-#PBS -q batch
+#PBS -q old
 
 echo ________________________________________________________
 echo
@@ -43,15 +43,20 @@ module load matlab/2019a
 
 ## Arguments/Options
 tiledir="$ARG_TILEDIR"
+tiledef_file="/mnt/pgc/data/projects/earthdem/tiledef_files/PGC_Imagery_Mosaic_Tiles_Arctic.mat"
 
 ## Validate arguments
 if [ ! -d "$tiledir" ]; then
     echo "Tiledir does not exist: ${tiledir}"
     exit 1
 fi
+if [ ! -f "$tiledef_file" ]; then
+    echo "Tiledef file does not exist: ${tiledef_file}"
+    exit 1
+fi
 
-matlab_cmd="try; addpath('/mnt/pgc/data/common/repos/setsm_postprocessing4'); matfile_list=dir(['${tiledir}','/*.mat']); matfile_paths=fullfile({matfile_list.folder},{matfile_list.name}); cropTile(matfile_paths); catch e; disp(getReport(e)); exit(1); end; exit(0)"
-#matlab_cmd="try; addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4'); matfile_list=dir(['${tiledir}','/*.mat']); matfile_paths=fullfile({matfile_list.folder},{matfile_list.name}); cropTile(matfile_paths); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+matlab_cmd="try; addpath('/mnt/pgc/data/common/repos/setsm_postprocessing4'); addLandMask2ArcticDEMTiles('${tiledir}', '${tiledef_file}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+#matlab_cmd="try; addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4'); addLandMask2ArcticDEMTiles('${tiledir}', '${tiledef_file}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 
 echo "Argument tile directory: ${tiledir}"
 echo "Matlab command: \"${matlab_cmd}\""

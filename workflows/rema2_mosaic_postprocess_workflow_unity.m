@@ -8,7 +8,7 @@
 % Undo tile buffer merge on all existing 10m and 2m (non-reg) tile .mat files
 file_listing = dir(['tiles','/*.mat'])
 file_paths_cellarr = fullfile({file_listing.folder}.', {file_listing.name}.');
-undoMergeTileBuffers(file_paths_cellarr)
+batch_undoMergeTileBuffers(file_paths_cellarr)
 
 
 

@@ -1,217 +1,395 @@
-import os, string, sys, argparse, glob, subprocess
 
+import argparse
+import glob
+import os
+import subprocess
+import sys
+
+from lib import jobscript_utils
+from lib.jobscript_utils import wrap_multiline_str
+from lib.jobscript_utils import UnsupportedMethodError
+
+
+# This script paths
 SCRIPT_FILE = os.path.abspath(os.path.realpath(__file__))
 SCRIPT_FNAME = os.path.basename(SCRIPT_FILE)
 SCRIPT_NAME, SCRIPT_EXT = os.path.splitext(SCRIPT_FNAME)
 SCRIPT_DIR = os.path.dirname(SCRIPT_FILE)
 
-matlab_scripts = os.path.join(SCRIPT_DIR, '../setsm_postprocessing4')
-quadname_list = ['1_1', '1_2', '2_1', '2_2']
-RESOLUTIONS = ['2', '10']
-REGIONS = ['arcticdem', 'earthdem', 'rema']
-TIF_OUTPUT_CHOICES = ['browse-LZW', 'browse-COG', 'full-LZW', 'full-COG']
-default_qsub = 'qsub_tiles2tif_v4.sh'
+# Paths relative to this script
+MATLAB_LIBDIR = os.path.join(SCRIPT_DIR, "../setsm_postprocessing4")
 
 
 class RawTextArgumentDefaultsHelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter): pass
 
-def main():
-    global quadname_list
-
-    ## args
+def get_arg_parser():
+    
     parser = argparse.ArgumentParser(
         formatter_class=RawTextArgumentDefaultsHelpFormatter,
-        description=""
+        description=wrap_multiline_str("""
+            Export raster data from Matlab '<tilename>_<resolution>.mat'
+            DEM mosaic tile files as GeoTIFF raster images, along with
+            associated processing metadata in text format.
+        """)
     )
-    parser.add_argument("tiledir", help="tile root directory containing supertile subfolders")
-    parser.add_argument("tiles",
-        help=' '.join([
-            "list of mosaic supertiles; either specified on command line (comma delimited),",
-            "or a text file list (each tile on separate line)"
-        ])
+    
+    ## Positional args
+    
+    parser.add_argument(
+        'tiledir',
+        type=str,
+        help="Root directory of tiles to be processed."
     )
-    parser.add_argument("region", choices=REGIONS,
-            help="processing domain of tiles")
-    parser.add_argument("res", choices=RESOLUTIONS,
-            help="resolution of source tiles to be exported")
+    parser.add_argument(
+        'tiles',
+        help=wrap_multiline_str("""
+            List of mosaic supertiles (10m tile names) to process,
+            either specified on command line (comma delimited)
+            or a text file list (each tile on separate line).
+        """)
+    )
+    parser.add_argument(
+        'domain',
+        type=str,
+        choices=['arcticdem', 'earthdem', 'rema'],
+        help="DEM production domain of source tiles"
+    )
+    parser.add_argument(
+        'resolution',
+        type=int,
+        choices=[10, 2],
+        help=wrap_multiline_str("""
+            Resolution class of existing tiles in source tiledir
+            to be processed (meters).
+        """)
+    )
 
-    parser.add_argument("--tif-output", choices=TIF_OUTPUT_CHOICES, default='full-COG',
-            help="type of tifs to create for raster output")
-    parser.add_argument("--meta-only", action='store_true', default=False,
-            help="build meta files only")
-    parser.add_argument("--rerun", action='store_true', default=False,
-            help="run script even if target dem already exists")
-    parser.add_argument("--keep-old-results", action='store_true', default=False,
-            help="do not remove existing results before submitting jobs")
-    parser.add_argument("--lib-path", default=matlab_scripts,
-            help="path to referenced Matlab functions".format(matlab_scripts))
-    parser.add_argument("--pbs", action='store_true', default=False,
-            help="submit tasks to PBS")
-    parser.add_argument("--hold", action='store_true', default=False,
-            help="when submitting PBS jobs, submit them with held (H) status")
-    parser.add_argument("--qsubscript",
-            help="qsub script to use in PBS submission (default is {} in script root folder)".format(default_qsub))
-    parser.add_argument("--dryrun", action='store_true', default=False,
-            help='print actions without executing')
+    ## Optional args
 
-    args = parser.parse_args()
+    parser.add_argument(
+        '--tif-output',
+        type=str,
+        choices=['browse-LZW', 'browse-COG', 'full-LZW', 'full-COG'],
+        default='full-COG',
+        help="Package of raster data to output."
+    )
+    parser.add_argument(
+        '--meta-only',
+        action='store_true',
+        help="Export tile metadata only."
+    )
+    parser.add_argument(
+        '--tile-nocrop',
+        action='store_true',
+        help=wrap_multiline_str("""
+            Export full tile data arrays, without cropping to
+            nearest multiple of 100km/50km (10m/2m tiles) in x/y
+            coordinate values.
+        """)
+    )
+    parser.add_argument(
+        '--tile-buffer-meters',
+        type=int,
+        default=100,
+        help=wrap_multiline_str("""
+            Size of tile overlap buffer for exported rasters (meters),
+            where the buffer is applied after cropping to nearest
+            multiple of 100km/50km (10m/2m tiles) in x/y coordinate values.
+        """)
+    )
+    
+    parser.add_argument(
+        '--rerun',
+        action='store_true',
+        help=wrap_multiline_str("""
+            Submit processing jobs even if exported results files
+            already exist.
+        """)
+    )
+    parser.add_argument(
+        '--keep-old-results',
+        action='store_true',
+        help=wrap_multiline_str("""
+            Do not remove existing exported results files before submitting
+            processing jobs.
+        """)
+    )
 
-    if args.tiles.lower().endswith(('.txt', '.csv')) or os.path.isfile(args.tiles):
-        tilelist_file = args.tiles
-        if not os.path.isfile(args.tiles):
-            parser.error("'supertile_list' argument tilelist file does not exist: {}".format(tilelist_file))
+    parser.add_argument(
+        '--tile-org',
+        type=str,
+        choices=['pgc', 'osu'],
+        default='pgc',
+        help="Tile file organization scheme."
+    )
+    parser.add_argument(
+        '--process-by',
+        type=str,
+        choices=['supertile-dir', 'tile-file'],
+        default='tile-file',
+        help=wrap_multiline_str(r"""
+            \nIf 'supertile-dir', if one tile within the supertile folder
+            needs to be processed, hand whole supertile folder to Matlab script
+            to be processed as a single task.
+            \nIf 'tile-file', send each tile to be processed individually
+            to Matlab script as a single task.
+        """)
+    )
+    
+    parser.add_argument(
+        '--matlib',
+        type=str,
+        default=MATLAB_LIBDIR,
+        help=wrap_multiline_str("""
+            Path to directory containing necessary Matlab scripts
+            and functions.
+        """)
+    )
+    
+    parser.add_argument(
+        '--dryrun',
+        action='store_true',
+        help="Print actions without executing."
+    )
+    
+    ## Argument groups
+    
+    jobscript_utils.argparse_add_job_scheduler_group(parser, config_group=SCRIPT_FNAME)
+
+    return parser
+
+
+def main():
+
+    ## Parse and adjust arguments
+
+    arg_parser = get_arg_parser()
+    script_args = arg_parser.parse_args()
+
+    root_tiledir = os.path.abspath(script_args.tiledir)
+
+    if script_args.tiles.lower().endswith(('.txt', '.csv')) or os.path.isfile(script_args.tiles):
+        tilelist_file = script_args.tiles
+        if not os.path.isfile(script_args.tiles):
+            arg_parser.error("'tiles' argument tilelist file does not exist: {}".format(tilelist_file))
         with open(tilelist_file, 'r') as tilelist_fp:
             supertile_list = [line for line in tilelist_fp.read().splitlines() if line != '']
     else:
-        supertile_list = args.tiles.split(',')
+        supertile_list = script_args.tiles.split(',')
     supertile_list = sorted(list(set(supertile_list)))
 
-    root_tiledir = os.path.abspath(args.tiledir)
-    scriptdir = SCRIPT_DIR
-
-    ## Verify qsubscript
-    if args.qsubscript is None:
-        qsubpath = os.path.join(scriptdir,default_qsub)
+    if script_args.domain == 'arcticdem':
+        global_projstr = 'polar stereo north'
+    elif script_args.domain == 'earthdem':
+        global_projstr = None
+    elif script_args.domain == 'rema':
+        global_projstr = 'polar stereo south'
     else:
-        qsubpath = os.path.abspath(args.qsubscript)
-    if not os.path.isfile(qsubpath):
-        parser.error("qsub script path is not valid: %s" %qsubpath)
+        raise UnsupportedMethodError(
+            "No projstr mapping for argument 'domain': {}".format(script_args.domain)
+        )
 
-    if not os.path.isdir(root_tiledir):
-        parser.error("tiledir does not exist: {}".format(root_tiledir))
+    res_name = '{}m'.format(script_args.resolution)
 
-    if args.region == 'arcticdem':
-        projstr = 'polar stereo north'
-    elif args.region == 'earthdem':
-        projstr = None
-    elif args.region == 'rema':
-        projstr = 'polar stereo south'
+    if script_args.resolution == 2:
+        quadname_list = ['1_1', '1_2', '2_1', '2_2']
     else:
-        parser.error("unexpected region name")
-
-    if args.res == '10':
         quadname_list = ['']
 
-    tif_output_is_browse = args.tif_output in ('browse-LZW', 'browse-COG')
+    tif_output_is_browse = script_args.tif_output in ('browse-LZW', 'browse-COG')
 
-    i=0
-    if len(supertile_list) > 0:
+    single_t2t_args = wrap_multiline_str(f"""
+        'resolution','{res_name}',
+        'outRasterType','{script_args.tif_output}',
+        'bufferMeters',{script_args.tile_buffer_meters}
+    """)
+    if script_args.tile_nocrop:
+        single_t2t_args += ", 'noCrop'"
 
-        for supertile in supertile_list:
+    batch_t2t_args = single_t2t_args
+    if script_args.meta_only:
+        batch_t2t_args += ", 'metaOnly'"
 
-            tile_projstr = projstr
+    jobscript_utils.adjust_args(script_args, arg_parser)
+    jobscript_utils.create_dirs(script_args, arg_parser)
 
-            if tile_projstr is None:
-                assert args.region == 'earthdem'
 
-                utm_tilename_parts = supertile.split('_')
-                utm_tilename_prefix = utm_tilename_parts[0]
-                if not utm_tilename_prefix.startswith('utm'):
-                    parser.error("Expected only UTM tile names (e.g. 'utm10n_01_01'), but got '{}'".format(supertile))
+    ## Verify arguments
 
-                tile_projstr = utm_tilename_prefix
+    if not os.path.isdir(root_tiledir):
+        arg_parser.error("Argument 'tiledir' is not an existing directory: {}".format(root_tiledir))
 
-            for quadname in quadname_list:
-                tile_name = '{}_{}'.format(supertile, quadname) if quadname != '' else supertile
-                tile_rootpath = os.path.join(root_tiledir, supertile, '{}_{}m'.format(tile_name, args.res))
+    if script_args.tile_org == 'osu' and script_args.process_by == 'supertile-dir':
+        arg_parser.error("--process-by must be set to to 'tile-file' when --tile-org='osu'")
 
-                unregmatfile    = '{}.mat'.format(tile_rootpath)
-                regmatfile      = '{}_reg.mat'.format(tile_rootpath)
-                finfp           = '{}.fin'.format(tile_rootpath)
-                demfp           = '{}_dem.tif'.format(tile_rootpath)
-                browsefp        = '{}_browse.tif'.format(tile_rootpath)
-                metafp          = '{}_meta.txt'.format(tile_rootpath)
-                matfile         = regmatfile if os.path.isfile(regmatfile) else unregmatfile
+    jobscript_utils.verify_args(script_args, arg_parser)
 
-                run_tile = True
 
-                if not os.path.isfile(unregmatfile) and not os.path.isfile(regmatfile):
-                    print(
-                        "Tile {} {}m mat and reg.mat files do not exist{}: {}".format(
-                            tile_name, args.res,
-                            " (AND .fin file also does not exist!!)" if not os.path.isfile(finfp) else '',
-                            matfile
-                        )
+    ## Main processing loop
+
+    num_supertiles = len(supertile_list)
+    if script_args.resolution == 2 and script_args.process_by == 'tile-file':
+        est_num_tasks = num_supertiles * 4
+    else:
+        est_num_tasks = num_supertiles
+
+    job_handler = jobscript_utils.JobHandler(
+        script_args,
+        est_num_tasks,
+        num_tasks_is_estimate=True,
+        init_env_requests='matlab gdal'
+    )
+
+    run_tile_list_all = []
+
+    for supertile in supertile_list:
+
+        tile_projstr = global_projstr
+        if tile_projstr is None:
+            assert script_args.domain == 'earthdem'
+
+            utm_tilename_parts = supertile.split('_')
+            utm_tilename_prefix = utm_tilename_parts[0]
+            if not utm_tilename_prefix.startswith('utm'):
+                arg_parser.error("Expected only UTM tile names (e.g. 'utm10n_01_01'), but got '{}'".format(supertile))
+
+            tile_projstr = utm_tilename_prefix
+
+        run_tile_matlist = []
+
+        for quadname in quadname_list:
+            tile_name = '{}_{}'.format(supertile, quadname) if quadname != '' else supertile
+            tile_rootpath = os.path.join(
+                root_tiledir,
+                supertile if script_args.tile_org == 'pgc' else '',
+                '{}_{}'.format(tile_name, res_name)
+            )
+
+            unregmatfile    = '{}.mat'.format(tile_rootpath)
+            regmatfile      = '{}_reg.mat'.format(tile_rootpath)
+            finfp           = '{}.fin'.format(tile_rootpath)
+            demfp           = '{}_dem.tif'.format(tile_rootpath)
+            browsefp        = '{}_browse.tif'.format(tile_rootpath)
+            metafp          = '{}_meta.txt'.format(tile_rootpath)
+            matfile         = regmatfile if os.path.isfile(regmatfile) else unregmatfile
+
+            run_tile = True
+
+            if not os.path.isfile(unregmatfile) and not os.path.isfile(regmatfile):
+                print(
+                    "Tile {} {}m mat and reg.mat files do not exist{}: {}".format(
+                        tile_name, script_args.resolution,
+                        " (AND .fin file also does not exist!!)" if not os.path.isfile(finfp) else '',
+                        matfile
                     )
-                    run_tile = False
+                )
+                run_tile = False
 
-                elif args.meta_only:
-                    if os.path.isfile(metafp):
-                        if args.rerun:
-                            print("Removing existing meta file: {}".format(metafp))
-                            if not args.dryrun:
-                                os.remove(metafp)
-                        else:
-                            print("{} exists, skipping".format(metafp))
-                            run_tile = False
-
-                else:
-                    if args.rerun:
-                        assume_complete = False
-                    if tif_output_is_browse:
-                        assume_complete = os.path.isfile(browsefp) and os.path.isfile(metafp)
+            elif script_args.meta_only:
+                if os.path.isfile(metafp):
+                    if script_args.rerun:
+                        print("Removing existing meta file: {}".format(metafp))
+                        if not script_args.dryrun:
+                            os.remove(metafp)
                     else:
-                        assume_complete = os.path.isfile(demfp) and os.path.isfile(browsefp) and os.path.isfile(metafp)
-
-                    if args.rerun or not assume_complete:
-                        if not args.keep_old_results:
-                            dstfps_old_pattern = [
-                                demfp.replace('_dem.tif', '*.tif'),
-                                metafp
-                            ]
-                            dstfps_old = [fp for pat in dstfps_old_pattern for fp in glob.glob(pat)]
-                            if dstfps_old:
-                                print("{}Removing existing tif tile results matching {}".format('(dryrun) ' if args.dryrun else '', dstfps_old_pattern))
-                                if not args.dryrun:
-                                    for dstfp_old in dstfps_old:
-                                        os.remove(dstfp_old)
-
-                    elif assume_complete:
-                        "{} {} exist, skipping".format(
-                            metafp,
-                            "browse and meta" if tif_output_is_browse else "dem, browse, and meta"
-                        )
+                        print("{} exists, skipping".format(metafp))
                         run_tile = False
 
-                if run_tile:
-                    ## if pbs, submit to scheduler
-                    i+=1
-                    if args.pbs:
-                        job_name = 't2t_{}'.format(tile_name)
-                        cmd = r'qsub {} -N {} -v p1={},p2={},p3={},p4={},p5="{}",p6={} {}'.format(
-                            '-h' if args.hold else '',
-                            job_name,
-                            scriptdir,
-                            args.lib_path,
-                            'true' if args.meta_only else 'false',
-                            matfile,
-                            tile_projstr,
-                            args.tif_output,
-                            qsubpath,
-                        )
-                        print(cmd)
-                        if not args.dryrun:
-                            subprocess.call(cmd, shell=True)
+            else:
+                if script_args.rerun:
+                    assume_complete = False
+                if tif_output_is_browse:
+                    assume_complete = os.path.isfile(browsefp) and os.path.isfile(metafp)
+                else:
+                    assume_complete = os.path.isfile(demfp) and os.path.isfile(browsefp) and os.path.isfile(metafp)
 
-                    ## else run matlab
-                    else:
-                        if args.meta_only:
-                            cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); tileMetav4('{2}'); catch e; disp(getReport(e)); exit(1); end; exit(0)" """.format(
-                                scriptdir,
-                                args.lib_path,
-                                matfile,
-                            )
-                        else:
-                            cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); writeTileToTifv4('{2}','{3}','outRasterType','{4}'); tileMetav4('{2}'); catch e; disp(getReport(e)); exit(1); end; exit(0)" """.format(
-                                scriptdir,
-                                args.lib_path,
-                                matfile,
-                                tile_projstr,
-                                args.tif_output,
-                            )
-                        print("{}, {}".format(i, cmd))
-                        if not args.dryrun:
-                            subprocess.call(cmd, shell=True)
+                if script_args.rerun or not assume_complete:
+                    if not script_args.keep_old_results:
+                        dstfps_old_pattern = [
+                            demfp.replace('_dem.tif', '*.tif'),
+                            metafp
+                        ]
+                        dstfps_old = [fp for pat in dstfps_old_pattern for fp in glob.glob(pat)]
+                        if dstfps_old:
+                            print("{}Removing existing tif tile results matching {}".format('(dryrun) ' if script_args.dryrun else '', dstfps_old_pattern))
+                            if not script_args.dryrun:
+                                for dstfp_old in dstfps_old:
+                                    os.remove(dstfp_old)
+
+                elif assume_complete:
+                    print("{} exist; skipping tile: {}".format(
+                        "browse and meta" if tif_output_is_browse else "dem, browse, and meta",
+                        matfile
+                    ))
+                    run_tile = False
+
+            if run_tile:
+                run_tile_matlist.append(matfile)
+
+        run_tile_list = []
+
+        if script_args.process_by == 'tile-file':
+            run_tile_list = run_tile_matlist
+        elif script_args.process_by == 'supertile-dir' and len(run_tile_matlist) > 0:
+            supertile_dir = os.path.join(root_tiledir, supertile)
+            run_tile_list = [supertile_dir]
+
+        run_tile_list_all.extend(run_tile_list)
+        # Un-comment the following line and un-indent the proceeding
+        # `for` loop if you want to check & gather the full list of
+        # processing tasks before looping through list for job submission.
+    # for tile_path in run_tile_list_all:
+        for tile_path in run_tile_list:
+            job_id = None
+
+            matlab_addpath = wrap_multiline_str(f"""
+                addpath('{SCRIPT_DIR}');
+                addpath('{script_args.matlib}');
+            """)
+
+            if not tile_path.endswith('.mat'):
+                supertile_dir = tile_path
+                job_id = os.path.basename(supertile_dir)
+
+                task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
+                    {matlab_addpath}
+                    batch_tiles2tif_v4('{supertile_dir}', '{tile_projstr}', {batch_t2t_args});
+                """))
+
+            else:
+                tile_matfile = tile_path
+                job_id, _ = os.path.splitext(os.path.basename(tile_matfile))
+
+                if script_args.meta_only:
+                    task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
+                        {matlab_addpath}
+                        tileMetav4('{tile_matfile}');
+                    """))
+                else:
+                    task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
+                        {matlab_addpath}
+                        writeTileToTifv4('{tile_matfile}', '{tile_projstr}', {single_t2t_args});
+                        tileMetav4('{tile_matfile}');
+                    """))
+
+            submit_cmd = job_handler.add_task_cmd(task_cmd, job_id)
+            if submit_cmd is not None:
+                print("Submitting job [{}/{}(est)]:\n  {}".format(
+                    job_handler.job_num, job_handler.num_jobs, submit_cmd
+                ))
+                if not script_args.dryrun:
+                    subprocess.call(submit_cmd, shell=True)
+
+    if job_handler.bundle_tasks:
+        submit_cmd = job_handler.get_last_bundle_submit_cmd()
+        if submit_cmd is not None:
+            print("Submitting job [{}/{}]:\n  {}".format(
+                job_handler.job_num, job_handler.job_num, submit_cmd
+            ))
+            if not script_args.dryrun:
+                subprocess.call(submit_cmd, shell=True)
+
+    sys.exit(0)
 
 
 if __name__ == '__main__':

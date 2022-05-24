@@ -42,8 +42,8 @@ cd "$PBS_O_WORKDIR"
 module load matlab/2019a
 
 tiledir="$ARG_TILEDIR"
-#matlab_cmd="try; addpath('/mnt/pgc/data/common/repos/setsm_postprocessing4'); matfile_list=dir(['${tiledir}','/*.mat']); matfile_paths=fullfile({matfile_list.folder},{matfile_list.name}); batch_undoMergeTileBuffers(matfile_paths); catch e; disp(getReport(e)); exit(1); end; exit(0)"
-matlab_cmd="try; addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4'); matfile_list=dir(['${tiledir}','/*.mat']); matfile_paths=fullfile({matfile_list.folder},{matfile_list.name}); batch_undoMergeTileBuffers(matfile_paths); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+matlab_cmd="try; addpath('/mnt/pgc/data/common/repos/setsm_postprocessing4'); matfile_list=dir(['${tiledir}','/*.mat']); matfile_paths=fullfile({matfile_list.folder},{matfile_list.name}); batch_undoMergeTileBuffers(matfile_paths); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+#matlab_cmd="try; addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4'); matfile_list=dir(['${tiledir}','/*.mat']); matfile_paths=fullfile({matfile_list.folder},{matfile_list.name}); batch_undoMergeTileBuffers(matfile_paths); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 
 echo "Argument tile directory: ${tiledir}"
 echo "Matlab command: \"${matlab_cmd}\""
