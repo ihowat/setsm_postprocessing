@@ -118,7 +118,7 @@ else
 end
 
 fprintf('performing coregistration & adjustment between adjoining subtiles\n')
-dZ = getOffsets(subTileFiles,subTileNum,buff);
+dZ = getOffsets(subTileFiles,subTileRow,subTileCol,buff);
 
 % if extent of mosaic not specidied, get from tiles at edges
 if ~exist('x0','var')
