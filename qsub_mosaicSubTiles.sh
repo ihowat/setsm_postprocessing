@@ -337,6 +337,7 @@ fi
 echo
 if [ "$MATLAB_USE_PARPOOL" = true ] && [ -d "$job_temp_dir" ]; then
     echo "Removing Matlab temp dir for parallel tasks: ${job_temp_dir}"
+    sleep 10s
     rm -rf "$job_temp_dir"
 fi
 
