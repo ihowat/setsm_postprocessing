@@ -10,7 +10,7 @@ else
 end
 outRasterType_choices = {'browse-LZW', 'browse-COG', 'full-LZW', 'full-COG'};
 if ~any(strcmp(outRasterType, outRasterType_choices))
-    error("'outRasterType' must be one of the following: {'%s'}", strjoin(outRasterType_choices, "', '"))
+    error("'outRasterType' must be one of the following, but was '%s': {'%s'}", outRasterType, strjoin(outRasterType_choices, "', '"))
 end
 
 if ismember(outRasterType, {'browse-LZW', 'browse-COG'})
