@@ -9,7 +9,9 @@ function [x0,x1,y0,y1]=getTileExtents(varargin)
 %buffer =  size of tile/subtile boundary buffer in meters (100 m default)
 
 buffer=100; % default size of tile/subtile boundary buffer in meters
-quadrant = '';
+quadrant='';
+tileParamListFile=''; % get custom tile/subtile boundary buffer
+bufferVararginProvided=false;
 
 tileName=varargin{1};
 tileDefFile = varargin{2};
@@ -17,11 +19,45 @@ tileDefFile = varargin{2};
 n = find(strcmpi('buffer',varargin));
 if ~isempty(n)
     buffer = varargin{n+1};
+    bufferVararginProvided = true;
 end
 n = find(strcmpi('quadrant',varargin));
 if ~isempty(n)
     quadrant = varargin{n+1};
 end
+n = find(strcmpi('tileParamListFile',varargin));
+if ~isempty(n)
+    tileParamListFile = varargin{n+1};
+end
+
+if ~bufferVararginProvided && ~isempty(tileParamListFile)
+    if exist(tileParamListFile,'file')
+        [~,tileParams]=system(['grep ',tileName,' ',tileParamListFile]);
+        paramReadFailFlag=true;
+        if ~isempty(isempty(tileParams))
+            tileParams=strtrim(tileParams);
+            tileParams=strrep(tileParams,'_',' ');
+            tileParams=str2num(tileParams);
+
+            if length(tileParams) == 4
+                buffer=tileParams(3);
+                minStripOverlap=tileParams(4);
+                paramReadFailFlag=false;
+            end
+        end
+
+        if  paramReadFailFlag == true
+            fprintf('Could not find %s in %s, using defaults\n',...
+                tileName,tileParamListFile)
+        end
+    else
+        fprintf('WARNING: tileParamListFile %s does not exist, cannot lookup custom subtile buffer setting\n', tileParamListFile)
+    end
+end
+
+fprintf('tileName = %s\n',tileName)
+fprintf('quadrant = %s\n',quadrant)
+fprintf('buffer = %d\n',buffer)
 
 tileDefs=load(tileDefFile);
 
