@@ -101,6 +101,12 @@ if ~isempty(n)
 end
 fprintf('projection = %s\n',projection)
 
+n = find(strcmpi(varargin,'res'));
+if ~isempty(n)
+    res = varargin{n+1};
+end
+fprintf('res = %d\n',res)
+
 %if output directory doesnt already exist, make it
 if ~exist(outDir,'dir')
     mkdir(outDir)
