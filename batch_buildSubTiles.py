@@ -245,6 +245,8 @@ def main():
     make_10m_only = 'true' if args.make_10m_only else 'false'
     make2m_arg = 'false' if args.make_10m_only else 'true'
     target_res = '10m' if args.make_10m_only else '2m'
+    # res_meters = 10 if args.make_10m_only else 2
+    res_meters = 10
 
     if args.tasks_per_job > 1:
         if not (args.pbs or args.slurm):
@@ -381,6 +383,7 @@ def main():
         'scriptdir': SCRIPT_DIR,
         'libdir': args.libdir,
         'outDir': template_outdir,
+        'resolution': res_meters,
         'projection': projection_string,
         'tileDefFile': args.tile_def,
         'stripDatabaseFile': args.strip_db,
@@ -424,7 +427,20 @@ def main():
 
         ## Create temp MST jobscript
         mst_jobscript = None
-        mst_args = ['python', mst_pyscript, args.dstdir, tiles[0], '10', '--project', args.project, '--write-jobscript-and-exit']
+        mst_args = [
+            'python',
+            mst_pyscript,
+            args.dstdir,
+            tiles[0],
+            '10',
+            '--project', args.project,
+            '--tile-def', args.tile_def,
+            '--tileparam-list', args.tileparam_list,
+            '--libdir', args.libdir,
+            '--tempdir', args.tempdir,
+            '--logdir', args.logdir,
+            '--write-jobscript-and-exit'
+        ]
         if not args.make_10m_only:
             mst_args.append('--make-2m-logdirs')
         print("Creating MST temporary jobscript file with the following command:\n    {}".format(' '.join(mst_args)))
