@@ -78,26 +78,48 @@ y0=tileDefs.y0(tileInd);
 x1=tileDefs.x1(tileInd);
 y1=tileDefs.y1(tileInd);
 
+%switch quadrant
+%    case lower('1_1') %lower left quadrant
+%
+%        x1 = x0 + (x1-x0)./2 + 1000;
+%        y1 = y0 + (y1-y0)./2 + 1000;
+%
+%    case lower('2_1') %upper left quadrant
+%
+%        x1 = x0 + (x1-x0)./2 + 1000;
+%        y0 = y0 + (y1-y0)./2 - 1000;
+%
+%    case lower('1_2') %lower right quadrant
+%
+%        x0 = x0 + (x1-x0)./2 - 1000;
+%        y1 = y0 + (y1-y0)./2 + 1000;
+%
+%    case lower('2_2') %upper right quadrant
+%
+%        x0 = x0 + (x1-x0)./2 - 1000;
+%        y0 = y0 + (y1-y0)./2 - 1000;
+%end
+
 switch quadrant
     case lower('1_1') %lower left quadrant
-      
-        x1 = x0 + (x1-x0)./2 + 1000;
-        y1 = y0 + (y1-y0)./2 + 1000;
-        
+
+        x1 = x0 + (x1-x0)./2;
+        y1 = y0 + (y1-y0)./2;
+
     case lower('2_1') %upper left quadrant
-        
-        x1 = x0 + (x1-x0)./2 + 1000;
-        y0 = y0 + (y1-y0)./2 - 1000;
-        
+
+        x1 = x0 + (x1-x0)./2;
+        y0 = y0 + (y1-y0)./2;
+
     case lower('1_2') %lower right quadrant
-        
-        x0 = x0 + (x1-x0)./2 - 1000;
-        y1 = y0 + (y1-y0)./2 + 1000;
-        
+
+        x0 = x0 + (x1-x0)./2;
+        y1 = y0 + (y1-y0)./2;
+
     case lower('2_2') %upper right quadrant
-        
-        x0 = x0 + (x1-x0)./2 - 1000;
-        y0 = y0 + (y1-y0)./2 - 1000;
+
+        x0 = x0 + (x1-x0)./2;
+        y0 = y0 + (y1-y0)./2;
 end
 
 % add buffer
