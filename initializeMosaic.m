@@ -351,7 +351,11 @@ if exist(qcFile,'file')
     qc = load(qcFile);
     
     A = cellfun( @(x,y) [x,'_',num2str(y)], qc.stripID, num2cell(qc.seg), 'uniformoutput',0);
-    B= cellfun( @(x,y) [x,'_',num2str(y)], strrep({S.strip},'_2m_lsf',''), {S.seg_id}, 'uniformoutput',0);
+    if exist('S','var')
+        B= cellfun( @(x,y) [x,'_',num2str(y)], strrep({S.strip},'_2m_lsf',''), {S.seg_id}, 'uniformoutput',0);
+    else
+        B= cellfun( @(x) stripFileNameToSegID(x), meta.fileName, 'uniformoutput',0);
+    end
     
     [~,IA,IB] =  intersect(A,B);
     
@@ -383,6 +387,13 @@ if removeSubtileFlag
 end
 
 
+function strip_seg_id = stripFileNameToSegID(fileName)
+pname_seg_re = '^.+/(?<pairname>[A-Z0-9]{4}_[0-9]{8}_[A-F0-9]{16}_[A-F0-9]{16})_[^/]+/[^/]+_seg(?<seg_id>\d+)_[^/]+$';
+[tokens, match_idx] = regexp(fileName, pname_seg_re, 'names');
+if isempty(match_idx)
+    error("Cannot parse strip fileName parts with regex '%s' from input fileName string: %s", tilename_re, tilename);
+end
+strip_seg_id = [tokens.pairname,'_',tokens.seg_id];
 
 
 
