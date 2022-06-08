@@ -93,7 +93,7 @@ project_tileDefFile_dict = {
 
 project_databaseFile_dict = {
     'arcticdem': '/scratch/sciteam/GS_bazu/mosaic_data/strip_databases/ArcticDEMdatabase4_2m_v4_20210817.mat',
-    'rema':      '/mnt/pgc/data/projects/earthdem/strip_databases/REMAdatabase4_2m_v4.1_20220511.mat',
+    'rema':      '/mnt/pgc/data/projects/earthdem/strip_databases/REMAdatabase4_2m_v4.1_20220511_clip_v13e.mat',
     'earthdem':  '/scratch/sciteam/GS_bazu/mosaic_data/strip_databases/EarthDEMdatabase4_2m_v4_20211014.mat',
 }
 project_waterTileDir_dict = {
@@ -108,7 +108,7 @@ project_stripsDirectory_dict = {
 }
 project_tileqcDir_dict = {
     'arcticdem': '',
-    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_qc/tile_qc_v13e',
+    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_qc/tile_qc_v13e_strips_v4.1',
     'earthdem':  '',
 }
 project_tileParamList_dict = {

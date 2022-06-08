@@ -118,11 +118,11 @@ for i=1:length(regionDirs)
 
         stripDirs=dir(stripDir_pattern);
         stripDirs=stripDirs([stripDirs.isdir]);
-        stripDirs = strcat({stripDirs.folder}',repmat({'/'},length(stripDirs),1),{stripDirs.name}');
         if length(stripDirs) == 0
             fprintf('None found\n')
             continue
         end
+        stripDirs = strcat({stripDirs.folder}',repmat({'/'},length(stripDirs),1),{stripDirs.name}');
 
 
 %        % check for duplicate strips
