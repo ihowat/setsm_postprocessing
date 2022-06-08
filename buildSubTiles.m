@@ -215,7 +215,7 @@ if isfield(meta,'strip_projection_name')
     if ~any(in)
         error("no matches between tileProjName='%s' and strip dbase 'strip_projection_name' field", tileProjName);
     end
-    meta = structfun(@(x) x(in), meta,'uniformoutput',0);
+    meta = structfun(@(x) trimMetaStructFieldByN(x,in), meta,'uniformoutput',0);
 end
 
 % tileDefs is a stucture, find this tile and extract range
@@ -449,6 +449,11 @@ parfor n=nstrt:subN
     % apply qc masks if provided
     if qcFlag
         nn = find(meta.qc.flag(ind) == 3);
+        if isempty(nn)
+            fprintf('no qc found to apply\n')
+        else
+            fprintf('found qc to apply\n')
+        end
         for j=nn
             ztmp = z(:,:,j);
             mttmp = mt(:,:,j);
@@ -937,3 +942,10 @@ save(outName,'stripIDs','x','y','za_med','land','za_mad','N','Nmt','tmax','tmin'
 function save_mat_file(outName, stripIDs, x,y, land, za_med, za_mad, N, Nmt, tmax, tmin, tmean)
     save(outName,'stripIDs','x','y','land','za_med','za_mad','N','Nmt',...
         'tmax','tmin','tmean','-v7.3')
+
+function field_out = trimMetaStructFieldByN(field_in, n)
+    if isstruct(field_in)
+        field_out = structfun(@(x) trimMetaStructFieldByN(x,n), field_in, 'uniformoutput',0);
+    else
+        field_out = field_in(n);
+    end
