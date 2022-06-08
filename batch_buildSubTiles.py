@@ -129,10 +129,14 @@ with open(watermask_tiles_visnav_need_editing_file, 'r') as tilelist_fp:
 quads = ['1_1', '1_2', '2_1', '2_2']
 
 
+class RawTextArgumentDefaultsHelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter): pass
+
 def main():
     global sched_addl_vars
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=RawTextArgumentDefaultsHelpFormatter
+    )
     parser.add_argument("dstdir", help="target directory (where tile subfolders will be created)")
     parser.add_argument("tiles",
         help=' '.join([

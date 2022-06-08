@@ -98,9 +98,13 @@ quads = ['1_1', '1_2', '2_1', '2_2']
 Task = namedtuple('Task', 't st')
 
 
+class RawTextArgumentDefaultsHelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter): pass
+
 def main():
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=RawTextArgumentDefaultsHelpFormatter
+    )
     parser.add_argument("srcdir", help="source root dir (where tile subfolders exist)")
     parser.add_argument("tiles",
         help=' '.join([
