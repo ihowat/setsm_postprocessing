@@ -82,6 +82,11 @@ project_tileDefFile_dict = {
     'rema':      '/mnt/pgc/data/projects/earthdem/tiledef_files/rema_tile_definitions.mat',
     'earthdem':  '/mnt/pgc/data/projects/earthdem/tiledef_files/PGC_UTM_Mosaic_Tiles_{}.mat'.format(earthdem_hemisphere_key),
 }
+project_tileParamList_dict = {
+    'arcticdem': '',
+    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_params/tileParamList_v13e.txt',
+    'earthdem':  '',
+}
 project_version_dict = {
     'arcticdem': 'ArcticDEM,4.1',
     'rema': 'REMA,2.0',
@@ -93,9 +98,13 @@ quads = ['1_1', '1_2', '2_1', '2_2']
 Task = namedtuple('Task', 't st')
 
 
+class RawTextArgumentDefaultsHelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter): pass
+
 def main():
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=RawTextArgumentDefaultsHelpFormatter
+    )
     parser.add_argument("srcdir", help="source root dir (where tile subfolders exist)")
     parser.add_argument("tiles",
         help=' '.join([
@@ -114,6 +123,10 @@ def main():
     parser.add_argument("--tile-def", default=None,
                         help="mosaic tile definition mat file (default is {})".format(
                             ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_tileDefFile_dict.items()])
+                        ))
+    parser.add_argument("--tileparam-list", default=None,
+                        help="tile parameters text file (default is {})".format(
+                            ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_tileParamList_dict.items()])
                         ))
     parser.add_argument("--version", default=None,
                         help="mosaic version (default is {})".format(
@@ -309,6 +322,7 @@ def main():
             'scriptdir': SCRIPT_DIR,
             'libdir': args.libdir,
             'tileDefFile': args.tile_def,
+            'tileParamListFile': args.tileparam_list,
             'subTileDir': template_subtiledir,
             'resolution': args.res,
             'outMatFile': template_outmatfile,

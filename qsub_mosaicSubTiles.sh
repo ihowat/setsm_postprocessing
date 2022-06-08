@@ -88,6 +88,7 @@ system="$ARG_SYSTEM"
 scriptdir="$ARG_SCRIPTDIR"
 libdir="$ARG_LIBDIR"
 tileDefFile="$ARG_TILEDEFFILE"
+tileParamListFile="$ARG_TILEPARAMLISTFILE"
 subTileDir="$ARG_SUBTILEDIR"
 outMatFile="$ARG_OUTMATFILE"
 projection="$ARG_PROJECTION"
@@ -245,7 +246,7 @@ warning('off','all'); \
 addpath('${scriptdir}'); addpath('${libdir}'); \
 ${matlab_parpool_init} \
 run_mosaicSubTiles(\
-'${superTileName}','${quadrant}','${tileDefFile}',\
+'${superTileName}','${quadrant}','${tileDefFile}','${tileParamListFile}',\
 '${subTileDir}',${resolution},'${outMatFile}',\
 '${projection}','${version}',${exportTif})"
 

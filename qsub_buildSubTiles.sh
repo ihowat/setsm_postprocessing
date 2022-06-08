@@ -87,6 +87,7 @@ system="$ARG_SYSTEM"
 scriptdir="$ARG_SCRIPTDIR"
 libdir="$ARG_LIBDIR"
 outDir="$ARG_OUTDIR"
+resolution="$ARG_RESOLUTION"
 projection="$ARG_PROJECTION"
 tileDefFile="$ARG_TILEDEFFILE"
 stripDatabaseFile="$ARG_STRIPDATABASEFILE"
@@ -227,7 +228,7 @@ matlab_cmd="\
 addpath('${scriptdir}'); addpath('${libdir}'); \
 ${matlab_parpool_init} \
 run_buildSubTiles(\
-'${tileName}','${outDir}',\
+'${tileName}','${outDir}',${resolution},\
 '${projection}','${tileDefFile}',\
 '${stripDatabaseFile}','${stripsDirectory}',\
 '${waterTileDir}','${refDemFile}',\

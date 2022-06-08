@@ -93,7 +93,7 @@ project_tileDefFile_dict = {
 
 project_databaseFile_dict = {
     'arcticdem': '/scratch/sciteam/GS_bazu/mosaic_data/strip_databases/ArcticDEMdatabase4_2m_v4_20210817.mat',
-    'rema':      '/mnt/pgc/data/projects/earthdem/strip_databases/REMAdatabase4_2m_v4.1_20220511.mat',
+    'rema':      '/mnt/pgc/data/projects/earthdem/strip_databases/REMAdatabase4_2m_v4.1_20220511_clip_v13e.mat',
     'earthdem':  '/scratch/sciteam/GS_bazu/mosaic_data/strip_databases/EarthDEMdatabase4_2m_v4_20211014.mat',
 }
 project_waterTileDir_dict = {
@@ -108,7 +108,7 @@ project_stripsDirectory_dict = {
 }
 project_tileqcDir_dict = {
     'arcticdem': '',
-    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_qc/tile_qc_v13e',
+    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_qc/tile_qc_v13e_strips_v4.1',
     'earthdem':  '',
 }
 project_tileParamList_dict = {
@@ -129,10 +129,14 @@ with open(watermask_tiles_visnav_need_editing_file, 'r') as tilelist_fp:
 quads = ['1_1', '1_2', '2_1', '2_2']
 
 
+class RawTextArgumentDefaultsHelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter): pass
+
 def main():
     global sched_addl_vars
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=RawTextArgumentDefaultsHelpFormatter
+    )
     parser.add_argument("dstdir", help="target directory (where tile subfolders will be created)")
     parser.add_argument("tiles",
         help=' '.join([
@@ -245,6 +249,8 @@ def main():
     make_10m_only = 'true' if args.make_10m_only else 'false'
     make2m_arg = 'false' if args.make_10m_only else 'true'
     target_res = '10m' if args.make_10m_only else '2m'
+    # res_meters = 10 if args.make_10m_only else 2
+    res_meters = 10
 
     if args.tasks_per_job > 1:
         if not (args.pbs or args.slurm):
@@ -381,6 +387,7 @@ def main():
         'scriptdir': SCRIPT_DIR,
         'libdir': args.libdir,
         'outDir': template_outdir,
+        'resolution': res_meters,
         'projection': projection_string,
         'tileDefFile': args.tile_def,
         'stripDatabaseFile': args.strip_db,
@@ -424,7 +431,20 @@ def main():
 
         ## Create temp MST jobscript
         mst_jobscript = None
-        mst_args = ['python', mst_pyscript, args.dstdir, tiles[0], '10', '--project', args.project, '--write-jobscript-and-exit']
+        mst_args = [
+            'python',
+            mst_pyscript,
+            args.dstdir,
+            tiles[0],
+            '10',
+            '--project', args.project,
+            '--tile-def', args.tile_def,
+            '--tileparam-list', args.tileparam_list,
+            '--libdir', args.libdir,
+            '--tempdir', args.tempdir,
+            '--logdir', args.logdir,
+            '--write-jobscript-and-exit'
+        ]
         if not args.make_10m_only:
             mst_args.append('--make-2m-logdirs')
         print("Creating MST temporary jobscript file with the following command:\n    {}".format(' '.join(mst_args)))
