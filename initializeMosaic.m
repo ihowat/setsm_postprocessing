@@ -1,10 +1,11 @@
-function [meta,landTile] = initializeMosaic(project,tileName,outDir,varargin)
+function [meta,landTile,buffer,minStripOverlap,filterFlag] = initializeMosaic(project,tileName,outDir,varargin)
 
 % set to true to remove the subdirectory of subtile .mat files after
 % completion:
 removeSubtileFlag=false;
 
 subTileDir='';
+res=10; % ouput mosaic resolution in meters
 projection='';
 tileDefFile='';
 stripDatabaseFile='';
@@ -80,6 +81,12 @@ end
 
 
 % Parse varargins
+n = find(strcmpi(varargin,'res'));
+if ~isempty(n)
+    res = varargin{n+1};
+end
+fprintf('res = %d\n',res)
+
 n = find(strcmpi(varargin,'projection'));
 if ~isempty(n)
     projection = varargin{n+1};
@@ -180,31 +187,34 @@ tileInd = strcmp(tileDefs.I,tileName_in_tileDef);
 tileDefs = structfun( @(x) x(tileInd), tileDefs,'uniformoutput',0);
 
 % get tile boundaries with buffer for making land mask and strip search
-res=10; % ouput mosaic resolution in meters
+%res=10; % ouput mosaic resolution in meters
 buffer=100; % size of tile/subtile boundary buffer in meters
 minStripOverlap=0.1;
 filterFlag= true;
 
-if exist(tileParamListFile,'file')
-    [~,tileParams]=system(['grep ',tileName,' ',tileParamListFile]);
-    paramReadFailFlag=true;
-    if ~isempty(isempty(tileParams))
-        tileParams=strtrim(tileParams);
-        tileParams=strrep(tileParams,'_',' ');
-        tileParams=str2num(tileParams);
-        
-        if length(tileParams) == 4
-            buffer=tileParams(3);
-            minStripOverlap=tileParams(4);
-            paramReadFailFlag=false;
+if ~isempty(tileParamListFile)
+    if exist(tileParamListFile,'file')
+        [~,tileParams]=system(['grep ',tileName,' ',tileParamListFile]);
+        paramReadFailFlag=true;
+        if ~isempty(isempty(tileParams))
+            tileParams=strtrim(tileParams);
+            tileParams=strrep(tileParams,'_',' ');
+            tileParams=str2num(tileParams);
+
+            if length(tileParams) == 4
+                buffer=tileParams(3);
+                minStripOverlap=tileParams(4);
+                paramReadFailFlag=false;
+            end
         end
+
+        if  paramReadFailFlag == true
+            fprintf('Could not find %s in %s, using defaults\n',...
+                tileName,tileParamListFile)
+        end
+    else
+        fprintf('tileParamListFile %s does not exist, using defaults\n', tileParamListFile)
     end
-    
-    if  paramReadFailFlag == true
-        fprintf('Could not find %s in %s, using defaults\n',...
-            tileName,tileParamListFile)
-    end
-    
 end
 
 x0=tileDefs.x0-buffer;
