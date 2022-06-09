@@ -1,4 +1,4 @@
-function batch_tiles2tif(tileDir,projstr,varargin)
+function batch_tiles2tif_v4(tileDir,projstr,varargin)
 
 %% Parse optional args
 
@@ -55,7 +55,7 @@ for tile_idx = 1:num_tiles
     tile_file = fileNames{tile_idx};
     fprintf("\nProcessing tile (%d/%d): %s\n\n", tile_idx, num_tiles, tile_file);
     if ~metaOnly
-        writeTileToTifv4(tile_file, projstr, varargin(:));
+        writeTileToTifv4(tile_file, projstr, varargin{:});
     end
-    tileMetav4(tile_file, varargin(:));
+    tileMetav4(tile_file, varargin{:});
 end
