@@ -15,12 +15,17 @@ end
 
 tiles=load(tilefile);
 
-coastline = cell(size(tiles.I));
 if isfield(tiles ,'coastline')
     coastline = tiles.coastline;
 else
     coastline = cell(size(tiles.I));
 end
+
+%if isfield(tiles ,'coastlinePolyshape')
+%    coastlinePolyshape = tiles.coastlinePolyshape;
+%else
+%    coastlinePolyshape = cellfun(@(x) polyshape(), coastline).';
+%end
 
 fix_tile_list = {};
 %fix_tile_list = {'63_13'};
@@ -181,7 +186,24 @@ end
 
 tiles.coastline = coastline;
 
+coastlinePolyshape = cellfun(@(x) polyshape(), coastline).';
+coastlinePolyshape_cellarr = cellfun(@(x) coastlineVertToPolyshape(x), coastline, 'UniformOutput',false);
+for i=1:length(coastlinePolyshape_cellarr)
+    coastlinePolyshape(i) = coastlinePolyshape_cellarr{i};
+end
+tiles.coastlinePolyshape = coastlinePolyshape;
+
 save(tilefile,'-struct','tiles');
+
+
+function coastlinePolyshape = coastlineVertToPolyshape(coastlineVert)
+if isempty(coastlineVert)
+    coastlinePolyshape = polyshape();
+else
+    x = cellfun(@(n) n(1,:), coastlineVert.', 'UniformOutput',false);
+    y = cellfun(@(n) n(2,:), coastlineVert.', 'UniformOutput',false);
+    coastlinePolyshape = polyshape(x, y);
+end
 
 
 
