@@ -30,11 +30,23 @@ end
 %load is2 data
 is2 =load(is2FileName,'x','y','z');
 
+try
+    %load DEM
+    load(tileFileName,'x','y','z','land');
+catch
+    warning('cant read %s\n',tileFileName)
+    return
+end
+
+% remove is2 points that fall outside of the (2m) tile
+n = is2.x >= min(x) & is2.x <= max(x) & is2.y >= min(y) & is2.y <= max(y);
+is2 = structfun( @(x) x(n), is2, 'uniformoutput', 0);
+
 % call the surfacef fitter with or without land mask if it exists
 if any(strcmp({s.name},'land'))
-    [dzfit,sf]=fitDEM2gcps(m.x,m.y,m.z,is2.x,is2.y,is2.z,'resizeFactor',0.01,'landMask',m.land);
+    [dzfit,sf]=fitDEM2gcps(x,y,z,is2.x,is2.y,is2.z,'resizeFactor',0.01,'landMask',land);
 else
-    [dzfit,sf]=fitDEM2gcps(m.x,m.y,m.z,is2.x,is2.y,is2.z,'resizeFactor',0.01);
+    [dzfit,sf]=fitDEM2gcps(x,y,z,is2.x,is2.y,is2.z,'resizeFactor',0.01);
 end
 
 if isempty(dzfit)

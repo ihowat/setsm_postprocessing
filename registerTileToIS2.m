@@ -43,6 +43,10 @@ catch
     return
 end
 
+% remove is2 points that fall outside of the (2m) tile
+n = is2.x >= min(x) & is2.x <= max(x) & is2.y >= min(y) & is2.y <= max(y);
+is2 = structfun( @(x) x(n), is2, 'uniformoutput', 0);
+
 if resizeFraction ~= 1.0
     x = imresize(x, resizeFraction);
     y = imresize(y, resizeFraction);
