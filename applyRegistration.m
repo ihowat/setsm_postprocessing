@@ -1,6 +1,8 @@
 function applyRegistration(demMatFile,registrationFile,varargin)
 
 % File to register
+    
+demMatFileWithRegToCopy = [];
 
 if ~exist(demMatFile,'file')
     warning('%s doesnt exist, skipping',demMatFile)
@@ -13,6 +15,11 @@ outName=strrep(demMatFile,'.mat','_reg.mat');
 if exist(outName,'file') && ~any(strcmpi(varargin,'overwrite'))
     fprintf('%s exists, skipping\n',outName)
     return
+end
+
+n = find(strcmpi(varargin,'demMatFileWithRegToCopy'));
+if ~isempty(n)
+    demMatFileWithRegToCopy = varargin{n+1};
 end
 
 % get the region and tile names from the mat file name
@@ -28,16 +35,37 @@ m_fields = fields(m);
 if ~isempty(registrationFile)
     regData=load(registrationFile);
     n = find(contains(regData.tileNames,tileName));
-    
+
     if isempty(n)
         warning('could not find registration data for %s, skipping\n',tileName)
         return
     end
-    
+    if any(strcmp(fields(m),'reg'))
+        warning('demMatFile already has reg field, will overwrite: %s\n',demMatFile)
+    end
+
     % extract data for this tile from registration data
     regData = rmfield(regData,{'tileFiles','tileNames'});
     regData.reg = structfun( @(x) x(n,:), regData.reg,'uniformoutput',0);
     regData.unreg = structfun( @(x) x(n,:), regData.unreg,'uniformoutput',0);
+
+    m.Properties.Writable = true;
+    m.reg=regData.reg;
+    m.unreg=regData.unreg;
+
+elseif ~isempty(demMatFileWithRegToCopy)
+    mReg = matfile(demMatFileWithRegToCopy);
+
+    if ~any(strcmp(fields(mReg),'reg'))
+        warning('no reg field in demMatFileWithRegToCopy: %s\n',demMatFileWithRegToCopy)
+        return
+    end
+    if any(strcmp(fields(m),'reg'))
+        warning('demMatFile already has reg field, will overwrite: %s\n',demMatFile)
+    end
+    
+    regData.reg=mReg.reg;
+    regData.unreg=mReg.unreg;
     
     m.Properties.Writable = true;
     m.reg=regData.reg;
@@ -46,6 +74,10 @@ if ~isempty(registrationFile)
 else
     if ~any(strcmp(fields(m),'reg'))
         warning('no reg field in %s\n',demMatFile)
+        return
+    end
+    if isempty(m.reg)
+        warning('reg field is empty in %s\n',demMatFile)
         return
     end
     

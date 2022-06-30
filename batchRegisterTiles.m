@@ -10,6 +10,8 @@ function batchRegisterTiles(tileDir,is2Dir,varargin)
 strt=1;
 inc=1;
 resolution='10m';
+overwrite=false;
+overwrite_flag='';
 
 if length(varargin) == 2 && ~isnan(str2double(varargin{1})) && ~isnan(str2double(varargin{2}))
     strt=varargin{1};
@@ -33,6 +35,11 @@ elseif ~isempty(varargin)
     end
     if ~ismember(resolution, resolution_choices)
         error("'resolution' must be one of the following, but was '%s': {'%s'}", resolution, strjoin(resolution_choices, "', '"));
+    end
+
+    if any(strcmpi(varargin,'overwrite'))
+        overwrite=true;
+        overwrite_flag='overwrite';
     end
 end
 
@@ -60,12 +67,18 @@ for i=strt:inc:length(tileFiles)
     
     fprintf('%d of %d, %s\n',i,length(tileNames10m),tileFile)
 
-    registerTileToIS2(tileFile,is2TileFile)
-     
-    applyRegistration(tileFile,[])
-    
     regTileFile=strrep(tileFile,'.mat','_reg.mat');
-    
+    unregTileFile=strrep(tileFile,'.mat','_unreg.mat.bak');
+
+    if ~exist(unregTileFile,'file')
+        eval(['!cp ',tileFile,' ',unregTileFile]);
+    end
+
+    if ~exist(regTileFile,'file') || overwrite
+        registerTileToIS2(tileFile,is2TileFile)
+        applyRegistration(tileFile,[],overwrite_flag)
+    end
+
     if exist(regTileFile,'file')
         fit2is2(regTileFile,is2TileFile)
     end

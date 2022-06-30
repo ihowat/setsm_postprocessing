@@ -15,10 +15,15 @@ resizeFraction = min(1.0, resizeFraction_10m * (res/10));
 resizeFraction = 1.0;
 
 
+if any(strcmp(fields(m),'unreg'))
+    fprintf('unreg field already exists, clearing: %s\n', tileFile)
+    m.Properties.Writable = true;
+    m.unreg = [];
+end
 if any(strcmp(fields(m),'reg'))
-    fprintf('reg already exists, skipping\n')
-    clear m
-    return
+    fprintf('reg field already exists, clearing: %s\n', tileFile)
+    m.Properties.Writable = true;
+    m.reg = [];
 end
 
 % skip if is2 file doesnt exist for this tile
