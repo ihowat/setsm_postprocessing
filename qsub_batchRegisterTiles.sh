@@ -34,8 +34,6 @@ echo Working directory: $PBS_O_WORKDIR
 echo ________________________________________________________
 echo
 
-set -uo pipefail
-
 cd "$PBS_O_WORKDIR"
 
 #module load gdal/2.1.3
@@ -43,7 +41,23 @@ module load matlab/2019a
 
 ## Arguments/Options
 tiledir="$ARG_TILEDIR"
+resolution="$ARG_RESOLUTION"
 is2dir="/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/from_unity/altimetryByTile/";
+
+set -uo pipefail
+
+if [ -n "$tiledir" ]; then
+    # Make sure this is an absolute path
+    tiledir=$(readlink -f "$tiledir")
+else
+    tiledir="/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/results/output_tiles/"
+#    tiledir="/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/results/output_tiles_testing/"
+fi
+if [ -z "$resolution" ]; then
+    resolution='10m';
+#    resolution='2m';
+fi
+
 
 ## Validate arguments
 if [ ! -d "$tiledir" ]; then
@@ -55,8 +69,8 @@ if [ ! -d "$is2dir" ]; then
     exit 1
 fi
 
-matlab_cmd="try; addpath('/mnt/pgc/data/common/repos/setsm_postprocessing4'); batchRegisterTiles('${tiledir}', '${is2dir}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
-#matlab_cmd="try; addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4'); batchRegisterTiles('${tiledir}', '${is2dir}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+matlab_cmd="try; addpath('/mnt/pgc/data/common/repos/setsm_postprocessing4'); batchRegisterTiles('${tiledir}', '${is2dir}', 'resolution','${resolution}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+#matlab_cmd="try; addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4'); batchRegisterTiles('${tiledir}', '${is2dir}', 'resolution','${resolution}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 
 echo "Argument tile directory: ${tiledir}"
 echo "Matlab command: \"${matlab_cmd}\""

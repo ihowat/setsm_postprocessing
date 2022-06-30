@@ -48,7 +48,7 @@ resolution="$ARG_RESOLUTION"
 set -uo pipefail
 
 if [ -n "$tiledir" ]; then
-    # make sure this is an absolute path
+    # Make sure this is an absolute path
     tiledir=$(readlink -f "$tiledir")
 else
     tiledir="/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/results/output_tiles/"
