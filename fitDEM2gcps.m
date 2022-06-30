@@ -54,7 +54,7 @@ dz(n) = [];
 
 % fit a quadratic surface to point offsets
 warning off % get precision and fit warnings, just ignore them
-sf = fit([px, py],dz,'poly23');
+sf = fit([px, py],dz,'poly22');
 warning on
 
 % resize the DEM coordinates to calculate the surface
