@@ -22,14 +22,15 @@ for i=1:length(fileNames)
     fileName10m=fileNames{i};
     
     [tiledir,filename10m_base,filename10m_ext]= fileparts(fileName10m);
+    fileName10mName = [filename10m_base,filename10m_ext];
 
     if isempty(dir2m_arg)
         dir2m = tiledir;
     end
-    fileNames2m = {[dir2m,'/',strrep(filename10m_base,'10m_reg','1_1_2m_reg.mat')],...
-                   [dir2m,'/',strrep(filename10m_base,'10m_reg','1_2_2m_reg.mat')],...
-                   [dir2m,'/',strrep(filename10m_base,'10m_reg','2_1_2m_reg.mat')],...
-                   [dir2m,'/',strrep(filename10m_base,'10m_reg','2_2_2m_reg.mat')]};
+    fileNames2m = {[dir2m,'/',strrep(fileName10mName,'10m_reg.mat','1_1_2m_reg.mat')],...
+                   [dir2m,'/',strrep(fileName10mName,'10m_reg.mat','1_2_2m_reg.mat')],...
+                   [dir2m,'/',strrep(fileName10mName,'10m_reg.mat','2_1_2m_reg.mat')],...
+                   [dir2m,'/',strrep(fileName10mName,'10m_reg.mat','2_2_2m_reg.mat')]};
     
     n = cellfun( @exist, fileNames2m);
     
@@ -49,10 +50,10 @@ for i=1:length(fileNames)
     % resize dzfit to 10m z
     dzfit0 = imresize(m10.dzfit,sz);
     
-    % resize dz0 to 10m z
-    dz0 = imresize(m10.dz0,sz);
+%    % resize dz0 to 10m z
+%    dz0 = imresize(m10.dz0,sz);
     
-    
+
     j=1;
     for j=1:length(fileNames2m)
 
@@ -60,16 +61,19 @@ for i=1:length(fileNames)
         
         % interpolate 10m full tile to 2m quad grid
         dzfit = interp2(m10.x,m10.y,dzfit0,m2.x,m2.y,'*bilinear');
-        dz0 = interp2(m10.x,m10.y,dzfit0,m2.x,m2.y,'*bilinear');
+%        dz0 = interp2(m10.x,m10.y,dzfit0,m2.x,m2.y,'*bilinear');
         
         % apply to z
         m2.Properties.Writable = true;
         m2.z = m2.z - dzfit;
-        m2.z = m2.z - dz0;
-        
+%        m2.z = m2.z - dz0;
+
+        m2.dzfitApplied = true;
+%        m2.adjusted = true;
+
         % downsample dzfit and add to mat file
         m2.dzfit = imresize(dzfit,0.01);
-        m2.dz0 = imresize(dz0,0.01);
+%        m2.dz0 = imresize(dz0,0.01);
     end
     
 end
