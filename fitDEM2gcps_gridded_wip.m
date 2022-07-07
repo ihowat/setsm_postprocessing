@@ -7,7 +7,7 @@ function [dzfit,sf]=fitDEM2gcps(x,y,z,px,py,pz,varargin)
 %
 % dzfit=fitDEM2gcps(...,'resizeFactor',val) returns an offset array that is
 % size * resizeFactor, saving computation time/memory. The result can be
-% resized to the orginal DEM size with imresize(dzfit,size(z)). 
+% resized to the orginal DEM size with imresize(dzfit,size(z)).
 
 minPoints = 1000;
 %minPoints = 10000;
@@ -68,17 +68,57 @@ px(n) = [];
 py(n) = [];
 dz(n) = [];
 
+% resize the DEM coordinates to calculate the surface
+x = imresize(x,resizeFactor);
+y = imresize(y,resizeFactor);
+grid_res = x(1,2) - x(1,1);
+x_min = min(x);
+x_max = max(x);
+y_min = min(y);
+y_max = max(y);
+
+% build solution grid
+[x,y] = meshgrid(x,y(:));
+
+% interpolate point offsets to solution grid
+warning off
+F = scatteredInterpolant(double(px),double(py),double(dz));
+warning on
+x_flat = x(:);
+y_flat = y(:);
+dzi = F(x_flat,y_flat);
+
+for i=1:length(dzi)
+    grid_x = x_flat(i);
+    grid_y = y_flat(i);
+    if any((abs(px - grid_x) < (grid_res/2)) & (abs(py - grid_y) < (grid_res/2)))
+        ;
+    elseif grid_x == x_min || grid_x == x_max
+        if mod((grid_y - y_min) / grid_res, 2) == 0
+            dzi(i) = 0;
+        end
+    elseif grid_y == y_min || grid_y == y_max
+        if mod((grid_x - x_min) / grid_res, 2) == 0
+            dzi(i) = 0;
+        end
+    else
+        dzi(i) = NaN;
+    end
+end
+
+px = x_flat;
+py = y_flat;
+dz = dzi;
+
+n = isnan(dz);
+px(n) = [];
+py(n) = [];
+dz(n) = [];
+
 % fit a quadratic surface to point offsets
 warning off % get precision and fit warnings, just ignore them
 sf = fit([px, py],dz,'poly22');
 warning on
-
-% resize the DEM coordinates to calculate the surface
-x = imresize(x,resizeFactor);
-y = imresize(y,resizeFactor);
-
-% build solution grid
-[x,y] = meshgrid(x,y(:));
 
 % calculate surface
 dzfit = sf(x,y);
