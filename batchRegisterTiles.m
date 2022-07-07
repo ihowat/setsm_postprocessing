@@ -12,6 +12,8 @@ inc=1;
 resolution='10m';
 overwrite=false;
 overwrite_flag='';
+skipDzfit=false;
+dzfitMinPoints=[];
 
 if length(varargin) == 2 && ~isnan(str2double(varargin{1})) && ~isnan(str2double(varargin{2}))
     strt=varargin{1};
@@ -40,6 +42,15 @@ elseif ~isempty(varargin)
     if any(strcmpi(varargin,'overwrite'))
         overwrite=true;
         overwrite_flag='overwrite';
+    end
+
+    if any(strcmpi(varargin,'skipDzfit'))
+        skipDzfit=true;
+    end
+
+    n = find(strcmpi('dzfitMinPoints', varargin));
+    if ~isempty(n)
+        dzfitMinPoints = varargin{n+1};
     end
 end
 
@@ -79,7 +90,7 @@ for i=strt:inc:length(tileFiles)
         applyRegistration(tileFile,[],overwrite_flag)
     end
 
-    if exist(regTileFile,'file')
-        fit2is2(regTileFile,is2TileFile)
+    if exist(regTileFile,'file') && ~skipDzfit
+        fit2is2(regTileFile,is2TileFile,'dzfitMinPoints',dzfitMinPoints)
     end
 end

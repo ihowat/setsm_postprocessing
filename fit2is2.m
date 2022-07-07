@@ -12,6 +12,12 @@ s=whos(m);
 % get the size of z
 sz = s(strcmp({s.name},'z')).size;
 
+dzfitMinPoints = [];
+n = find(strcmpi('dzfitMinPoints', varargin));
+if ~isempty(n)
+    dzfitMinPoints = varargin{n+1};
+end
+
 if any(strcmp(fields(m),'dzfitApplied'))
     if m.dzfitApplied==1
         if ~any(strcmp(varargin,'overwrite'))
@@ -44,9 +50,9 @@ is2 = structfun( @(x) x(n), is2, 'uniformoutput', 0);
 
 % call the surfacef fitter with or without land mask if it exists
 if any(strcmp({s.name},'land'))
-    [dzfit,sf]=fitDEM2gcps(x,y,z,is2.x,is2.y,is2.z,'resizeFactor',0.01,'landMask',land);
+    [dzfit,sf]=fitDEM2gcps(x,y,z,is2.x,is2.y,is2.z,'resizeFactor',0.01,'landMask',land,'minPoints',dzfitMinPoints);
 else
-    [dzfit,sf]=fitDEM2gcps(x,y,z,is2.x,is2.y,is2.z,'resizeFactor',0.01);
+    [dzfit,sf]=fitDEM2gcps(x,y,z,is2.x,is2.y,is2.z,'resizeFactor',0.01,'minPoints',dzfitMinPoints);
 end
 
 if isempty(dzfit)

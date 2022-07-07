@@ -31,6 +31,22 @@ if ~isempty(n)
     land=varargin{n+1};
 end
 
+n = find(strcmpi(varargin, 'minPoints'));
+if ~isempty(n)
+    argval=varargin{n+1};
+    if ~isempty(argval)
+        minPoints=argval;
+    end
+end
+
+n = find(strcmpi(varargin, 'minLand'));
+if ~isempty(n)
+    argval=varargin{n+1};
+    if ~isempty(argval)
+        minLand=argval;
+    end
+end
+
 % interpolate dem to control point coordinates
 zi = interp2(x,y,z,px,py,'*linear');
 
