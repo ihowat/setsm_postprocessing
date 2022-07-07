@@ -71,6 +71,24 @@ def get_arg_parser():
     )
 
     parser.add_argument(
+        '--skip-dzfit',
+        action='store_true',
+        help=wrap_multiline_str("""
+            Skip the dzfit step of ICESat-2 registration application.
+            You should skip applying dzfit to tiles over the ice shelves of Antarctica.
+        """)
+    )
+    parser.add_argument(
+        '--dzfit-minpoints',
+        type=int,
+        default=1000,
+        help=wrap_multiline_str("""
+            Minimum number of valid ICESat-2 points overalapping tile
+            for dzfit to be applied.
+        """)
+    )
+
+    parser.add_argument(
         '--tile-org',
         type=str,
         # choices=['pgc', 'osu'],
@@ -266,6 +284,9 @@ def main():
                 matscript_args += ", 'rows'"
             elif script_args.process_group == 'column':
                 matscript_args += ", 'cols'"
+        if script_args.skip_dzfit:
+            matscript_args += ", 'skipDzfit'"
+        matscript_args += ", 'dzfitMinPoints',{}".format(script_args.dzfit_minpoints)
 
         task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
             addpath('{SCRIPT_DIR}');
