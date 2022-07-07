@@ -15,6 +15,29 @@ resizeFraction = min(1.0, resizeFraction_10m * (res/10));
 resizeFraction = 1.0;
 
 
+% make sure data array altering post-process steps have not been applied
+m_struct = m;
+m_varlist = who(m_struct);
+
+dzfitApplied = ismember('dzfitApplied', m_varlist) && m_struct.dzfitApplied;
+adjusted = ismember('adjusted', m_varlist) && m_struct.adjusted;
+
+mergedTop = ismember('mergedTop', m_varlist) && m_struct.mergedTop;
+mergedBottom = ismember('mergedBottom', m_varlist) && m_struct.mergedBottom;
+mergedLeft = ismember('mergedLeft', m_varlist) && m_struct.mergedLeft;
+mergedRight = ismember('mergedRight', m_varlist) && m_struct.mergedRight;
+
+if dzfitApplied
+    error('unregistered tile somehow has dzfit applied, please investigate')
+end
+if adjusted
+    error('unregistered tile has adjust flag true, cannot register')
+end
+if mergedTop || mergedBottom || mergedLeft || mergedRight
+    error('unregistered tile has had at least one side merged, cannot register')
+end
+
+
 if any(strcmp(fields(m),'unreg'))
     fprintf('unreg field already exists, clearing: %s\n', tileFile)
     m.Properties.Writable = true;
