@@ -15,10 +15,38 @@ resizeFraction = min(1.0, resizeFraction_10m * (res/10));
 resizeFraction = 1.0;
 
 
+% make sure data array altering post-process steps have not been applied
+m_struct = m;
+m_varlist = who(m_struct);
+
+dzfitApplied = ismember('dzfitApplied', m_varlist) && m_struct.dzfitApplied;
+adjusted = ismember('adjusted', m_varlist) && m_struct.adjusted;
+
+mergedTop = ismember('mergedTop', m_varlist) && m_struct.mergedTop;
+mergedBottom = ismember('mergedBottom', m_varlist) && m_struct.mergedBottom;
+mergedLeft = ismember('mergedLeft', m_varlist) && m_struct.mergedLeft;
+mergedRight = ismember('mergedRight', m_varlist) && m_struct.mergedRight;
+
+if dzfitApplied
+    error('unregistered tile somehow has dzfit applied, please investigate')
+end
+if adjusted
+    error('unregistered tile has adjust flag true, cannot register')
+end
+if mergedTop || mergedBottom || mergedLeft || mergedRight
+    error('unregistered tile has had at least one side merged, cannot register')
+end
+
+
+if any(strcmp(fields(m),'unreg'))
+    fprintf('unreg field already exists, clearing: %s\n', tileFile)
+    m.Properties.Writable = true;
+    m.unreg = [];
+end
 if any(strcmp(fields(m),'reg'))
-    fprintf('reg already exists, skipping\n')
-    clear m
-    return
+    fprintf('reg field already exists, clearing: %s\n', tileFile)
+    m.Properties.Writable = true;
+    m.reg = [];
 end
 
 % skip if is2 file doesnt exist for this tile
@@ -37,6 +65,10 @@ catch
     warning('cant read %s\n',tileFile)
     return
 end
+
+% remove is2 points that fall outside of the (2m) tile
+n = is2.x >= min(x) & is2.x <= max(x) & is2.y >= min(y) & is2.y <= max(y);
+is2 = structfun( @(x) x(n), is2, 'uniformoutput', 0);
 
 if resizeFraction ~= 1.0
     x = imresize(x, resizeFraction);
