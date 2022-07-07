@@ -9,10 +9,11 @@ function boundaryAdjustCalc(fileName,neighborFiles,varargin)
 
 m0=matfile(fileName);
 
-% standard resizeFraction is for 10m, scale for 2m and other res
-resizeFraction_10m = 0.1;
-res = m0.x(1,2) - m0.x(1,1);
-resizeFraction = min(1.0, resizeFraction_10m * (res/10));
+resizeFraction = 0.1;
+%% standard resizeFraction is for 10m, scale for 2m and other res
+%resizeFraction_10m = 0.1;
+%res = m0.x(1,2) - m0.x(1,1);
+%resizeFraction = min(1.0, resizeFraction_10m * (res/10));
 
 n=find(strcmpi(varargin,'resizeFraction'));
 if ~isempty(n)
