@@ -10,9 +10,17 @@ function [dzfit,sf]=fitDEM2gcps(x,y,z,px,py,pz,varargin)
 % resized to the orginal DEM size with imresize(dzfit,size(z)). 
 
 minPoints = 1000;
+%minPoints = 10000;
+%minLand = -1;
+minLand = 0.95;
+
+%resizeFactor=0.01;
+% standard resizeFactor is for 10m, scale for 2m and other res
+resizeFactor_10m = 0.01;
+res = x(1,2) - x(1,1);
+resizeFactor = min(1.0, resizeFactor_10m * (res/10));
 
 % get varargins
-resizeFactor=0.01;
 n = find(strcmpi(varargin,'resizefactor'));
 if ~isempty(n)
     resizeFactor=varargin{n+1};
@@ -27,6 +35,13 @@ end
 zi = interp2(x,y,z,px,py,'*linear');
 
 if exist('land','var')
+    if nnz(land)/numel(land) < minLand
+        warning('not enough land in tile to create accurate surface, returning')
+        dzfit = [];
+        sf=[];
+        return
+    end
+
     if any(~land(:))
         land = interp2(x,y,land,px,py,'*nearest',0);
         zi(land ~= 1) = NaN;
