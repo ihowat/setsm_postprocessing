@@ -30,7 +30,21 @@ for tiledir in v2/results/output_tiles/*/ ; do qsub -v "ARG_TILEDIR=${tiledir}" 
 # - The "fit2is2" function adds quadratic surface "sf" (fit equation) and "dzfit" (mesh grid) variables of point GCP offsets from ICESat-2, and applies offset to the "z" array (DEM data).
 for tiledir in v2/results/output_tiles/*/ ; do qsub -v "ARG_TILEDIR=${tiledir}" ~/scratch/repos/setsm_postprocessing_pgc/qsub_batchRegisterTiles.sh ; done
 # Alternatively, use new python batch_registerTiles.py script:
-python ~/scratch/repos/setsm_postprocessing_pgc/batch_registerTiles.py v2/results/output_tiles/ v2/tilelists/rema_tiles_all_complete.txt 2 --pbs
+python ~/scratch/repos/setsm_postprocessing_pgc/batch_registerTiles.py v2/results/output_tiles/ v2/tilelists/tiles_over_ice_shelves_to_skip_dzfit.txt 2 --pbs --skip-dzfit
+python ~/scratch/repos/setsm_postprocessing_pgc/batch_registerTiles.py v2/results/output_tiles/ v2/tilelists/tiles_not_over_ice_shelves_to_apply_dzfit.txt 2 --pbs
+
+# NOTE: The below 10-to-2 registration method did not turn out well.
+#       We ended up using the 2m independent quad tile registration method above.
+# Create *_reg.mat copies of the tile .mat files with registration to ICESat-2.
+# - Registration info is calculated and stored in the "reg" variable of both registered and unregistrered .mat tile files.
+# - *_reg.mat files are created by the "applyRegistration" function with the 3D vector translation from registration applied to all data arrays.
+# - The "fit2is2" function adds quadratic surface "sf" (fit equation) and "dzfit" (mesh grid) variables of point GCP offsets from ICESat-2, and applies offset to the "z" array (DEM data).
+python ~/scratch/repos/setsm_postprocessing_pgc/batch_registerTiles.py v2/results/output_tiles/ v2/tilelists/rema_tiles_all_FINAL.txt 10 --pbs
+# Alternatively, use old qsub script method:
+for tiledir in v2/results/output_tiles/*/ ; do qsub -v "ARG_TILEDIR=${tiledir},ARG_RESOLUTION=10m" ~/scratch/repos/setsm_postprocessing_pgc/qsub_batchRegisterTiles.sh ; done
+
+# Apply registration from the 10m tiles to their 2m quad tiles:
+for tiledir in v2/results/output_tiles/*/ ; do qsub -v "ARG_TILEDIR=${tiledir}" ~/scratch/repos/setsm_postprocessing_pgc/qsub_batchApplyRegTo2m.sh ; done
 
 
 
@@ -46,22 +60,22 @@ qsub ~/scratch/repos/setsm_postprocessing_pgc/qsub_make_tileNeighborIndex.sh -v 
 # The batch_boundaryAdjust.py script will spin off jobs that run these two matlab scripts in serial:
 # batch_boundaryAdjustCalc: Calculate DEM offset between tile and all its neighbors, save as 'dz0' variable in tile .mat files
 # batch_boundaryAdjustApply: Apply 'z = z - dz0' to tile .mat files ('dz0' calculated in the previous step)
-python ~/scratch/repos/setsm_postprocessing_pgc/batch_boundaryAdjust.py v2/results/output_tiles/ v2/tilelists/rema_tiles_all_complete.txt 2 --pbs --process-group stripe-1
+python ~/scratch/repos/setsm_postprocessing_pgc/batch_boundaryAdjust.py v2/results/output_tiles/ v2/tilelists/rema_tiles_all_FINAL.txt 2 --pbs --process-group stripe-1
 # wait until all jobs finish...
-python ~/scratch/repos/setsm_postprocessing_pgc/batch_boundaryAdjust.py v2/results/output_tiles/ v2/tilelists/rema_tiles_all_complete.txt 2 --pbs --process-group stripe-2
+python ~/scratch/repos/setsm_postprocessing_pgc/batch_boundaryAdjust.py v2/results/output_tiles/ v2/tilelists/rema_tiles_all_FINAL.txt 2 --pbs --process-group stripe-2
 # wait until all jobs finish...
-python ~/scratch/repos/setsm_postprocessing_pgc/batch_boundaryAdjust.py v2/results/output_tiles/ v2/tilelists/rema_tiles_all_complete.txt 2 --pbs --process-group stripe-3
+python ~/scratch/repos/setsm_postprocessing_pgc/batch_boundaryAdjust.py v2/results/output_tiles/ v2/tilelists/rema_tiles_all_FINAL.txt 2 --pbs --process-group stripe-3
 
 
 
 ## Merge tile buffers
 
-python ~/scratch/repos/setsm_postprocessing_pgc/batch_mergeTileBuffer.py v2/results/output_tiles/ v2/tilelists/rema_tiles_all_complete.txt 2 --pbs --process-group row
+python ~/scratch/repos/setsm_postprocessing_pgc/batch_mergeTileBuffer.py v2/results/output_tiles/ v2/tilelists/rema_tiles_all_FINAL.txt 2 --pbs --process-group row
 # wait until all jobs finish...
-python ~/scratch/repos/setsm_postprocessing_pgc/batch_mergeTileBuffer.py v2/results/output_tiles/ v2/tilelists/rema_tiles_all_complete.txt 2 --pbs --process-group column
+python ~/scratch/repos/setsm_postprocessing_pgc/batch_mergeTileBuffer.py v2/results/output_tiles/ v2/tilelists/rema_tiles_all_FINAL.txt 2 --pbs --process-group column
 
 
 
 ## Export tile data array GeoTIFFs and meta.txt file
 
-python ~/scratch/repos/setsm_postprocessing_pgc/batch_tiles2tif_v4.py v2/results/output_tiles/ v2/tilelists/rema_tiles_all_complete.txt rema 2 --pbs --process-by supertile-dir
+python ~/scratch/repos/setsm_postprocessing_pgc/batch_tiles2tif_v4.py v2/results/output_tiles/ v2/tilelists/rema_tiles_all_FINAL.txt rema 2 --pbs --process-by supertile-dir
