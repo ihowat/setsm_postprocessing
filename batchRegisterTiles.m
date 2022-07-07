@@ -90,7 +90,14 @@ for i=strt:inc:length(tileFiles)
         applyRegistration(tileFile,[],overwrite_flag)
     end
 
-    if exist(regTileFile,'file') && ~skipDzfit
-        fit2is2(regTileFile,is2TileFile,'dzfitMinPoints',dzfitMinPoints)
+    if ~exist(regTileFile,'file')
+        fprintf('registered tile was not created, skipping dzfit\n')
+    else
+        if skipDzfit
+            fprintf('skipping dzfit due to provided skipDzfit flag\n')
+        else
+            fprintf('calculating dzfit\n')
+            fit2is2(regTileFile,is2TileFile,'dzfitMinPoints',dzfitMinPoints)
+        end
     end
 end

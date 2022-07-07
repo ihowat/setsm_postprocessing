@@ -56,7 +56,10 @@ else
 end
 
 if isempty(dzfit)
+    fprintf('dzfit is empty and will not be applied\n')
     return
+else
+    fprintf('applying dzfit\n')
 end
 
 % add downscaled surface to the file
