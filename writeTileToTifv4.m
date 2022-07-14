@@ -150,6 +150,13 @@ if exist(outNameDem,'file') && ~overwrite
 else
     browse_keep_dem = false;
     z=m.z(ny(1):ny(end),nx(1):nx(end));
+    
+    % add ocean surface (egm96 height above ellipsoid) if specified - requires mask array in matfile
+    if any(strcmpi('addSeaSurface',varargin))
+        land=m.land(ny(1):ny(end),nx(1):nx(end));
+        z=addSeaSurfaceHeight(x,y,z,land,'epsg',3031,'adaptCoastline');
+    end
+    
     % Round DEM values to 1/128 meters to greatly improve compression effectiveness
     z=round(z*128.0)/128.0;
     z(isnan(z)) = -9999;
