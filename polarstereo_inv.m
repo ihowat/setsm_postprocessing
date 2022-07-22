@@ -30,6 +30,10 @@ function [phi,lambda]=polarstereo_inv(x,y,a,e,phi_c,lambda_0)
 %   Changes since version 01:
 %       1. Split into two functions and vectorized code.
 
+% Andrew Bliss (2022). polar stereographic coordinate transformation (map to lat/lon)
+% (https://www.mathworks.com/matlabcentral/fileexchange/32907-polar-stereographic-coordinate-transformation-map-to-lat-lon),
+% MATLAB Central File Exchange. Retrieved July 22, 2022.
+
 %%%%%%%%%%%%%
 %some standard info
 %%%%%%%%%%%%%
