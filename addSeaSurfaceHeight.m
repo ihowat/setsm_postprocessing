@@ -52,7 +52,7 @@ if adaptCoastlineFlag
     L = bwlabel(M);
     
     uniqueL = unique(L(:));
-    uniqueLLand  = unique(L(land(:)));
+    uniqueLLand  = unique(L(find(land)));
     
     removeTheseLs = setdiff(uniqueL,uniqueLLand);
     
