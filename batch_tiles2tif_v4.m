@@ -5,6 +5,7 @@ function batch_tiles2tif_v4(tileDir,projstr,varargin)
 % Arg default values
 resolution = '10m';
 metaOnly = false;
+noMeta = false;
 
 if ~isempty(varargin)
     n = find(strcmpi('resolution', varargin));
@@ -15,6 +16,11 @@ if ~isempty(varargin)
     n = find(strcmpi('metaOnly', varargin));
     if ~isempty(n)
         metaOnly = true;
+    end
+
+    n = find(strcmpi('noMeta', varargin));
+    if ~isempty(n)
+        noMeta = true;
     end
 end
 
@@ -57,5 +63,7 @@ for tile_idx = 1:num_tiles
     if ~metaOnly
         writeTileToTifv4(tile_file, projstr, varargin{:});
     end
-    tileMetav4(tile_file, varargin{:});
+    if ~noMeta
+        tileMetav4(tile_file, varargin{:});
+    end
 end

@@ -48,8 +48,20 @@ else
     outRasterType = 'full-LZW';
 end
 outRasterType_choices = {'browse-LZW', 'browse-COG', 'full-LZW', 'full-COG'};
-if ~any(strcmp(outRasterType, outRasterType_choices))
+if ~ismember(outRasterType, outRasterType_choices)
     error("'outRasterType' must be one of the following, but was '%s': {'%s'}", outRasterType, strjoin(outRasterType_choices, "', '"))
+end
+
+if ismember(outRasterType, {'browse-LZW', 'browse-COG'})
+    outSet = 'browse';
+else
+    outSet = 'full';
+end
+
+if ismember(outRasterType, {'browse-COG', 'full-COG'})
+    outFormat = 'COG';
+else
+    outFormat = 'LZW';
 end
 
 n = find(strcmpi('extent',varargin));
@@ -526,7 +538,7 @@ else
 end
 
 % use the tile cropping logic from writeTileToTifv4
-writeTileToTifv4(outName, projection, 'outRasterType', outRasterType)
+writeTileToTifv4(outName, projection, 'outSet',outSet, 'outFormat',outFormat)
 
 %% write tiff files
 %z(isnan(z)) = -9999;
@@ -574,7 +586,7 @@ if exist('quadrant','var')
 else
     addInfoToSubtileMosaic(subTileDir,dx,outName);
 end
-%if outRasterType ~= 'browse'
+%if strcmpi(outSet, 'full')
     fprintf('Writing meta.txt\n')
     tileMetav4(outName)
 %end
