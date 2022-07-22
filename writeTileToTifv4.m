@@ -49,6 +49,26 @@ else
     tif_format = 'GTiff';
 end
 
+n = find(strcmpi('addSeaSurface',varargin));
+if ~isempty(n)
+    addSeaSurface = true;
+else
+    addSeaSurface = false;
+end
+
+if strcmpi(projstr, 'polar stereo north')
+    addSeaSurface_epsg = 3413;
+elseif strcmpi(projstr, 'polar stereo south')
+    addSeaSurface_epsg = 3031;
+else
+    addSeaSurface_epsg = [];
+end
+
+if addSeaSurface && isempty(addSeaSurface_epsg)
+    error("'addSeaSurface' option conversion to EPSG is not handled for 'projstr': '%s'", projstr)
+end
+    
+
 fprintf('Source: %s\n',tilef);
 
 % load m file and get coordinate vectors
@@ -152,9 +172,10 @@ else
     z=m.z(ny(1):ny(end),nx(1):nx(end));
     
     % add ocean surface (egm96 height above ellipsoid) if specified - requires mask array in matfile
-    if any(strcmpi('addSeaSurface',varargin))
+    if addSeaSurface
+        fprintf('applying sea surface height\n')
         land=m.land(ny(1):ny(end),nx(1):nx(end));
-        z=addSeaSurfaceHeight(x,y,z,land,'epsg',3031,'adaptCoastline');
+        z=addSeaSurfaceHeight(x,y,z,land,'epsg',addSeaSurface_epsg,'adaptCoastline');
     end
     
     % Round DEM values to 1/128 meters to greatly improve compression effectiveness
