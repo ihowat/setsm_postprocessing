@@ -2,6 +2,9 @@ function writeTileToTifv4(tilef,projstr,varargin)
 % Write 2m or 10m dem matfiles to tif
 %   compatible with setsm_postprocesing v4 branch
 
+% By default, tiles are cropped to nearest gridline multiple of 50/100km for 2/10m tiles
+% before bufferMeters is applied.
+% In noCrop mode, skip the crop step.
 n = find(strcmpi('noCrop',varargin));
 if ~isempty(n)
     noCrop = true;
@@ -24,30 +27,66 @@ else
     overwrite = false;
 end
 
-n = find(strcmpi('outRasterType',varargin));
+n = find(strcmpi('outFormat',varargin));
 if ~isempty(n)
-    outRasterType = varargin{n+1};
+    outFormat = varargin{n+1};
 else
-    outRasterType = 'full-LZW';
+    outFormat = 'LZW';
 end
-outRasterType_choices = {'browse-LZW', 'browse-COG', 'full-LZW', 'full-COG'};
-if ~any(strcmp(outRasterType, outRasterType_choices))
-    error("'outRasterType' must be one of the following, but was '%s': {'%s'}", outRasterType, strjoin(outRasterType_choices, "', '"))
+outFormat_choices = {'LZW', 'COG'};
+if ~any(strcmpi(outFormat, outFormat_choices))
+    error("'outFormat' must be one of the following, but was '%s': {'%s'}", outFormat, strjoin(outFormat_choices, "', '"))
 end
 
-if ismember(outRasterType, {'browse-LZW', 'browse-COG'})
+n = find(strcmpi('outSet',varargin));
+if ~isempty(n)
+    outSet = varargin{n+1};
+else
+    outSet = 'full';
+end
+outSet_choices = {'full', 'browseOnly', 'demOnly', 'demAndBrowse'};
+if ~any(strcmpi(outSet, outSet_choices))
+    error("'outSet' must be one of the following, but was '%s': {'%s'}", outSet, strjoin(outSet_choices, "', '"))
+end
+
+dem_only = false;
+browse_only = false;
+if strcmpi(outSet, 'demOnly')
+    dem_only = true;
+elseif strcmpi(outSet, 'browseOnly')
     browse_only = true;
-else
-    browse_only = false;
+elseif strcmpi(outSet, 'demAndBrowse')
+    dem_only = true;
+    browse_only = true;
 end
 
-if ismember(outRasterType, {'browse-COG', 'full-COG'})
-    outRasterType_is_cog = true;
+if strcmpi(outFormat, 'COG')
+    outFormat_is_cog = true;
     tif_format = 'COG';
 else
-    outRasterType_is_cog = false;
+    outFormat_is_cog = false;
     tif_format = 'GTiff';
 end
+
+n = find(strcmpi('addSeaSurface',varargin));
+if ~isempty(n)
+    addSeaSurface = true;
+else
+    addSeaSurface = false;
+end
+
+if strcmpi(projstr, 'polar stereo north')
+    addSeaSurface_epsg = 3413;
+elseif strcmpi(projstr, 'polar stereo south')
+    addSeaSurface_epsg = 3031;
+else
+    addSeaSurface_epsg = [];
+end
+
+if addSeaSurface && isempty(addSeaSurface_epsg)
+    error("'addSeaSurface' option conversion to EPSG is not handled for 'projstr': '%s'", projstr)
+end
+    
 
 fprintf('Source: %s\n',tilef);
 
@@ -55,6 +94,14 @@ fprintf('Source: %s\n',tilef);
 m=matfile(tilef);
 x=m.x;
 y=m.y;
+
+m_varlist = who(m);
+
+if addSeaSurface && ~ismember('land', m_varlist)
+    fprintf("'addSeaSurface' option requires 'land' variable exists in tile matfile: %s", tilef)
+    warning('sea surface heights will not be applied')
+    addSeaSurface = false;
+end
 
 % find data/buffer boundaries
 % get posting distance
@@ -140,10 +187,11 @@ y=y(ny(1):ny(2));
 
 %get name without "_reg"
 outNameBase = strrep(tilef,'_reg.mat','.mat');
+outNameDem = strrep(outNameBase,'.mat','_dem.tif');
+outNameBrowse = strrep(outNameBase,'.mat','_browse.tif');
 
 
 fprintf('Writing DEM\n')
-outNameDem = strrep(outNameBase,'.mat','_dem.tif');
 if exist(outNameDem,'file') && ~overwrite
     browse_keep_dem = true;
     fprintf('%s exists, skipping\n',outNameDem);
@@ -152,15 +200,16 @@ else
     z=m.z(ny(1):ny(end),nx(1):nx(end));
     
     % add ocean surface (egm96 height above ellipsoid) if specified - requires mask array in matfile
-    if any(strcmpi('addSeaSurface',varargin))
+    if addSeaSurface
+        fprintf('applying sea surface height\n')
         land=m.land(ny(1):ny(end),nx(1):nx(end));
-        z=addSeaSurfaceHeight(x,y,z,land,'epsg',3031,'adaptCoastline');
+        z=addSeaSurfaceHeight(x,y,z,land,'epsg',addSeaSurface_epsg,'adaptCoastline');
     end
     
     % Round DEM values to 1/128 meters to greatly improve compression effectiveness
     z=round(z*128.0)/128.0;
     z(isnan(z)) = -9999;
-    if outRasterType_is_cog
+    if outFormat_is_cog
         co_predictor = 'FLOATING_POINT';
     else
         co_predictor = '3';
@@ -168,6 +217,18 @@ else
     writeGeotiff(outNameDem,x,y,z,4,-9999,projstr,'out_format',tif_format,'co_predictor',co_predictor,'cog_overview_resampling','BILINEAR')
     clear z
 end
+
+
+% ensure browse is consistent with dem
+if dem_only && ~browse_only
+    if exist(outNameBrowse,'file')
+        delete(outNameBrowse);
+        browse_only = true;
+    else
+        return;
+    end
+end
+
 
 flds=fields(m);
 
@@ -182,7 +243,7 @@ if ~browse_only
             % Round MAD values to 1/128 meters to greatly improve compression effectiveness
             z_mad=round(z_mad*128.0)/128.0;
             z_mad(isnan(z_mad)) = -9999;
-            if outRasterType_is_cog
+            if outFormat_is_cog
                 co_predictor = 'FLOATING_POINT';
             else
                 co_predictor = '3';
@@ -200,7 +261,7 @@ if ~browse_only
             fprintf('%s exists, skipping\n',outNameTif);
         else
             N=m.N(ny(1):ny(end),nx(1):nx(end));
-            if outRasterType_is_cog
+            if outFormat_is_cog
                 co_predictor = 'NO';
 %                co_predictor = 'STANDARD';
             else
@@ -220,7 +281,7 @@ if ~browse_only
             fprintf('%s exists, skipping\n',outNameTif);
         else
             Nmt=m.Nmt(ny(1):ny(end),nx(1):nx(end));
-            if outRasterType_is_cog
+            if outFormat_is_cog
                 co_predictor = 'NO';
 %                co_predictor = 'STANDARD';
             else
@@ -240,7 +301,7 @@ if ~browse_only
             fprintf('%s exists, skipping\n',outNameTif);
         else
             tmax=m.tmax(ny(1):ny(end),nx(1):nx(end));
-            if outRasterType_is_cog
+            if outFormat_is_cog
                 co_predictor = 'NO';
 %                co_predictor = 'STANDARD';
             else
@@ -260,7 +321,7 @@ if ~browse_only
             fprintf('%s exists, skipping\n',outNameTif);
         else
             tmin=m.tmin(ny(1):ny(end),nx(1):nx(end));
-            if outRasterType_is_cog
+            if outFormat_is_cog
                 co_predictor = 'NO';
 %                co_predictor = 'STANDARD';
             else
@@ -278,7 +339,6 @@ end
 fprintf('Writing browse\n')
 
 % if 2m posting, first downsample to 10m
-outNameBrowse = strrep(outNameBase,'.mat','_browse.tif');
 if exist(outNameBrowse,'file') && ~overwrite
     fprintf('%s exists, skipping\n',outNameBrowse);
 else
@@ -307,7 +367,7 @@ else
         outNameTemp = outNameDem;
     end
 
-    if outRasterType_is_cog
+    if outFormat_is_cog
         co_predictor = 'STANDARD';
         co_tiled_arg = '';
         co_overviews_args = '-co OVERVIEWS=IGNORE_EXISTING -co RESAMPLING=CUBIC';
@@ -342,7 +402,7 @@ else
 end
 
 
-if browse_only && ~browse_keep_dem
+if browse_only && ~(dem_only || browse_keep_dem)
     fprintf('Removing temporary DEM output:\n%s\n', outNameDem)
     delete(outNameDem)
 end
