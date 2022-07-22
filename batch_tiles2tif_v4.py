@@ -67,16 +67,18 @@ def get_arg_parser():
     ## Optional args
 
     parser.add_argument(
-        '--tif-output',
+        '--tif-format',
         type=str,
-        choices=['browse-LZW', 'browse-COG', 'full-LZW', 'full-COG'],
-        default='full-COG',
-        help="Package of raster data to output."
+        choices=['lzw', 'cog'],
+        default='cog',
+        help="Format of output GeoTIFF rasters."
     )
     parser.add_argument(
-        '--meta-only',
-        action='store_true',
-        help="Export tile metadata only."
+        '--output-set',
+        type=str,
+        choices=['full', 'browse-meta', 'dem-browse', 'dem', 'meta'],
+        default='full',
+        help="Set of output tile result files to create."
     )
     parser.add_argument(
         '--tile-nocrop',
@@ -95,6 +97,17 @@ def get_arg_parser():
             Size of tile overlap buffer for exported rasters (meters),
             where the buffer is applied after cropping to nearest
             multiple of 100km/50km (10m/2m tiles) in x/y coordinate values.
+        """)
+    )
+    parser.add_argument(
+        '--add-sea-surface-height',
+        type=str,
+        choices=['true', 'false'],
+        default='true',
+        help=wrap_multiline_str("""
+            In tile dem.tif area where ocean pixels ('land' mask is false) would
+            normally be set to NoData, set elevation values to height above the
+            WGS84 ellipsoid. 
         """)
     )
     
@@ -196,19 +209,30 @@ def main():
     else:
         quadname_list = ['']
 
-    tif_output_is_browse = script_args.tif_output in ('browse-LZW', 'browse-COG')
+    output_set_to_matscript_arg_dict = {
+        'full': 'full',
+        'browse-meta': 'browseOnly',
+        'dem-browse': 'demAndBrowse',
+        'dem': 'demOnly',
+        'meta': 'metaOnly',
+    }
 
     single_t2t_args = wrap_multiline_str(f"""
         'resolution','{res_name}',
-        'outRasterType','{script_args.tif_output}',
+        'outFormat','{script_args.tif_format.upper()}',
+        'outSet','{output_set_to_matscript_arg_dict[script_args.output_set]}',
         'bufferMeters',{script_args.tile_buffer_meters}
     """)
     if script_args.tile_nocrop:
         single_t2t_args += ", 'noCrop'"
+    if script_args.add_sea_surface_height == 'true':
+        single_t2t_args += ", 'addSeaSurface'"
 
     batch_t2t_args = single_t2t_args
-    if script_args.meta_only:
+    if script_args.output_set == 'meta':
         batch_t2t_args += ", 'metaOnly'"
+    elif script_args.output_set == 'dem':
+        batch_t2t_args += ", 'noMeta'"
 
     jobscript_utils.adjust_args(script_args, arg_parser)
     jobscript_utils.create_dirs(script_args, arg_parser)
@@ -285,7 +309,7 @@ def main():
                 )
                 run_tile = False
 
-            elif script_args.meta_only:
+            elif script_args.output_set == 'meta':
                 if os.path.isfile(metafp):
                     if script_args.rerun:
                         print("Removing existing meta file: {}".format(metafp))
@@ -295,10 +319,35 @@ def main():
                         print("{} exists, skipping".format(metafp))
                         run_tile = False
 
+            elif script_args.output_set == 'dem':
+                if os.path.isfile(demfp):
+                    if script_args.rerun:
+                        print("Removing existing dem file: {}".format(demfp))
+                        if not script_args.dryrun:
+                            os.remove(demfp)
+                    else:
+                        print("{} exists, skipping".format(demfp))
+                        run_tile = False
+
+            elif script_args.output_set == 'dem-browse':
+                if os.path.isfile(demfp) or os.path.isfile(browsefp):
+                    if script_args.rerun:
+                        if os.path.isfile(demfp):
+                            print("Removing existing dem file: {}".format(demfp))
+                            if not script_args.dryrun:
+                                os.remove(demfp)
+                        if os.path.isfile(browsefp):
+                            print("Removing existing browse file: {}".format(browsefp))
+                            if not script_args.dryrun:
+                                os.remove(browsefp)
+                    elif os.path.isfile(demfp) and os.path.isfile(browsefp):
+                        print("{} dem and browse exist, skipping".format(demfp))
+                        run_tile = False
+
             else:
                 if script_args.rerun:
                     assume_complete = False
-                if tif_output_is_browse:
+                if script_args.output_set == 'browse-meta':
                     assume_complete = os.path.isfile(browsefp) and os.path.isfile(metafp)
                 else:
                     assume_complete = os.path.isfile(demfp) and os.path.isfile(browsefp) and os.path.isfile(metafp)
@@ -318,7 +367,7 @@ def main():
 
                 elif assume_complete:
                     print("{} exist; skipping tile: {}".format(
-                        "browse and meta" if tif_output_is_browse else "dem, browse, and meta",
+                        "browse and meta" if script_args.output_set == 'browse-meta' else "dem, browse, and meta",
                         matfile
                     ))
                     run_tile = False
@@ -360,7 +409,12 @@ def main():
                 tile_matfile = tile_path
                 job_id, _ = os.path.splitext(os.path.basename(tile_matfile))
 
-                if script_args.meta_only:
+                if script_args.output_set == 'dem':
+                    task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
+                        {matlab_addpath}
+                        writeTileToTifv4('{tile_matfile}', '{tile_projstr}', {single_t2t_args});
+                    """))
+                elif script_args.output_set == 'meta':
                     task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
                         {matlab_addpath}
                         tileMetav4('{tile_matfile}');
