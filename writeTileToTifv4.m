@@ -76,6 +76,14 @@ m=matfile(tilef);
 x=m.x;
 y=m.y;
 
+m_varlist = who(m);
+
+if addSeaSurface && ~ismember('land', m_varlist)
+    fprintf("'addSeaSurface' option requires 'land' variable exists in tile matfile: %s", tilef)
+    warning('sea surface heights will not be applied')
+    addSeaSurface = false;
+end
+
 % find data/buffer boundaries
 % get posting distance
 dx = x(2)-x(1);
