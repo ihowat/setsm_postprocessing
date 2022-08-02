@@ -111,7 +111,7 @@ fprintf(fid,'\n');
 fprintf(fid,'List of DEMs used in mosaic:\n');
 if exist('stripList') && ~isempty(stripList)
     strip.name=unique(stripList);
-    strip.name=strip.name(:);
+    strip.name=regexprep(strip.name(:), '^.*([A-Z0-9]{4}_[0-9]{8}_[A-F0-9]{16}_[A-F0-9]{16}).*$', '$1');
     i=1;
     for i=1:length(strip.name)
         fprintf(fid,'%s\n',...
