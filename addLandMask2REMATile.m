@@ -26,7 +26,11 @@ if any(strcmp(fields(m),'land'))
 end
 
 [~,tileName] = fileparts(fileName);
-tileName = tileName(1:5);
+if strcmp(tileName(6), 's')
+    tileName = tileName(1:6);
+else
+    tileName = tileName(1:5);
+end
 
 % find index of tile in tile def database
 tileInd = find(strcmp(tileDefs.tileName,tileName));
