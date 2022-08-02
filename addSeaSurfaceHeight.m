@@ -26,6 +26,13 @@ if ~any(~land(:))
     return
 end
 
+landfraction = nnz(land) / numel(land);
+fprintf('tile land fraction: %g\n', landfraction)
+if landfraction > 0.99
+    fprintf('skipping sea surface application for tile that is more than 99 percent land\n')
+    return
+end
+
 % Trying to sample sea level at full (2m) resolution may never return!
 % Sample at 100m resolution. EGM96 geoid native resolution is ~15 min anyways.
 xi_min = idivide(int64(x(1,1)), int64(100), 'floor') * 100;
