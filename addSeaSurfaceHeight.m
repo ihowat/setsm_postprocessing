@@ -63,8 +63,24 @@ catch ME
     fprintf(1,'Error identifier: %s\n',ME.identifier);
     fprintf(1,'Error message:\n%s\n',ME.message);
     fprintf(1, 'Trying geoidheight method instead\n')
-    ellipsoidHeight = geoidheight(LAT,LON,'egm96');
-    ellipsoidHeight = reshape(ellipsoidHeight, size(LAT));
+
+%    ellipsoidHeight = geoidheight(LAT,LON,'egm96');
+%    ellipsoidHeight = reshape(ellipsoidHeight, size(LAT));
+
+    % The above 2-line approach is bugged when LON values
+    % cross the 180 line (both +179.X and -179.X values exist).
+    % Call geoidheight method on those two groups of LON value
+    % points separately.
+    LON_pos_ind = find(LON >= 0);
+    LON_neg_ind = find(LON < 0);
+    ellipsoidHeight_pos = geoidheight(LAT(LON_pos_ind),LON(LON_pos_ind),'egm96');
+    ellipsoidHeight_neg = geoidheight(LAT(LON_neg_ind),LON(LON_neg_ind),'egm96');
+    ellipsoidHeight = NaN(size(LAT),'single');
+    ellipsoidHeight(LON_pos_ind) = ellipsoidHeight_pos;
+    ellipsoidHeight(LON_neg_ind) = ellipsoidHeight_neg;
+    if any(isnan(ellipsoidHeight))
+        error('failed to assemble ellipsoid heights')
+    end
 end
 fprintf('got ellipsoid heights\n')
 
