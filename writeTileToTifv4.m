@@ -75,6 +75,11 @@ else
     addSeaSurface = false;
 end
 
+n = find(strcmpi('maskFile',varargin));
+if ~isempty(n)
+   mask=load(varargin{n+1});
+end
+
 if strcmpi(projstr, 'polar stereo north')
     addSeaSurface_epsg = 3413;
 elseif strcmpi(projstr, 'polar stereo south')
@@ -204,6 +209,25 @@ else
         fprintf('applying sea surface height\n')
         land=m.land(ny(1):ny(end),nx(1):nx(end));
         z=addSeaSurfaceHeight(x,y,z,land,'epsg',addSeaSurface_epsg,'adaptCoastline');
+    end
+    
+    if exist('mask','var')
+        fprintf('applying mask\n')
+        
+        tilePoly = polyshape([x(1,1);x(1,1);x(end);x(end);x(1)],...
+                [y(1);y(end);y(end);y(1);y(1)]);
+                
+        n = find(overlaps(tilePoly,mask.polyShapes));
+ 
+        for j = 1:length(n)
+            M = roipoly(x,y,z,mask.polyShapes(n(j)).Vertices(:,1),mask.polyShapes(n(j)).Vertices(:,2));
+            M =imdilate(M,ones(3));
+            if mask.seaSurface(n(j))
+                z=addSeaSurfaceHeight(x,y,z,~M);
+            else
+                z(M) = NaN;
+            end
+        end
     end
     
     % Round DEM values to 1/128 meters to greatly improve compression effectiveness
