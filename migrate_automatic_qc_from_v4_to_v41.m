@@ -54,7 +54,7 @@ for qc_file_idx = 1:length(qc_files_cellarr)
                 if qc_flag == 3 || qc_flag == 5
                     ;
                 else
-                    error('qc exists with flag that is not 3; %s, stripID: %s, seg: %d, flag: %d', qc_file, stripID, qc_seg, qc_flag);
+                    error('qc exists with flag that is not 3 or 5; %s, stripID: %s, seg: %d, flag: %d', qc_file, stripID, qc_seg, qc_flag);
                 end
             end
         end
@@ -133,6 +133,9 @@ for qc_file_idx = 1:length(qc_files_cellarr)
                         error('qc exists with flag=%d; %s, stripID: %s, seg: %d', v4_seg_flag, qc_file, stripID, v4_seg_seg);
                     end
                     if v41_seg_flag ~= 3
+                        % FIXME: The following comparison should be inverted.
+                        % -t    But in addition, a QC mask should be added
+                        % -t    with the footprint of any '5' flag v4 segments.
                         if v4_seg_flag > v41_seg_flag
                             v41_seg_flag = v4_seg_flag;
                         end
