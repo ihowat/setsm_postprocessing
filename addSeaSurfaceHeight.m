@@ -8,11 +8,16 @@ function z=addSeaSurfaceHeight(x,y,z,land,varargin)
 %
 %  z=addSeaSurfaceHeight(...,'adaptCoastline')
 
+%epsg = 3413;
+epsg = [];
+
 % parse vargins
-epsg = 3413;
 n = find(strcmpi(varargin,'epsg'));
 if ~isempty(n)
     epsg = varargin{n+1};
+end
+if isempty(epsg)
+    error('epsg varargin must be provided')
 end
 
 adaptCoastlineFlag = false;
@@ -50,6 +55,8 @@ if epsg == 3413
     [LAT,LON]=polarstereo_inv(X,Y,[],[],70,-45);
 elseif epsg == 3031
     [LAT,LON]=polarstereo_inv(X,Y,[],[],-71,0);
+else
+    error('epsg not handled: %d',epsg)
 end
 
 % egm96 sea level height above
