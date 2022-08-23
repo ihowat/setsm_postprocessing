@@ -220,12 +220,20 @@ else
         n = find(overlaps(tilePoly,mask.polyShapes));
  
         for j = 1:length(n)
-            M = roipoly(x,y,z,mask.polyShapes(n(j)).Vertices(:,1),mask.polyShapes(n(j)).Vertices(:,2));
-            M =imdilate(M,ones(3));
-            if mask.seaSurface(n(j))
-                z=addSeaSurfaceHeight(x,y,z,~M);
-            else
-                z(M) = NaN;
+            qc_x = mask.polyShapes(n(j)).Vertices(:,1);
+            qc_y = mask.polyShapes(n(j)).Vertices(:,2);
+            try
+                M = roipoly(x,y,z,qc_x,qc_y);
+                M =imdilate(M,ones(3));
+                if mask.seaSurface(n(j))
+                    z=addSeaSurfaceHeight(x,y,z,~M,'epsg',addSeaSurface_epsg);
+                else
+                    z(M) = NaN;
+                end
+            catch ME
+                qc_x
+                qc_y
+                rethrow(ME)
             end
         end
     end

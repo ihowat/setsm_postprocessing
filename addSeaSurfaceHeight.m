@@ -8,11 +8,16 @@ function z=addSeaSurfaceHeight(x,y,z,land,varargin)
 %
 %  z=addSeaSurfaceHeight(...,'adaptCoastline')
 
+%epsg = 3413;
+epsg = [];
+
 % parse vargins
-epsg = 3413;
 n = find(strcmpi(varargin,'epsg'));
 if ~isempty(n)
     epsg = varargin{n+1};
+end
+if isempty(epsg)
+    error('epsg varargin must be provided')
 end
 
 adaptCoastlineFlag = false;
@@ -46,10 +51,12 @@ yi = double(yi_max):-100:double(yi_min);
 [X,Y] = meshgrid(single(xi),single(yi));
 
 % convert to lat lon coordinates
-if epsg == 3412
+if epsg == 3413
     [LAT,LON]=polarstereo_inv(X,Y,[],[],70,-45);
 elseif epsg == 3031
     [LAT,LON]=polarstereo_inv(X,Y,[],[],-71,0);
+else
+    error('epsg not handled: %d',epsg)
 end
 
 % egm96 sea level height above
@@ -59,9 +66,9 @@ try
     % egm96geoid(LAT,LON) syntax and will error.
     ellipsoidHeight = egm96geoid(LAT,LON);
 catch ME
-    warning('Caught error in egm96geoid method')
-    fprintf(1,'Error identifier: %s\n',ME.identifier);
-    fprintf(1,'Error message:\n%s\n',ME.message);
+    warning('Caught err in egm96geoid method')
+    fprintf(1,'Err identifier: %s\n',ME.identifier);
+    fprintf(1,'Err message:\n%s\n',ME.message);
     fprintf(1, 'Trying geoidheight method instead\n')
 
 %    ellipsoidHeight = geoidheight(LAT,LON,'egm96');
