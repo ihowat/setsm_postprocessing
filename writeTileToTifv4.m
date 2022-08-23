@@ -223,7 +223,7 @@ else
             M = roipoly(x,y,z,mask.polyShapes(n(j)).Vertices(:,1),mask.polyShapes(n(j)).Vertices(:,2));
             M =imdilate(M,ones(3));
             if mask.seaSurface(n(j))
-                z=addSeaSurfaceHeight(x,y,z,~M);
+                z=addSeaSurfaceHeight(x,y,z,~M,'epsg',addSeaSurface_epsg);
             else
                 z(M) = NaN;
             end
