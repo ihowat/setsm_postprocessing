@@ -46,7 +46,7 @@ yi = double(yi_max):-100:double(yi_min);
 [X,Y] = meshgrid(single(xi),single(yi));
 
 % convert to lat lon coordinates
-if epsg == 3412
+if epsg == 3413
     [LAT,LON]=polarstereo_inv(X,Y,[],[],70,-45);
 elseif epsg == 3031
     [LAT,LON]=polarstereo_inv(X,Y,[],[],-71,0);
