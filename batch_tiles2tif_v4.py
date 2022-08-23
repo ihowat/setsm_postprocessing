@@ -20,6 +20,15 @@ SCRIPT_DIR = os.path.dirname(SCRIPT_FILE)
 MATLAB_LIBDIR = os.path.join(SCRIPT_DIR, "../setsm_postprocessing4")
 
 
+# Argument defaults by 'domain'
+
+domain_finalQcMask_dict = {
+    'arcticdem': None,
+    'earthdem': None,
+    'rema': "/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/final_qc_mask/rema_final_mask.mat",
+}
+
+
 class RawTextArgumentDefaultsHelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter): pass
 
 def get_arg_parser():
@@ -108,6 +117,29 @@ def get_arg_parser():
             In tile dem.tif area where ocean pixels ('land' mask is false) would
             normally be set to NoData, set elevation values to height above the
             WGS84 ellipsoid. 
+        """)
+    )
+    parser.add_argument(
+        '--final-qc-mask',
+        type=str,
+        default=None,
+        help=wrap_multiline_str(r"""
+            Domain-wide QC mask matfile in a format created by Ian for the
+            REMA v2 final QC mask application step. Mask polygons in the matfile
+            are designated for filling with either sea surface height or NoData.
+            \n(default is {})
+        """.format(
+            ', '.join(["{} if domain={}".format(val, dom) for dom, val in domain_finalQcMask_dict.items()]
+        )))
+    )
+    parser.add_argument(
+        '--use-final-qc-mask',
+        type=str,
+        choices=['true', 'false'],
+        default='true',
+        help=wrap_multiline_str("""
+            Whether or not to do the final QC mask application step, using the
+            QC mask matfile provided through argument `--final-qc-mask`.
         """)
     )
     
@@ -202,6 +234,9 @@ def main():
             "No projstr mapping for argument 'domain': {}".format(script_args.domain)
         )
 
+    if script_args.final_qc_mask is None:
+        script_args.final_qc_mask = domain_finalQcMask_dict[script_args.domain]
+
     res_name = '{}m'.format(script_args.resolution)
 
     if script_args.resolution == 2:
@@ -227,6 +262,8 @@ def main():
         single_t2t_args += ", 'noCrop'"
     if script_args.add_sea_surface_height == 'true':
         single_t2t_args += ", 'addSeaSurface'"
+    if script_args.use_final_qc_mask and script_args.final_qc_mask is not None:
+        single_t2t_args += ", 'maskFile','{}'".format(script_args.final_qc_mask)
 
     batch_t2t_args = single_t2t_args
     if script_args.output_set == 'meta':
