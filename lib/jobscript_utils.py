@@ -129,6 +129,10 @@ def argparse_add_job_scheduler_group(
     add_to_sched_opt_flags_list = (_sched_opt_flags_list is None)
     if add_to_sched_opt_flags_list:
         _sched_opt_flags_list = []
+
+    if config_file is None and DEFAULT_CONFIG_FILE is not None:
+        if os.path.isfile(DEFAULT_CONFIG_FILE):
+            config_file = DEFAULT_CONFIG_FILE
     
     available_sched_list = get_available_sched()
     jobscript = None
@@ -143,9 +147,14 @@ def argparse_add_job_scheduler_group(
     task_bundle_dir = None
 
     provided_argstr_set = set()
-    for token in sys.argv:
+    for token_idx, token in enumerate(sys.argv):
         if token.startswith('-'):
             provided_argstr_set.add(token.split('=')[0])
+        if token.startswith('--job-config-file'):
+            if token.startswith('--job-config-file='):
+                config_file = token.split('=')[0]
+            else:
+                config_file = sys.argv[token_idx + 1]
 
     if '--job-config-on' in provided_argstr_set:
         use_config = True
@@ -157,34 +166,29 @@ def argparse_add_job_scheduler_group(
         use_config = True
 
     config_was_used = False
-    if use_config:
+    if use_config and config_file is not None:
+        config = configparser.ConfigParser()
+        config.read(config_file)
 
-        if config_file is None and DEFAULT_CONFIG_FILE is not None:
-            if os.path.isfile(DEFAULT_CONFIG_FILE):
-                config_file = DEFAULT_CONFIG_FILE
-        if config_file is not None:
-            config = configparser.ConfigParser()
-            config.read(config_file)
+        if config_group is None or config_group not in config:
+            config_group = 'DEFAULT'
+        if config_group in config:
+            config_dict = config[config_group]
+            config_was_used = True
 
-            if config_group is None or config_group not in config:
-                config_group = 'DEFAULT'
-            if config_group in config:
-                config_dict = config[config_group]
-                config_was_used = True
-
-                jobscript = get_config_value(config_dict, 'jobscript')
-                jobname_prefix = get_config_value(config_dict, 'jobname-prefix')
-                ncpus = get_config_value(config_dict, 'ncpus')
-                mem = get_config_value(config_dict, 'mem')
-                walltime = get_config_value(config_dict, 'walltime')
-                queue = get_config_value(config_dict, 'queue')
-                if 'nodelist' in config_dict:
-                    node_list = get_config_value(config_dict, 'nodelist')
-                    if node_list is not None:
-                        node_list = [name.strip() for name in node_list.split(',')]
-                tasks_per_job = get_config_value(config_dict, 'tasks-per-job')
-                tasks_per_job_mode = get_config_value(config_dict, 'tasks-per-job-mode')
-                task_bundle_dir = get_config_value(config_dict, 'task-bundle-dir')
+            jobscript = get_config_value(config_dict, 'jobscript')
+            jobname_prefix = get_config_value(config_dict, 'jobname-prefix')
+            ncpus = get_config_value(config_dict, 'ncpus')
+            mem = get_config_value(config_dict, 'mem')
+            walltime = get_config_value(config_dict, 'walltime')
+            queue = get_config_value(config_dict, 'queue')
+            if 'nodelist' in config_dict:
+                node_list = get_config_value(config_dict, 'nodelist')
+                if node_list is not None:
+                    node_list = [name.strip() for name in node_list.split(',')]
+            tasks_per_job = get_config_value(config_dict, 'tasks-per-job')
+            tasks_per_job_mode = get_config_value(config_dict, 'tasks-per-job-mode')
+            task_bundle_dir = get_config_value(config_dict, 'task-bundle-dir')
 
     if jobscript is None:
         jobscript = DEFAULT_JOBSCRIPT_FILE
@@ -229,7 +233,7 @@ def argparse_add_job_scheduler_group(
         '--job-config-off',
         action='store_true',
         help=wrap_multiline_str("""
-            Do not use the default --job-config-file, leaving job settings to be
+            Do not use the --job-config-file, leaving job settings to be
             set from the --job-script or provided through relevant job setting
             script arguments.
         """)
@@ -238,7 +242,7 @@ def argparse_add_job_scheduler_group(
         '--job-config-on',
         action='store_true',
         help=wrap_multiline_str("""
-            Force useage of the default --job-config-file in situations where
+            Force useage of the --job-config-file in situations where
             the default config file would not be automatically used.
         """)
     )
