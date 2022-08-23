@@ -59,9 +59,9 @@ try
     % egm96geoid(LAT,LON) syntax and will error.
     ellipsoidHeight = egm96geoid(LAT,LON);
 catch ME
-    warning('Caught error in egm96geoid method')
-    fprintf(1,'Error identifier: %s\n',ME.identifier);
-    fprintf(1,'Error message:\n%s\n',ME.message);
+    warning('Caught err in egm96geoid method')
+    fprintf(1,'Err identifier: %s\n',ME.identifier);
+    fprintf(1,'Err message:\n%s\n',ME.message);
     fprintf(1, 'Trying geoidheight method instead\n')
 
 %    ellipsoidHeight = geoidheight(LAT,LON,'egm96');
