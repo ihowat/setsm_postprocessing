@@ -26,16 +26,24 @@ if any(n)
     adaptCoastlineFlag = true;
 end
 
+landIsQcMaskFlag = false;
+n = strcmpi(varargin,'landIsQcMask');
+if any(n)
+    landIsQcMaskFlag = true;
+end
+
 if ~any(~land(:))
     fprintf('land mask has no zero (water) values\n')
     return
 end
 
-landfraction = nnz(land) / numel(land);
-fprintf('tile land fraction: %g\n', landfraction)
-if landfraction > 0.99
-    fprintf('skipping sea surface application for tile that is more than 99 percent land\n')
-    return
+if ~landIsQcMaskFlag
+    landfraction = nnz(land) / numel(land);
+    fprintf('tile land fraction: %g\n', landfraction)
+    if landfraction > 0.99
+        fprintf('skipping sea surface application for tile that is more than 99 percent land\n')
+        return
+    end
 end
 
 % Trying to sample sea level at full (2m) resolution may never return!
