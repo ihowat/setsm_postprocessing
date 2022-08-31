@@ -53,7 +53,7 @@ if ~ismember(outRasterType, outRasterType_choices)
 end
 
 if ismember(outRasterType, {'browse-LZW', 'browse-COG'})
-    outSet = 'browse';
+    outSet = 'browseOnly';
 else
     outSet = 'full';
 end
