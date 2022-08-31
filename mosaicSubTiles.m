@@ -123,6 +123,8 @@ Nrows = max(subTileRow);
 %[tileProjName,projection] = getProjName(subTileName{1}{1},projection);
 
 % column-wise subtile number
+% 'subTileNum' number DOES NOT MATCH old subtile naming scheme numbers,
+% and is for purposes of sorting subtile files only!
 subTileNum = sub2ind([Nrows,Ncols],subTileRow,subTileCol);
 
 % % sort subtilefiles by ascending subtile number order

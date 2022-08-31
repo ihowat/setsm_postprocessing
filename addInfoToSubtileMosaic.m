@@ -41,14 +41,19 @@ subTileName=cellfun(@(x) strsplit(x,'_'),subTileName,'uniformoutput',0);
 subTileCol = cellfun(@(x) str2num(x{end-1}),subTileName);
 subTileRow = cellfun(@(x) str2num(x{end-2}),subTileName);
 
-Ncols = max(subTileCol);
-Nrows = max(subTileRow);
+%Ncols = max(subTileCol);
+%Nrows = max(subTileRow);
 
 % Get tile projection information, esp. from UTM tile name
 %[tileProjName,projection] = getProjName(subTileName{1}{1},projection);
 
 % column-wise subtile number
-subTileNum = sub2ind([Nrows,Ncols],subTileRow,subTileCol);
+% 'Nrows' and 'Ncols' are hardcoded to assume we are working on a
+% 100x100km tile, for purposes of properly selecting subtiles in a
+% particular 2m quad tile quadrant using the old linear "column-wise"
+% subtile numbering.
+%subTileNum = sub2ind([Nrows,Ncols],subTileRow,subTileCol);
+subTileNum = sub2ind([100,100],subTileRow,subTileCol);
 
 % % sort subtilefiles by ascending subtile number order
 [subTileNum,n] = sort(subTileNum);
