@@ -15,6 +15,25 @@ NsubTileFiles = length(subTileFiles);
 % can reuse
 subTileDir=fileparts(subTileFiles{1});
 regFile=[subTileDir,'/tileReg.mat'];
+regFileLock=[regFile,'.lock'];
+
+if exist(regFile,'file')
+    saveReg=false;
+    if ~exist(regFileLock,'file')
+        useReg=true;
+    else
+        useReg=false;
+    end
+else
+    useReg=false;
+    if ~exist(regFileLock,'file')
+        saveReg=true;
+        cleanup_locks = onCleanup(@()remove_lockfile(regFileLock));
+        fclose(fopen(regFileLock, 'w'));
+    else
+        saveReg=false;
+    end
+end
 
 %This would make resolution-dependent tile adjustment
 %[subTileDir,subTileName]=fileparts(subTileFiles{1});
@@ -23,7 +42,7 @@ regFile=[subTileDir,'/tileReg.mat'];
 %regFile=[subTileDir,'/tileReg',resStr,'.mat'];
 
 % check if coregistration file exists and load it if so
-if exist(regFile,'file')
+if exist(regFile,'file') && useReg
     load(regFile)
 else
     % no coregistration file, so calculate all subtile offsets
@@ -142,8 +161,10 @@ else
         m0 = matfile(subTileFiles{n});
         N(n) = max(max(m0.N));
     end
-    
-    save(regFile,'nrt','dzup','dzrt','dzup_mad','dzrt_mad','N')
+
+    if saveReg
+        save(regFile,'nrt','dzup','dzrt','dzup_mad','dzrt_mad','N')
+    end
     
 end
 
@@ -201,4 +222,12 @@ fprintf('performing LSQ adjustment\n')
 
 dZ(~n_missing) = (wz.*A)\(wz.*dz);
 
-save(regFile,'dZ','-append');
+if saveReg
+    save(regFile,'dZ','-append');
+end
+
+
+function remove_lockfile(lockfile)
+if exist(lockfile,'file')
+    delete(lockfile);
+end
