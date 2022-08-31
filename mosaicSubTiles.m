@@ -27,6 +27,11 @@ if ~exist(subTileDir,'dir')
     error('Subtiles folder does not exist: %s', subTileDir)
 end
 
+n = find(strcmpi('quadrant',varargin));
+if ~isempty(n)
+    quadrant = varargin{n+1};
+end
+
 projection = '';
 n = find(strcmpi('projection',varargin));
 if ~isempty(n)

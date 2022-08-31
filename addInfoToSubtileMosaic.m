@@ -31,20 +31,29 @@ if isempty(subTileFiles)
         [subTileDir,'/*_',num2str(dx),'m.mat']);
 end
 
-subTileFiles=cellfun( @(x) [subTileDir,'/',x],{subTileFiles.name},'uniformoutput',0);
+subTileFiles=cellfun( @(x) [subTileDir,'/',x],{subTileFiles.name},...
+    'uniformoutput',0);
 
-% Get column-wise number of subtile from file names - assumes the subtile
-% names is {tilex}_{tily}_{subtilenum}_....
+% Get rows and cols of subtile from file names - assumes the subtile
+% names is *_{row}_{col}_{res}.mat
 [~,subTileName] = cellfun(@fileparts,subTileFiles,'uniformoutput',0);
 subTileName=cellfun(@(x) strsplit(x,'_'),subTileName,'uniformoutput',0);
-if length(subTileName) > 0 && startsWith(subTileName{1}{1},'utm')
-    subTileNum = cellfun(@(x) str2num(x{4}),subTileName);
-else
-    subTileNum = cellfun(@(x) str2num(x{3}),subTileName);
-end
+subTileCol = cellfun(@(x) str2num(x{end-1}),subTileName);
+subTileRow = cellfun(@(x) str2num(x{end-2}),subTileName);
 
-% sort subtilefiles by ascending subtile number order
+Ncols = max(subTileCol);
+Nrows = max(subTileRow);
+
+% Get tile projection information, esp. from UTM tile name
+%[tileProjName,projection] = getProjName(subTileName{1}{1},projection);
+
+% column-wise subtile number
+subTileNum = sub2ind([Nrows,Ncols],subTileRow,subTileCol);
+
+% % sort subtilefiles by ascending subtile number order
 [subTileNum,n] = sort(subTileNum);
+subTileCol = subTileCol(n);
+subTileRow= subTileRow(n);
 subTileFiles = subTileFiles(n);
 
 if exist('quadrant','var')
