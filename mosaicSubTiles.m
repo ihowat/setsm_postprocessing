@@ -193,6 +193,8 @@ tmax = zeros(length(y),length(x),'uint16');
 tmin = zeros(length(y),length(x),'uint16');
 
 
+added_at_least_one_subtile = false;
+
 % initialize subtile count for use in n-weighted alignment
 subtile_n=1;
 
@@ -343,6 +345,8 @@ for filen=1:NsubTileFiles
     
     % update count of subtiles added to mosaic
     subtile_n= subtile_n+1;
+
+    added_at_least_one_subtile = true;
     
 end
 
@@ -381,7 +385,7 @@ while ~isempty(nf)
     
     filen = nf(count);
     
-    fprintf('%d remainging subtiles, attempting to add: %s\n',length(nf),subTileFiles{nf(count)})
+    fprintf('%d remaining subtiles, attempting to add: %s\n',length(nf),subTileFiles{nf(count)})
     
     % get list of variables within this subtile mat file
     mvars  = who('-file',subTileFiles{filen});
@@ -533,7 +537,15 @@ while ~isempty(nf)
     
     % remove this subtile from index
     nf(count) = [];
+
+    added_at_least_one_subtile = true;
     
+end
+
+if ~added_at_least_one_subtile
+    fprintf('no subtiles were added to output mosaic tile\n')
+    fprintf('could write empty mosaic tile results, but choosing not to and returning early\n')
+    return
 end
 
 %% Write Output
