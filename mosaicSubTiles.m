@@ -588,12 +588,12 @@ writeTileToTifv4(outName, projection, 'outSet',outSet, 'outFormat',outFormat)
 
 % Build mosaic centent list and write meta.txt
 fprintf('Gathering subtile information for tile meta.txt file\n')
-if exist('quadrant','var')
-    addInfoToSubtileMosaic(subTileDir,dx,outName,quadrant);
+n = find(strcmpi('extent',varargin));
+if ~isempty(n)
+    extent=varargin{n+1};
+    addInfoToSubtileMosaic(subTileDir,dx,outName,'extent',extent);
 else
     addInfoToSubtileMosaic(subTileDir,dx,outName);
 end
-%if strcmpi(outSet, 'full')
-    fprintf('Writing meta.txt\n')
-    tileMetav4(outName)
-%end
+fprintf('Writing meta.txt\n')
+tileMetav4(outName)
