@@ -27,6 +27,11 @@ if ~exist(subTileDir,'dir')
     error('Subtiles folder does not exist: %s', subTileDir)
 end
 
+n = find(strcmpi('quadrant',varargin));
+if ~isempty(n)
+    quadrant = varargin{n+1};
+end
+
 projection = '';
 n = find(strcmpi('projection',varargin));
 if ~isempty(n)
@@ -118,6 +123,8 @@ Nrows = max(subTileRow);
 %[tileProjName,projection] = getProjName(subTileName{1}{1},projection);
 
 % column-wise subtile number
+% 'subTileNum' number DOES NOT MATCH old subtile naming scheme numbers,
+% and is for purposes of sorting subtile files only!
 subTileNum = sub2ind([Nrows,Ncols],subTileRow,subTileCol);
 
 % % sort subtilefiles by ascending subtile number order
@@ -185,6 +192,8 @@ z_mad = z;
 tmax = zeros(length(y),length(x),'uint16');
 tmin = zeros(length(y),length(x),'uint16');
 
+
+added_at_least_one_subtile = false;
 
 % initialize subtile count for use in n-weighted alignment
 subtile_n=1;
@@ -336,6 +345,8 @@ for filen=1:NsubTileFiles
     
     % update count of subtiles added to mosaic
     subtile_n= subtile_n+1;
+
+    added_at_least_one_subtile = true;
     
 end
 
@@ -374,7 +385,7 @@ while ~isempty(nf)
     
     filen = nf(count);
     
-    fprintf('%d remainging subtiles, attempting to add: %s\n',length(nf),subTileFiles{nf(count)})
+    fprintf('%d remaining subtiles, attempting to add: %s\n',length(nf),subTileFiles{nf(count)})
     
     % get list of variables within this subtile mat file
     mvars  = who('-file',subTileFiles{filen});
@@ -526,7 +537,15 @@ while ~isempty(nf)
     
     % remove this subtile from index
     nf(count) = [];
+
+    added_at_least_one_subtile = true;
     
+end
+
+if ~added_at_least_one_subtile
+    fprintf('no subtiles were added to output mosaic tile\n')
+    fprintf('could write empty mosaic tile results, but choosing not to and returning early\n')
+    return
 end
 
 %% Write Output
@@ -581,12 +600,12 @@ writeTileToTifv4(outName, projection, 'outSet',outSet, 'outFormat',outFormat)
 
 % Build mosaic centent list and write meta.txt
 fprintf('Gathering subtile information for tile meta.txt file\n')
-if exist('quadrant','var')
-    addInfoToSubtileMosaic(subTileDir,dx,outName,quadrant);
+n = find(strcmpi('extent',varargin));
+if ~isempty(n)
+    extent=varargin{n+1};
+    addInfoToSubtileMosaic(subTileDir,dx,outName,'extent',extent);
 else
     addInfoToSubtileMosaic(subTileDir,dx,outName);
 end
-%if strcmpi(outSet, 'full')
-    fprintf('Writing meta.txt\n')
-    tileMetav4(outName)
-%end
+fprintf('Writing meta.txt\n')
+tileMetav4(outName)
