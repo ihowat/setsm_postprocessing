@@ -17,7 +17,7 @@ while IFS='' read -r tile || [ -n "$tile" ]; do
 
     nfin=$(find "${output_tiles_dir}/${tile}/" -mindepth 1 -maxdepth 1 -type f -name "*.fin" | wc -l)
 
-    if (( nfin != 6 )); then
+    if (( nfin != 6 )) && (( nfin != 7 )); then
         echo "$tile"
     fi
 done < "$tilelist_file"
