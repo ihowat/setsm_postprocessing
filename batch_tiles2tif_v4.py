@@ -178,6 +178,7 @@ def get_arg_parser():
             to be processed as a single task.
             \nIf 'tile-file', send each tile to be processed individually
             to Matlab script as a single task.
+            \n
         """)
     )
     
