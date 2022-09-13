@@ -8,7 +8,7 @@ find v2/results/output_tiles/ -mindepth 2 -maxdepth 2 -type f ! \( -name "*_10m.
 # Undo tile buffer merge on all existing 10m and 2m (non-reg) tile .mat files
 # Crop 2m tiles, which had 1100m quad-internal buffer, to 100m buffer on all four edges
 for tiledir in v2/results/output_tiles/*/ ; do qsub -v "ARG_TILEDIR=${tiledir}" ~/scratch/repos/setsm_postprocessing_pgc/qsub_cropTiles.sh ; done
-    
+
 # Rename cropped output .mat files, backing up uncropped
 find v2/results/output_tiles/ -mindepth 2 -maxdepth 2 -type f -name "*_cropped.mat" -exec bash -c 'tilef_crop={}; tilef_orig="${tilef_crop%_cropped.mat}.mat"; mv "$tilef_orig" "${tilef_orig}.bak"; mv "$tilef_crop" "$tilef_orig";' \;
 
