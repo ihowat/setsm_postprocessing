@@ -549,9 +549,10 @@ def main():
         if water_tile_dir != '':
             if auto_select_arcticdem_water_tile_dir:
                 if tile in watermask_tiles_visnav_need_editing:
-                    parser.error("Tile '{}' is in tilelist indicating the visnav watermask "
-                                 "still needs fixing: {}".format(tile, watermask_tiles_visnav_need_editing_file))
-                if tile in watermask_tiles_greenland:
+                    # parser.error("Tile '{}' is in tilelist indicating the visnav watermask "
+                    #              "still needs fixing: {}".format(tile, watermask_tiles_visnav_need_editing_file))
+                    water_tile_dir = os.path.join(water_tile_dir, 'visnav/tiled_watermasks_edit/')
+                elif tile in watermask_tiles_greenland:
                     water_tile_dir = os.path.join(water_tile_dir, 'howat_greenland/tiled_watermasks/')
                 elif tile in watermask_tiles_needing_visnav:
                     water_tile_dir = os.path.join(water_tile_dir, 'visnav/tiled_watermasks/')
