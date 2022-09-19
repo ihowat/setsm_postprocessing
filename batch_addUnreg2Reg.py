@@ -1,5 +1,11 @@
 import os, string, sys, argparse, glob, subprocess
-matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing3'
+
+SCRIPT_FILE = os.path.abspath(os.path.realpath(__file__))
+SCRIPT_FNAME = os.path.basename(SCRIPT_FILE)
+SCRIPT_NAME, SCRIPT_EXT = os.path.splitext(SCRIPT_FNAME)
+SCRIPT_DIR = os.path.dirname(SCRIPT_FILE)
+
+matlab_scripts = os.path.join(SCRIPT_DIR, '../setsm_postprocessing3')
 
 
 def main():
@@ -7,7 +13,12 @@ def main():
     ## args
     parser = argparse.ArgumentParser()
     parser.add_argument("dstdir", help="target directory (tile subfolders will be created)")
-    parser.add_argument("tiles", help="list of mosaic tiles, comma delimited")
+    parser.add_argument("tiles",
+        help=' '.join([
+            "list of mosaic tiles; either specified on command line (comma delimited),",
+            "or a text file list (each tile on separate line)"
+        ])
+    )
     
     parser.add_argument("--lib-path", default=matlab_scripts,
                         help="path to referenced Matlab functions (default={}".format(matlab_scripts))
@@ -20,10 +31,19 @@ def main():
             help='print actions without executing')
     
     args = parser.parse_args()
-    
-    tiles = args.tiles.split(',')
+
+    if args.tiles.lower().endswith(('.txt', '.csv')) or os.path.isfile(args.tiles):
+        tilelist_file = args.tiles
+        if not os.path.isfile(args.tiles):
+            parser.error("'tiles' argument tilelist file does not exist: {}".format(tilelist_file))
+        with open(tilelist_file, 'r') as tilelist_fp:
+            tiles = [line for line in tilelist_fp.read().splitlines() if line != '']
+    else:
+        tiles = args.tiles.split(',')
+    tiles = sorted(list(set(tiles)))
+
     dstdir = os.path.abspath(args.dstdir)
-    scriptdir = os.path.dirname(sys.argv[0])
+    scriptdir = SCRIPT_DIR
 
     ## Verify qsubscript
     if args.qsubscript is None:
@@ -56,19 +76,19 @@ def main():
                     args.lib_path,
                     qsubpath
                 )
-                print cmd
+                print(cmd)
                 if not args.dryrun:
                     subprocess.call(cmd, shell=True)
             
             ## else run matlab
             else:
-                cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); {2}('{3}'); exit" """.format(
+                cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); {2}('{3}'); catch e; disp(getReport(e)); exit(1); end; exit(0)" """.format(
                     scriptdir,
                     args.lib_path,
                     matlab_script,
                     tiledir,
                 )
-                print "{}, {}".format(i, cmd)
+                print("{}, {}".format(i, cmd))
                 if not args.dryrun:
                     subprocess.call(cmd, shell=True)
 

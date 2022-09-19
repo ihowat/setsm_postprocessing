@@ -1,6 +1,5 @@
-*.mat
+*database*.mat
 *.csv
 *.pyc
 *.asv
-*.txt
 .idea

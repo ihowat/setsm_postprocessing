@@ -1,5 +1,11 @@
 import os, string, sys, argparse, glob, subprocess
-matlab_scripts = '/mnt/pgc/data/scratch/claire/repos/setsm_postprocessing3'
+
+SCRIPT_FILE = os.path.abspath(os.path.realpath(__file__))
+SCRIPT_FNAME = os.path.basename(SCRIPT_FILE)
+SCRIPT_NAME, SCRIPT_EXT = os.path.splitext(SCRIPT_FNAME)
+SCRIPT_DIR = os.path.dirname(SCRIPT_FILE)
+
+matlab_scripts = os.path.join(SCRIPT_DIR, '../setsm_postprocessing3')
 
 
 def main():
@@ -7,8 +13,13 @@ def main():
     ## args
     parser = argparse.ArgumentParser()
     parser.add_argument("dstdir", help="target directory (tile subfolders will be created)")
-    parser.add_argument("tiles", help="list of mosaic tiles, comma delimited")
-    parser.add_argument("res", choices=['2','8','20','40'], help="resolution (2, 8, or 40)")
+    parser.add_argument("tiles",
+        help=' '.join([
+            "list of mosaic tiles; either specified on command line (comma delimited),",
+            "or a text file list (each tile on separate line)"
+        ])
+    )
+    parser.add_argument("res", choices=['2','8','10','40'], help="resolution (2, 8, 10, or 40)")
     parser.add_argument("region", choices=['arctic','antarctic','above'], help="region (arctic, antarctic, or above)")
 
     parser.add_argument("--rebuild", action='store_true', default=False, help="rebuild DEM from 40m template. 40m version must already exist)")
@@ -27,9 +38,18 @@ def main():
 
     args = parser.parse_args()
 
-    tiles = args.tiles.split(',')
+    if args.tiles.lower().endswith(('.txt', '.csv')) or os.path.isfile(args.tiles):
+        tilelist_file = args.tiles
+        if not os.path.isfile(args.tiles):
+            parser.error("'tiles' argument tilelist file does not exist: {}".format(tilelist_file))
+        with open(tilelist_file, 'r') as tilelist_fp:
+            tiles = [line for line in tilelist_fp.read().splitlines() if line != '']
+    else:
+        tiles = args.tiles.split(',')
+    tiles = sorted(list(set(tiles)))
+
     dstdir = os.path.abspath(args.dstdir)
-    scriptdir = os.path.dirname(sys.argv[0])
+    scriptdir = SCRIPT_DIR
 
     ## Verify qsubscript
     if args.qsubscript is None:
@@ -76,7 +96,7 @@ def main():
                 dstfp2 = os.path.join(dstdir,tile,'{}_{}m_dem.mat'.format(tile, args.res))
 
             if (os.path.isfile(dstfp) or os.path.isfile(dstfp2)) and not args.rerun:
-                print '{} or {} exists, skipping'.format(dstfp, dstfp2)
+                print('{} or {} exists, skipping'.format(dstfp, dstfp2))
 
             else:
                 ## if pbs, submit to scheduler
@@ -106,7 +126,7 @@ def main():
                             args.lib_path,
                             qsubpath
                         )
-                    print cmd
+                    print(cmd)
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)
 
@@ -114,7 +134,7 @@ def main():
                 else:
                     #cmd = """matlab -nodisplay -nosplash -r "addpath('{}'); parpool(4); selectTileByName('{}',{}); exit" """.format(scriptdir, tile, args.res)
                     if args.gcpfile:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); addpath('{1}/intersections'); {2}('{3}','{4}',{5},'{6}'); exit" """.format(
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); addpath('{1}/intersections'); {2}('{3}','{4}',{5},'{6}'); catch e; disp(getReport(e)); exit(1); end; exit(0)" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,
@@ -124,7 +144,7 @@ def main():
                             args.gcpfile
                         )
                     else:
-                        cmd = """matlab -nojvm -nodisplay -nosplash -r "addpath('{0}'); addpath('{1}'); addpath('{1}/intersections'); {2}('{3}','{4}',{5}); exit" """.format(
+                        cmd = """matlab -nojvm -nodisplay -nosplash -r "try; addpath('{0}'); addpath('{1}'); addpath('{1}/intersections'); {2}('{3}','{4}',{5}); catch e; disp(getReport(e)); exit(1); end; exit(0)" """.format(
                             scriptdir,
                             args.lib_path,
                             matlab_script,
@@ -132,7 +152,7 @@ def main():
                             tile,
                             args.res
                         )
-                    print "{}, {}".format(i, cmd)
+                    print("{}, {}".format(i, cmd))
                     if not args.dryrun:
                         subprocess.call(cmd, shell=True)
 

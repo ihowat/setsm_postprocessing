@@ -12,8 +12,8 @@ echo $PBS_O_HOST
 echo $PBS_NODEFILE
 echo $a1
 
-module load gdal/2.1.1
-module load matlab/2016b
+module load gdal/2.1.3
+module load matlab/2019a
 
 echo $p1
 echo $p2
@@ -24,11 +24,11 @@ echo $p6
 echo $p7
 
 if [ -z $p7 ]; then
-    cmd="addpath('${p1}'); addpath('${p6}'); addpath('${p6}/intersections'); ${p2}('${p3}','${p4}',${p5}); exit"
+    cmd="try; addpath('${p1}'); addpath('${p6}'); addpath('${p6}/intersections'); ${p2}('${p3}','${p4}',${p5}); catch e; disp(getReport(e)); exit(1); end; exit(0)"
     echo $cmd
     time matlab -nojvm -nodisplay -nosplash -r "${cmd}"
 else
-    cmd="addpath('${p1}'); addpath('${p6}'); addpath('${p6}/intersections'); ${p2}('${p3}','${p4}',${p5},'${p7}'); exit"
+    cmd="try; addpath('${p1}'); addpath('${p6}'); addpath('${p6}/intersections'); ${p2}('${p3}','${p4}',${p5},'${p7}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
     echo $cmd
     time matlab -nojvm -nodisplay -nosplash -r "${cmd}"
 fi

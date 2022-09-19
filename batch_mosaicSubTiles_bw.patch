@@ -1,0 +1,17 @@
+diff --git a/batch_mosaicSubTiles.py b/batch_mosaicSubTiles.py
+index 19b7879..6bb46fa 100644
+--- a/batch_mosaicSubTiles.py
++++ b/batch_mosaicSubTiles.py
+@@ -78,9 +78,9 @@ project_epsg_dict = {
+ 
+ earthdem_hemisphere_key = '<hemisphere>'
+ project_tileDefFile_dict = {
+-    'arcticdem': '/mnt/pgc/data/projects/earthdem/tiledef_files/PGC_Imagery_Mosaic_Tiles_Arctic.mat',
+-    'rema':      '/mnt/pgc/data/projects/earthdem/tiledef_files/rema_tile_definitions.mat',
+-    'earthdem':  '/mnt/pgc/data/projects/earthdem/tiledef_files/PGC_UTM_Mosaic_Tiles_{}.mat'.format(earthdem_hemisphere_key),
++    'arcticdem': '/scratch/sciteam/GS_bazu/mosaic_data/tiledef_files/PGC_Imagery_Mosaic_Tiles_Arctic.mat',
++    'rema':      '/scratch/sciteam/GS_bazu/mosaic_data/tiledef_files/rema_tile_definitions.mat',
++    'earthdem':  '/scratch/sciteam/GS_bazu/mosaic_data/tiledef_files/PGC_UTM_Mosaic_Tiles_{}.mat'.format(earthdem_hemisphere_key),
+ }
+ project_version_dict = {
+     'arcticdem': 'ArcticDEM,4.1',
