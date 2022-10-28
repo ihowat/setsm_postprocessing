@@ -24,8 +24,13 @@ end
 % initialize output
 meta.fileName=metaFileName;
 
-% read each line of meta file into a cell array (textscan doesnt work)
-C=textread(metaFileName,'%s','delimiter','\n');
+try
+    % read each line of meta file into a cell array (textscan doesnt work)
+    C=textread(metaFileName,'%s','delimiter','\n');
+catch ME
+    metaFileName
+    rethrow(ME)
+end
 
 % iterate thrhough C and seperate out name/value pairs into cells.
 cnt=1;
