@@ -433,7 +433,7 @@ parfor n=nstrt:subN
     
     % make date vector
     [~,name] =  cellfun(@fileparts,fileNames,'uniformoutput',0);
-    t=cellfun(@(x) datenum(x(6:13),'yyyymmdd'),name)';
+    t=cellfun(@(x) datenum(parsePairnameDatestring(x),'yyyymmdd'),name)';
     
     %% extract strip subsets into stack
     fprintf('extracting %d strip subsets ',length(fileNames))
