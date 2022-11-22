@@ -16,8 +16,7 @@ med_rmse=nan(size(f));
 max_rmse=nan(size(f));
 Nscenes=nan(size(f));
 
-stripDate=char(f{:});
-stripDate=datenum(stripDate(:,6:13),'yyyymmdd');
+stripDate=arrayfun(@(x) datenum(parsePairnameDatestring(convertCharsToStrings(x)),'yyyymmdd'), f, 'uniformoutput',0);
 
  reg.datasets       = cell(size(f));
  reg.Ngcps          = nan(size(f));
