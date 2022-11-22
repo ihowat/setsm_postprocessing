@@ -80,8 +80,8 @@ project_epsg_dict = {
 earthdem_tilePrefix_key = '<tilePrefix>'
 project_refDemFile_dict = {
     'arcticdem': None,
-    'earthdem':  '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_UTM_90m/TDX_UTM_Mosaic_{}_90m.tif'.format(earthdem_tilePrefix_key),
-    'rema':      '/mnt/pgc/data/elev/dem/tandem-x/90m/TanDEM-X_Antarctica_90m/old_mosaic/TanDEM_Antarctica_Mosaic.tif',
+    'earthdem':  '/mnt/pgc/data/elev/dem/tandem-x/90m/mosaic/TanDEM-X_UTM_90m/TDX_UTM_Mosaic_{}_90m.tif'.format(earthdem_tilePrefix_key),
+    'rema':      '/mnt/pgc/data/elev/dem/tandem-x/90m/mosaic/TanDEM-X_Antarctica_90m/old_mosaic/TanDEM_Antarctica_Mosaic.tif',
 }
 
 earthdem_hemisphere_key = '<hemisphere>'
