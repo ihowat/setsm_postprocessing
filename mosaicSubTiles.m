@@ -136,7 +136,7 @@ subTileFiles = subTileFiles(n);
 NsubTileFiles = length(subTileFiles);
 
 % find buffer size from neighboring tiles
-n = diff(subTileNum);
+n = diff(subTileNum); % check column-wise neighbors
 n(mod(subTileNum(1:end-1),Nrows) == 0) = 0; %DEPENDS ON SUBTILE ROW/COLS
 n = find(n == 1,1,'first');
 if ~isempty(n)
@@ -144,10 +144,23 @@ if ~isempty(n)
     buffcheck2=load(subTileFiles{n+1},'y');
     buff = (length(buffcheck2.y)-find(buffcheck1.y(1) == buffcheck2.y))/2;
     buff = round(buff);
-else
-    fprintf('no neighboring tiles, returning\n')
-    return
+else % if no column-wise neighbors, check rows
+    [~,n]= sortrows([subTileRow(:),subTileCol(:)]); % sort by row first
+    nn = diff(subTileRow(n)) == 0 & diff(subTileCol(n)) == 1; % find same row, adjacent column
+    nn = find(nn == 1,1,'first'); % first neighbor
+    
+    if isempty(nn) % fail if no neighbors
+            fprintf('no neighboring tiles, returning\n')
+            return
+    end
+    
+    buffcheck1=load(subTileFiles{n(nn)},'x');
+    buffcheck2=load(subTileFiles{n(nn+1)},'x');
+    buff = (length(buffcheck2.x)-find(buffcheck1.x(end) == buffcheck2.x))/2;
+    buff = round(buff);
+    
 end
+
 
 fprintf('performing coregistration & adjustment between adjoining subtiles\n')
 dZ = getOffsets(subTileFiles,subTileRow,subTileCol,buff);
