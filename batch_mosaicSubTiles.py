@@ -242,12 +242,15 @@ def main():
     projection_string = epsg_projstr_dict[args.epsg]
     if args.tile_def is None:
         args.tile_def = project_tileDefFile_dict[args.project]
+    if args.tileparam_list is None:
+        args.tileparam_list = project_tileParamList_dict[args.project]
     if args.version is None:
         args.version = project_version_dict[args.project]
 
     ## Convert argument paths to absolute paths
     args.srcdir = os.path.abspath(args.srcdir)
     args.tile_def = os.path.abspath(args.tile_def if os.path.isfile(args.tile_def) else os.path.join(SCRIPT_DIR, args.tile_def))
+    args.tileparam_list = os.path.abspath(args.tileparam_list if os.path.isfile(args.tileparam_list) else os.path.join(SCRIPT_DIR, args.tileparam_list))
     args.libdir = os.path.abspath(args.libdir)
     args.tempdir = os.path.abspath(args.tempdir)
     args.logdir = os.path.abspath(os.path.join(args.srcdir, args.logdir) if args.logdir.startswith('../') else args.logdir)
