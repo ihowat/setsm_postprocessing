@@ -82,7 +82,13 @@ for i=strt:inc:length(tileFiles)
     unregTileFile=strrep(tileFile,'.mat','_unreg.mat.bak');
 
     if ~exist(unregTileFile,'file')
+        fprintf('Creating backup copy of unaltered tile matfile: %s\n',unregTileFile);
         eval(['!cp ',tileFile,' ',unregTileFile]);
+    end
+
+    if ~exist(is2TileFile,'file')
+        fprintf('icesat registration file does not exist, skipping registration and dzfit: %s\n',is2TileFile);
+        return;
     end
 
     if ~exist(regTileFile,'file') || overwrite
