@@ -208,8 +208,9 @@ def main():
             
         altimetry_file = os.path.join(script_args.is2dir, '{}_is2.mat'.format(supertile))
         if not os.path.isfile(altimetry_file):
-            print("Tile {} altimetry file does not exist: {}".format(supertile, altimetry_file))
-            run_tile = False
+            print("WARNING: Tile {} altimetry file does not exist: {}".format(supertile, altimetry_file))
+            print("Running this tile anyways in order to produce tile *_unreg.mat.bak backup tile matfile")
+            # run_tile = False
             
         if not run_tile:
             continue
