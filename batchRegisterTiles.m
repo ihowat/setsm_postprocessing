@@ -83,7 +83,7 @@ for i=strt:inc:length(tileFiles)
 
     if ~exist(unregTileFile,'file')
         fprintf('Creating backup copy of unaltered tile matfile: %s\n',unregTileFile);
-        eval(['!cp ',tileFile,' ',unregTileFile]);
+        eval(['!cp --preserve=timestamps ',tileFile,' ',unregTileFile]);
     end
 
     if ~exist(is2TileFile,'file')
