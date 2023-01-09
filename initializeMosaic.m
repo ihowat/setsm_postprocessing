@@ -284,7 +284,7 @@ if endsWith(stripDatabaseFile,'.shp', 'IgnoreCase',true)
     %% Create meta input file from shp structure
 
     % make full path filanames for each segment without extension
-    meta.fileName = cellfun(@(w,x,y,z) [stripsDirectory,'/',w,'/strips_v4/2m/',x,'_',y,'/',x,'_seg',num2str(z),'_dem_10m.tif'],{S.region},{S.strip},{S.version},...
+    meta.fileName = cellfun(@(w,x,y,z) [stripsDirectory,'/',w,'/strips_v4.1/2m/',x,'_',y,'/SETSM_s2s041_',x,'_seg',num2str(z),'_dem_10m.tif'],{S.region},{S.strip},{S.version},...
         {S.seg_id},'uniformoutput',0);
 
     % convert shapefile vertices to cells in meta struct, removing nans
