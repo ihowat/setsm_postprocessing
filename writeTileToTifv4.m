@@ -84,6 +84,8 @@ if strcmpi(projstr, 'polar stereo north')
     addSeaSurface_epsg = 3413;
 elseif strcmpi(projstr, 'polar stereo south')
     addSeaSurface_epsg = 3031;
+elseif contains(projstr,'UTM','IgnoreCase',true)
+    [addSeaSurface_epsg,~,~] = getProjstrInfo(projstr);
 else
     addSeaSurface_epsg = [];
 end
@@ -103,7 +105,7 @@ y=m.y;
 m_varlist = who(m);
 
 if addSeaSurface && ~ismember('land', m_varlist)
-    fprintf("'addSeaSurface' option requires 'land' variable exists in tile matfile: %s", tilef)
+    fprintf("'addSeaSurface' option requires 'land' variable exists in tile matfile: %s\n", tilef)
     warning('sea surface heights will not be applied')
     addSeaSurface = false;
 end
