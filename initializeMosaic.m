@@ -284,8 +284,13 @@ if endsWith(stripDatabaseFile,'.shp', 'IgnoreCase',true)
     %% Create meta input file from shp structure
 
     % make full path filanames for each segment without extension
-    meta.fileName = cellfun(@(w,x,y,z) [stripsDirectory,'/',w,'/strips_v4.1/2m/',x,'_',y,'/SETSM_s2s041_',x,'_seg',num2str(z),'_dem_10m.tif'],{S.region},{S.strip},{S.version},...
+    meta.fileName = cellfun(@(w,x,y,z) [stripsDirectory,'/',w,'/strips_v4.1/2m/',regexprep(x,'^SETSM_s2s\d{3}_',''),'_',y,'/',x,'_seg',num2str(z),'_dem_10m.tif'],{S.region},{S.strip},{S.version},...
         {S.seg_id},'uniformoutput',0);
+
+    % ensure strip filename scheme is as expected
+    if isempty(regexp(meta.fileName{1}, 'SETSM_s2s041'))
+        error("Expected meta.fileName items to contain 'SETSM_s2s041' substring, but it is not present: %s", meta.fileName{1});
+    end
 
     % convert shapefile vertices to cells in meta struct, removing nans
     meta.x = cellfun( @(x) x(~isnan(x)), {S.X}, 'uniformoutput', 0);
@@ -301,6 +306,11 @@ elseif endsWith(stripDatabaseFile,'.mat', 'IgnoreCase',true)
 
     fprintf('reading strip database .mat file: %s\n',stripDatabaseFile)
     meta=load(stripDatabaseFile);
+
+    % ensure strip filename scheme is as expected
+    if isempty(regexp(meta.fileName{1}, 'SETSM_s2s041'))
+        error("Expected meta.fileName items to contain 'SETSM_s2s041' substring, but it is not present: %s", meta.fileName{1});
+    end
 
     % trim strip database to only strips with a projection matching the tile
     if isfield(meta,'strip_projection_name')
@@ -349,15 +359,23 @@ if exist(qcFile,'file')
     
     fprintf('reading qc file: %s\n',qcFile)
     qc = load(qcFile);
+
+    % ensure qc stripID scheme is as expected
+    if isempty(regexp(qc.stripID{1}, 'SETSM_s2s041'))
+        error("Expected qc.stripID items to contain 'SETSM_s2s041' substring, but it is not present: %s", qc.stripID{1});
+    end
     
     A = cellfun( @(x,y) [x,'_',num2str(y)], qc.stripID, num2cell(qc.seg), 'uniformoutput',0);
     if exist('S','var')
-        B= cellfun( @(x,y) [x,'_',num2str(y)], strrep({S.strip},'_2m_lsf',''), {S.seg_id}, 'uniformoutput',0);
+        B= cellfun( @(x,y) [x,'_',num2str(y)], {S.strip}, {S.seg_id}, 'uniformoutput',0);
     else
         B= cellfun( @(x) stripFileNameToSegID(x), meta.fileName, 'uniformoutput',0);
     end
     
     [~,IA,IB] =  intersect(A,B);
+    if isempty(IA)
+        error("Could not match qc.stripID entries to any meta.fileName records");
+    end
     
     meta.qc.flag = zeros(size(meta.fileName),'uint8');
     meta.qc.x = cell(size(meta.fileName));
@@ -388,7 +406,7 @@ end
 
 
 function strip_seg_id = stripFileNameToSegID(fileName)
-pname_seg_re = '^.+/(?<pairname>[A-Z0-9]{4}_[0-9]{8}_[A-F0-9]{16}_[A-F0-9]{16})_[^/]+/[^/]+_seg(?<seg_id>\d+)_[^/]+$';
+pname_seg_re = '^.+/(?<pairname>SETSM_s2s041_[A-Z0-9]{4}_[0-9]{8}_[A-F0-9]{16}_[A-F0-9]{16})_[^/]+/[^/]+_seg(?<seg_id>\d+)_[^/]+$';
 [tokens, match_idx] = regexp(fileName, pname_seg_re, 'names');
 if isempty(match_idx)
     error("Cannot parse strip fileName parts with regex '%s' from input fileName string: %s", tilename_re, tilename);
