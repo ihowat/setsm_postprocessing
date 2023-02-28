@@ -356,6 +356,10 @@ out.creation_date = [out.creation_date{:}];
 out.strip_creation_date = [out.strip_creation_date{:}];
 out.A = [out.A{:}];
 
+%% Remove DEMs created after license change (use strip creation date of June 15 2022 as cutoff)
+%n = out.creation_date < 738687;
+%out = structfun(@(x) x(n), out, 'uniformoutput',0);
+
 fprintf('Writing %d new records to database file\n',length(out.fileName));
 if exist('out0','var')
     flds = fields(out);
