@@ -421,12 +421,6 @@ def main():
             finfile = os.path.join(args.srcdir, task.t, dstfn.replace('.mat', '.fin'))
             subtile_dir = os.path.join(args.srcdir, task.t, 'subtiles')
 
-            if not os.path.isdir(subtile_dir):
-                message = "ERROR! Subtile directory ({}) does not exist, skipping {}".format(subtile_dir, dstfn)
-                print(message)
-                error_messages.append(message)
-                continue
-
             run_tile = True
             removing_existing_output = False
 
@@ -475,6 +469,12 @@ def main():
                     removing_existing_output = True
 
             if removing_existing_output:
+                if not os.path.isdir(subtile_dir):
+                    message = "ERROR! Subtile directory ({}) does not exist, skipping {}".format(subtile_dir, dstfn)
+                    print(message)
+                    error_messages.append(message)
+                    continue
+
                 dstfps_old_pattern = dstfp.replace('.mat', '*')
                 dstfps_old = glob.glob(dstfps_old_pattern)
                 if dstfps_old:
@@ -502,6 +502,11 @@ def main():
                         supertile_num_nodata_dict[task.t] += 1
 
             if run_tile:
+                if not os.path.isdir(subtile_dir):
+                    message = "ERROR! Subtile directory ({}) does not exist, skipping {}".format(subtile_dir, dstfn)
+                    print(message)
+                    error_messages.append(message)
+                    continue
                 tiles_to_run.append(outtile)
 
     task_success_rc = 3 if len(tiles_to_run) > 0 else -1
