@@ -1,4 +1,4 @@
-function combineDatabase4(dbase1,dbase2,dbase3,dbase_out)
+function combineDatabase4_triple(dbase1,dbase2,dbase3,dbase_out)
 
 fprintf("Loading dbase1 as meta1: %s\n", dbase1);
 meta1 = load(dbase1);

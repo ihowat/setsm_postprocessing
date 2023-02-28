@@ -21,8 +21,8 @@ if isfile(reproject_list) && ~isfile([reproject_list,'.bak'])
 end
 reproject_list_fp = fopen(reproject_list, 'wt');
 
-%mosaic_zones_shp = '/mnt/pgc/data/projects/earthdem/EarthDEM_mosaic_zones_v2.shp';
-mosaic_zones_shp = 'EarthDEM_mosaic_zones_v2.shp';
+%mosaic_zones_shp = '/mnt/pgc/data/projects/earthdem/EarthDEM_mosaic_zones_v3.shp';
+mosaic_zones_shp = 'EarthDEM_mosaic_zones_v3.shp';
 mosaic_zones_mapstruct = shaperead(mosaic_zones_shp);
 %mosaic_zones_mapstruct = shaperead(mosaic_zones_shp, 'UseGeoCoords',true);
 mosaic_zones_polyshape_arr = arrayfun(@(feat) polyshape(feat.X, feat.Y), mosaic_zones_mapstruct);
@@ -362,8 +362,8 @@ out.stripName=strrep(out.stripName,'_meta','');
 
 stripNameChar=char(out.stripName{:});
 
-out.stripDate=datenum(stripNameChar(:,6:13),'yyyymmdd');
-out.stripDate=out.stripDate(:)';
+out.stripDate=cellfun(@(x) datenum(parsePairnameDatestring(x),'yyyymmdd'), out.stripName, 'uniformoutput',0);
+out.stripDate=cell2mat(out.stripDate);
 
 out.satID=cellstr(stripNameChar(:,1:4))';
 
