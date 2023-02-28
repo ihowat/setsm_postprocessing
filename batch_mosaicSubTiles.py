@@ -89,7 +89,7 @@ project_tileParamList_dict = {
 }
 project_version_dict = {
     'arcticdem': 'ArcticDEM,4.1',
-    'rema': 'REMA,2.0',
+    'rema': 'REMA,2.1',
     'earthdem': 'EarthDEM,1.1',
 }
 

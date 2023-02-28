@@ -25,7 +25,8 @@ MATLAB_LIBDIR = os.path.join(SCRIPT_DIR, "../setsm_postprocessing4")
 domain_finalQcMask_dict = {
     'arcticdem': None,
     'earthdem': None,
-    'rema': "/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/final_qc_mask/rema_final_mask.mat",
+    # 'rema': "/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/final_qc_mask/rema_v2/rema_final_mask.mat",
+    'rema': "/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/final_qc_mask/rema_v2.1/rema_final_mask_rev1.mat",
 }
 
 

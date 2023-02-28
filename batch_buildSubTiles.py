@@ -92,9 +92,11 @@ project_tileDefFile_dict = {
 }
 
 project_databaseFile_dict = {
-    'arcticdem': '/scratch/sciteam/GS_bazu/mosaic_data/strip_databases/ArcticDEMdatabase4_2m_v4_20210817.mat',
-    'rema':      '/mnt/pgc/data/projects/earthdem/strip_databases/REMAdatabase4_2m_v4.1_20220511_clip_v13e.mat',
-    'earthdem':  '/scratch/sciteam/GS_bazu/mosaic_data/strip_databases/EarthDEMdatabase4_2m_v4_20211014.mat',
+    'arcticdem': '/mnt/pgc/data/projects/earthdem/strip_databases/ArcticDEMdatabase4_2m_v4.1_20230120_before_2022jun15.mat',
+    # 'rema':      '/mnt/pgc/data/projects/earthdem/strip_databases/unity_databases/rema_v2/rema_strips_v13e.shp',  # REMA v2 original run tiles, used strips_v4
+    # 'rema':      '/mnt/pgc/data/projects/earthdem/strip_databases/REMAdatabase4_2m_v4.1_20220511_clip_v13e.mat',  # REMA v2 rerun params tiles (247 tiles), used strips_v4.1
+    'rema':      '/mnt/pgc/data/projects/earthdem/strip_databases/unity_databases/rema_v2.1/rema_strips.shp',  # REMA v2.1 re-QC, used strips_v4.1 (more strips)
+    'earthdem':  '/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4.1_20230120.mat',
 }
 project_waterTileDir_dict = {
     'arcticdem': '/mnt/pgc/data/projects/arcticdem/watermasks/',
@@ -108,7 +110,9 @@ project_stripsDirectory_dict = {
 }
 project_tileqcDir_dict = {
     'arcticdem': '',
-    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_qc/tile_qc_v13e_strips_v4.1',
+    # 'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_qc/tile_qc_v13e',  # REMA v2 original run tiles, used strips_v4
+    # 'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_qc/tile_qc_v13e_strips_v4.1',  # REMA v2 rerun params tiles (247 tiles), used strips_v4.1
+    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_qc/rema_v2.1_rema_strip_automosaic_qc_tile_v4_1',  # REMA v2.1 re-QC, used strips_v4.1 (more strips)
     'earthdem':  '',
 }
 project_tileParamList_dict = {
