@@ -347,8 +347,8 @@ out.stripName=strrep(out.stripName,'_meta','');
 
 stripNameChar=char(out.stripName{:});
 
-out.stripDate=datenum(stripNameChar(:,6:13),'yyyymmdd');
-out.stripDate=out.stripDate(:)';
+out.stripDate=cellfun(@(x) datenum(parsePairnameDatestring(x),'yyyymmdd'), out.stripName, 'uniformoutput',0);
+out.stripDate=cell2mat(out.stripDate);
 
 out.satID=cellstr(stripNameChar(:,1:4))';
 
