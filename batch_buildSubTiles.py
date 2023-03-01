@@ -182,6 +182,10 @@ def main():
                         help="tile parameters text file (default is {})".format(
                             ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_tileParamList_dict.items()])
                         ))
+    parser.add_argument("--datefilt-start", default='',
+                        help="filter strip database to (first image) acquisition date on or after this date in 'yyyymmdd' format")
+    parser.add_argument("--datefilt-end", default='',
+                        help="filter strip database to (first image) acquisition date on or before this date in 'yyyymmdd' format")
     
     parser.add_argument("--libdir", default=default_matlab_scriptdir,
                         help="directory of referenced Matlab functions (default={})".format(default_matlab_scriptdir))
@@ -344,6 +348,9 @@ def main():
         parser.error("--jobscript does not exist: {}".format(args.jobscript))
 
     ## Verify other arguments
+    for datefilt_arg in [args.datefilt_start, args.datefilt_end]:
+        if datefilt_arg != '' and not (datefilt_arg.isdigit() and len(datefilt_arg) == 8):
+            parser.error("--datefilt-start and/or --datefilt-end options must be date strings in 'yyyymmdd' format")
     if [args.pbs, args.slurm, args.swift].count(True) > 1:
         parser.error("--pbs --slurm --swift are mutually exclusive")
     if args.rerun and args.rerun_without_cleanup:
@@ -399,6 +406,8 @@ def main():
         'refDemFile': args.ref_dem,
         'tileqcDir': args.tileqc_dir,
         'tileParamListFile': args.tileparam_list,
+        'dateFiltStart': args.datefilt_start,
+        'dateFiltEnd': args.datefilt_end,
         'make2m': make2m_arg,
         'finfile': template_finfile,
         'logfile': template_logfile,

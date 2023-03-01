@@ -96,6 +96,8 @@ waterTileDir="$ARG_WATERTILEDIR"
 refDemFile="$ARG_REFDEMFILE"
 tileqcDir="$ARG_TILEQCDIR"
 tileParamListFile="$ARG_TILEPARAMLISTFILE"
+dateFiltStart="$ARG_DATEFILTSTART"
+dateFiltEnd="$ARG_DATEFILTEND"
 make2m="$ARG_MAKE2M"
 finfile="$ARG_FINFILE"
 logfile="$ARG_LOGFILE"
@@ -233,6 +235,7 @@ run_buildSubTiles(\
 '${stripDatabaseFile}','${stripsDirectory}',\
 '${waterTileDir}','${refDemFile}',\
 '${tileqcDir}','${tileParamListFile}',\
+'${dateFiltStart}','${dateFiltEnd}',\
 ${make2m})"
 
 
