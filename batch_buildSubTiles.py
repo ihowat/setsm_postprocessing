@@ -182,6 +182,10 @@ def main():
                         help="tile parameters text file (default is {})".format(
                             ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_tileParamList_dict.items()])
                         ))
+    parser.add_argument("--datefilt-start", default='',
+                        help="filter strip database to (first image) acquisition date on or after this date in 'yyyymmdd' format")
+    parser.add_argument("--datefilt-end", default='',
+                        help="filter strip database to (first image) acquisition date on or before this date in 'yyyymmdd' format")
     
     parser.add_argument("--libdir", default=default_matlab_scriptdir,
                         help="directory of referenced Matlab functions (default={})".format(default_matlab_scriptdir))
@@ -399,6 +403,8 @@ def main():
         'refDemFile': args.ref_dem,
         'tileqcDir': args.tileqc_dir,
         'tileParamListFile': args.tileparam_list,
+        'dateFiltStart': args.datefilt_start,
+        'dateFiltEnd': args.datefilt_end,
         'make2m': make2m_arg,
         'finfile': template_finfile,
         'logfile': template_logfile,
