@@ -348,6 +348,9 @@ def main():
         parser.error("--jobscript does not exist: {}".format(args.jobscript))
 
     ## Verify other arguments
+    for datefilt_arg in [args.datefilt_start, args.datefilt_end]:
+        if datefilt_arg != '' and not (datefilt_arg.isdigit() and len(datefilt_arg) == 8):
+            parser.error("--datefilt-start and/or --datefilt-end options must be date strings in 'yyyymmdd' format")
     if [args.pbs, args.slurm, args.swift].count(True) > 1:
         parser.error("--pbs --slurm --swift are mutually exclusive")
     if args.rerun and args.rerun_without_cleanup:
