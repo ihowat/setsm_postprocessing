@@ -28,6 +28,12 @@ domain_finalQcMask_dict = {
     # 'rema': "/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/final_qc_mask/rema_v2/rema_final_mask.mat",
     'rema': "/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/final_qc_mask/rema_v2.1/rema_final_mask_rev1.mat",
 }
+supertile_key = '<supertile>'
+domain_refDemPath_dict = {
+    'arcticdem': "/mnt/pgc/data/elev/dem/copernicus-dem-30m/mosaic/arctic_tiles_wgs84/<supertile>_10m_cop30_wgs84.tif",
+    'earthdem': None,
+    'rema': "/mnt/pgc/data/elev/dem/copernicus-dem-30m/mosaic/rema_tiles_wgs84/<supertile>_10m_cop30_wgs84.tif",
+}
 
 
 class RawTextArgumentDefaultsHelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter): pass
@@ -107,6 +113,30 @@ def get_arg_parser():
             Size of tile overlap buffer for exported rasters (meters),
             where the buffer is applied after cropping to nearest
             multiple of 100km/50km (10m/2m tiles) in x/y coordinate values.
+        """)
+    )
+    parser.add_argument(
+        '--ref-dem-path',
+        type=str,
+        default=None,
+        help=wrap_multiline_str(r"""
+            Path to reference DEM used for filtering with the --apply-ref-filter argument.
+            DEM should cover all input tiles, or include the '{}' substring in path to be
+            replaced with supertile name.
+            \n(default is {})
+        """.format(
+            supertile_key,
+            ', '.join(["{} if domain={}".format(val, dom) for dom, val in domain_refDemPath_dict.items()]
+        )))
+    )
+    parser.add_argument(
+        '--apply-ref-filter',
+        type=str,
+        choices=['true', 'false'],
+        default='false',
+        help=wrap_multiline_str("""
+            Apply Ian's slopeDifferenceFilter to tile DEM data in memory before tif export,
+            using the reference DEM from the --ref-dem-path argument.
         """)
     )
     parser.add_argument(
@@ -236,6 +266,8 @@ def main():
             "No projstr mapping for argument 'domain': {}".format(script_args.domain)
         )
 
+    if script_args.ref_dem_path is None:
+        script_args.ref_dem_path = domain_refDemPath_dict[script_args.domain]
     if script_args.final_qc_mask is None:
         script_args.final_qc_mask = domain_finalQcMask_dict[script_args.domain]
 
@@ -255,16 +287,16 @@ def main():
     }
 
     single_t2t_args = wrap_multiline_str(f"""
-        'resolution','{res_name}',
-        'outFormat','{script_args.tif_format.upper()}',
-        'outSet','{output_set_to_matscript_arg_dict[script_args.output_set]}',
-        'bufferMeters',{script_args.tile_buffer_meters}
+        , 'resolution','{res_name}'
+        , 'outFormat','{script_args.tif_format.upper()}'
+        , 'outSet','{output_set_to_matscript_arg_dict[script_args.output_set]}'
+        , 'bufferMeters',{script_args.tile_buffer_meters}
     """)
     if script_args.tile_nocrop:
         single_t2t_args += ", 'noCrop'"
     if script_args.add_sea_surface_height == 'true':
         single_t2t_args += ", 'addSeaSurface'"
-    if script_args.use_final_qc_mask and script_args.final_qc_mask is not None:
+    if script_args.use_final_qc_mask == 'true' and script_args.final_qc_mask is not None:
         single_t2t_args += ", 'maskFile','{}'".format(script_args.final_qc_mask)
 
     batch_t2t_args = single_t2t_args
@@ -281,7 +313,8 @@ def main():
 
     if not os.path.isdir(root_tiledir):
         arg_parser.error("Argument 'tiledir' is not an existing directory: {}".format(root_tiledir))
-
+    if script_args.apply_ref_filter == 'true' and script_args.ref_dem_path is None:
+        arg_parser.error("--ref-dem-path cannot be None when --apply-ref-filter=true")
     if script_args.tile_org == 'osu' and script_args.process_by == 'supertile-dir':
         arg_parser.error("--process-by must be set to to 'tile-file' when --tile-org='osu'")
 
@@ -317,6 +350,11 @@ def main():
                 arg_parser.error("Expected only UTM tile names (e.g. 'utm10n_01_01'), but got '{}'".format(supertile))
 
             tile_projstr = utm_tilename_prefix
+
+        supertile_args = ''
+        if script_args.apply_ref_filter == 'true':
+            ref_dem = script_args.ref_dem_path.replace(supertile_key, supertile)
+            supertile_args += ", 'applySlopeDiffFilt','{}'".format(ref_dem)
 
         run_tile_matlist = []
 
@@ -441,7 +479,7 @@ def main():
 
                 task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
                     {matlab_addpath}
-                    batch_tiles2tif_v4('{supertile_dir}', '{tile_projstr}', {batch_t2t_args});
+                    batch_tiles2tif_v4('{supertile_dir}', '{tile_projstr}'{batch_t2t_args}{supertile_args});
                 """))
 
             else:
@@ -451,7 +489,7 @@ def main():
                 if script_args.output_set == 'dem':
                     task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
                         {matlab_addpath}
-                        writeTileToTifv4('{tile_matfile}', '{tile_projstr}', {single_t2t_args});
+                        writeTileToTifv4('{tile_matfile}', '{tile_projstr}'{single_t2t_args}{supertile_args});
                     """))
                 elif script_args.output_set == 'meta':
                     task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
@@ -461,7 +499,7 @@ def main():
                 else:
                     task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
                         {matlab_addpath}
-                        writeTileToTifv4('{tile_matfile}', '{tile_projstr}', {single_t2t_args});
+                        writeTileToTifv4('{tile_matfile}', '{tile_projstr}'{single_t2t_args}{supertile_args});
                         tileMetav4('{tile_matfile}');
                     """))
 
