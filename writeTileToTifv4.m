@@ -77,7 +77,16 @@ end
 
 n = find(strcmpi('maskFile',varargin));
 if ~isempty(n)
-   mask=load(varargin{n+1});
+    mask = load(varargin{n+1});
+end
+
+n = find(strcmpi('applySlopeDiffFilt',varargin));
+if ~isempty(n)
+    applySlopeDiffFilt = true;
+    refDem = varargin{n+1};
+else
+    applySlopeDiffFilt = false;
+    refDem = [];
 end
 
 if strcmpi(projstr, 'polar stereo north')
@@ -205,6 +214,40 @@ if exist(outNameDem,'file') && ~overwrite
 else
     browse_keep_dem = false;
     z=m.z(ny(1):ny(end),nx(1):nx(end));
+
+    if applySlopeDiffFilt
+        % TODO: Apply filter to all components, not just DEM.
+        % -t    Also apply sea surface and final QC mask to all components.
+        fprintf('applying slope difference filter\n')
+        I_ref = readGeotiff(refDem,'mapinfoonly');
+        zr_dx = I_ref.x(2)-I_ref.x(1);
+        if zr_dx ~= dx
+            m_x0 = floor(x(1)  /zr_dx) * zr_dx;
+            m_x1 = ceil( x(end)/zr_dx) * zr_dx;
+            m_y0 = floor(y(end)/zr_dx) * zr_dx;
+            m_y1 = ceil( y(1)  /zr_dx) * zr_dx;
+            m_x = m_x0:zr_dx:m_x1;
+            m_y = m_y1:-zr_dx:m_y0;
+            z_at_zr_res = interp2(x,y(:),z,m_x,m_y(:),'*bilinear');
+        else
+            m_x0 = x(1);
+            m_x1 = x(end);
+            m_y0 = y(end);
+            m_y1 = y(1);
+            m_x = x;
+            m_y = y;
+            z_at_zr_res = z;
+        end
+        I_ref = getDataFromTileAndNeighbors(refDem,m_x0,m_x1,m_y0,m_y1,zr_dx,nan);
+        zr = I_ref.z;
+        M = slopeDifferenceFilter(m_x,m_y,z_at_zr_res,zr);
+        if zr_dx ~= dx
+            m_at_z_res = interp2(m_x,m_y(:),M,x,y(:),'*nearest');
+        else
+            m_at_z_res = M;
+        end
+        z(~m_at_z_res) = NaN;
+    end
     
     % add ocean surface (egm96 height above ellipsoid) if specified - requires mask array in matfile
     if addSeaSurface
