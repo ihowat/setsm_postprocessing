@@ -16,6 +16,8 @@ tileqcDir='';
 qcFile='';
 tileParamListFile='';
 returnMetaOnly=false;
+dateFiltStart='';
+dateFiltEnd='';
 
 % Set Paths and filenames
 if strcmpi(project,'rema')
@@ -146,6 +148,18 @@ if ~isempty(n)
     returnMetaOnly = varargin{n+1};
 end
 fprintf('returnMetaOnly = %d\n',returnMetaOnly)
+
+n = find(strcmpi(varargin,'dateFiltStart'));
+if ~isempty(n)
+    dateFiltStart = varargin{n+1};
+end
+fprintf('dateFiltStart = %s\n',dateFiltStart)
+
+n = find(strcmpi(varargin,'dateFiltEnd'));
+if ~isempty(n)
+    dateFiltEnd = varargin{n+1};
+end
+fprintf('dateFiltEnd = %s\n',dateFiltEnd)
 
 
 % attempt to set uninitialized qc file location
@@ -287,6 +301,8 @@ if endsWith(stripDatabaseFile,'.shp', 'IgnoreCase',true)
     meta.fileName = cellfun(@(w,x,y,z) [stripsDirectory,'/',w,'/strips_v4.1/2m/',regexprep(x,'^SETSM_s2s\d{3}_',''),'_',y,'/',x,'_seg',num2str(z),'_dem_10m.tif'],{S.region},{S.strip},{S.version},...
         {S.seg_id},'uniformoutput',0);
 
+    meta.strip = {S.strip};
+
     % ensure strip filename scheme is as expected
     if isempty(regexp(meta.fileName{1}, 'SETSM_s2s041'))
         error("Expected meta.fileName items to contain 'SETSM_s2s041' substring, but it is not present: %s", meta.fileName{1});
@@ -351,6 +367,36 @@ end
 if ~isfield(meta,'A')
     % get strip areas and alignment stats for quality selection
     meta.A = cellfun(@(x,y) polyarea(x,y), meta.x,meta.y);
+end
+
+
+if ~isempty(dateFiltStart) || ~isempty(dateFiltEnd)
+    fprintf('filtering strip overlap to records that match date filter\n')
+    fprintf('dateFiltStart = %s\n',dateFiltStart)
+    fprintf('dateFiltEnd = %s\n',dateFiltEnd)
+
+    if ~isfield(meta,'stripDate')
+        meta.stripDate=cellfun(@(x) datenum(parsePairnameDatestring(x),'yyyymmdd'), meta.strip, 'uniformoutput',0);
+        meta.stripDate=cell2mat(meta.stripDate);
+    end
+
+    n = [];
+    if ~isempty(dateFiltStart)
+        n_dateFiltStart = meta.stripDate >= datenum(dateFiltStart,'yyyymmdd');
+    end
+    if ~isempty(dateFiltEnd)
+        n_dateFiltEnd = meta.stripDate <= datenum(dateFiltEnd,'yyyymmdd');
+    end
+    if ~isempty(dateFiltStart) && ~isempty(dateFiltEnd)
+        n = n_dateFiltStart & n_dateFiltEnd;
+    elseif ~isempty(dateFiltStart)
+        n = n_dateFiltStart;
+    elseif ~isempty(dateFiltEnd)
+        n = n_dateFiltEnd;
+    end
+
+    fprintf('%d of %d overlapping strips match date filter, applying filter\n', nnz(n), length(meta.stripDate))
+    meta = structfun(@(x) x(n), meta, 'uniformoutput',0);
 end
 
 
