@@ -113,6 +113,25 @@ y=m.y;
 
 m_varlist = who(m);
 
+% ensure output projection setting is correct for PGC projects
+if ismember('version', m_varlist)
+    project_version = strsplit(m.version, '|');
+    project = project_version{1};
+    if strcmpi(project, 'arcticdem')
+        if ~strcmpi(projstr, 'polar stereo north')
+            error("'projstr' for ArcticDEM project should be 'polar stereo north', but was '%s'", projstr)
+        end
+    elseif strcmpi(project, 'rema')
+        if ~strcmpi(projstr, 'polar stereo south')
+            error("'projstr' for REMA project should be 'polar stereo south', but was '%s'", projstr)
+        end
+    elseif strcmpi(project, 'earthdem')
+        if ~startsWith(projstr, 'utm', 'IgnoreCase',true)
+            error("'projstr' for EarthDEM project should start with 'utm', but was '%s'", projstr)
+        end
+    end
+end
+
 if addSeaSurface && ~ismember('land', m_varlist)
     fprintf("'addSeaSurface' option requires 'land' variable exists in tile matfile: %s\n", tilef)
     warning('sea surface heights will not be applied')
