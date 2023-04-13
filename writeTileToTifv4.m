@@ -51,13 +51,13 @@ end
 
 dem_only = false;
 browse_only = false;
+dem_and_browse = false;
 if strcmpi(outSet, 'demOnly')
     dem_only = true;
 elseif strcmpi(outSet, 'browseOnly')
     browse_only = true;
 elseif strcmpi(outSet, 'demAndBrowse')
-    dem_only = true;
-    browse_only = true;
+    dem_and_browse = true;
 end
 
 if strcmpi(outFormat, 'COG')
@@ -209,10 +209,15 @@ outNameBrowse = strrep(outNameBase,'.mat','_browse.tif');
 
 fprintf('Writing DEM\n')
 if exist(outNameDem,'file') && ~overwrite
-    browse_keep_dem = true;
+    wrote_dem = false;
     fprintf('%s exists, skipping\n',outNameDem);
 else
-    browse_keep_dem = false;
+    wrote_dem = true;
+    % ensure browse is consistent with dem
+    if exist(outNameBrowse,'file')
+        delete(outNameBrowse);
+    end
+
     z=m.z(ny(1):ny(end),nx(1):nx(end));
 
     if applySlopeDiffFilt
@@ -295,21 +300,14 @@ else
     clear z
 end
 
-
-% ensure browse is consistent with dem
-if dem_only && ~browse_only
-    if exist(outNameBrowse,'file')
-        delete(outNameBrowse);
-        browse_only = true;
-    else
-        return;
-    end
+if dem_only
+    return;
 end
 
 
 flds=fields(m);
 
-if ~browse_only
+if ~(browse_only || dem_and_browse)
     if contains('z_mad',flds)
         fprintf('Writing mad\n')
         outNameTif = strrep(outNameBase,'.mat','_mad.tif');
@@ -472,21 +470,8 @@ else
         error('Non-zero exit status (%d) from gdaldem hillshade',status)
     end
 
-    if dx == 2
+    if ~strcmp(outNameTemp, outNameDem) || (browse_only && wrote_dem)
         fprintf('Removing temporary DEM output:\n%s\n', outNameTemp)
         delete(outNameTemp);
     end
 end
-
-
-if browse_only && ~(dem_only || browse_keep_dem)
-    fprintf('Removing temporary DEM output:\n%s\n', outNameDem)
-    delete(outNameDem)
-end
-
-
-
-
-
-
-
