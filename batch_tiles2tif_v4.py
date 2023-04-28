@@ -340,6 +340,13 @@ def main():
 
     for supertile in supertile_list:
 
+        if supertile.startswith('utm'):
+            if script_args.domain != 'earthdem':
+                arg_parser.error("domain should be 'earthdem' when 'utm*' prefix tilenames are provided")
+        else:
+            if script_args.domain == 'earthdem':
+                arg_parser.error("domain should NOT be 'earthdem' when tilenames do not have 'utm*' prefix")
+
         tile_projstr = global_projstr
         if tile_projstr is None:
             assert script_args.domain == 'earthdem'
