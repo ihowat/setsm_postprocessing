@@ -68,6 +68,30 @@ else
     tif_format = 'GTiff';
 end
 
+n = find(strcmpi('refDemFile',varargin));
+if ~isempty(n)
+    refDemFile = varargin{n+1};
+end
+
+n = find(strcmpi('waterMaskFile',varargin));
+if ~isempty(n)
+    waterMaskFile = varargin{n+1};
+end
+
+n = find(strcmpi('applySlopeDiffFilt',varargin));
+if ~isempty(n)
+    applySlopeDiffFilt = true;
+else
+    applySlopeDiffFilt = false;
+end
+
+n = find(strcmpi('applyWaterFill',varargin));
+if ~isempty(n)
+    applyWaterFill = true;
+else
+    applyWaterFill = false;
+end
+
 n = find(strcmpi('addSeaSurface',varargin));
 if ~isempty(n)
     addSeaSurface = true;
@@ -75,18 +99,9 @@ else
     addSeaSurface = false;
 end
 
-n = find(strcmpi('maskFile',varargin));
+n = find(strcmpi('qcMaskFile',varargin));
 if ~isempty(n)
-    mask = load(varargin{n+1});
-end
-
-n = find(strcmpi('applySlopeDiffFilt',varargin));
-if ~isempty(n)
-    applySlopeDiffFilt = true;
-    refDem = varargin{n+1};
-else
-    applySlopeDiffFilt = false;
-    refDem = [];
+    qcMaskFile = varargin{n+1};
 end
 
 if strcmpi(projstr, 'polar stereo north')
@@ -102,7 +117,7 @@ end
 if addSeaSurface && isempty(addSeaSurface_epsg)
     error("'addSeaSurface' option conversion to EPSG is not handled for 'projstr': '%s'", projstr)
 end
-    
+
 
 fprintf('Source: %s\n',tilef);
 
@@ -193,7 +208,7 @@ if length(nx) == 1
     end
 end
 if length(ny) == 1
-    % if boundary point is closer to y(1), assume buffer is 1:ny-1 
+    % if boundary point is closer to y(1), assume buffer is 1:ny-1
     if ny/length(y) < 0.5
         ny(2) = length(y)+1;
     else
@@ -216,15 +231,141 @@ if bufferMeters > 0
     ny(2) = min(ny(2)+buffer_px, length(y));
 end
 
-%crop coordinate vectors
-x=x(nx(1):nx(2));
-y=y(ny(1):ny(2));
+%% crop coordinate vectors
+%x=x(nx(1):nx(2));
+%y=y(ny(1):ny(2));
+% do cropping AFTER filter/mask application steps
 
 %get name without "_reg"
 outNameBase = strrep(tilef,'_reg.mat','.mat');
 outNameDem = strrep(outNameBase,'.mat','_dem.tif');
 outNameBrowse = strrep(outNameBase,'.mat','_browse.tif');
 
+
+z = [];
+slope_filter_mask = [];
+water_fill_mask = [];
+sea_surface_mask = [];
+qc_mask = [];
+
+if applySlopeDiffFilt
+    fprintf('applying slope difference filter\n')
+    if isempty(z)
+        z = m.z;
+    end
+    I_ref = readGeotiff(refDemFile,'mapinfoonly');
+    zr_dx = I_ref.x(2)-I_ref.x(1);
+    if zr_dx ~= dx
+        m_x0 = floor(x(1)  /zr_dx) * zr_dx;
+        m_x1 = ceil( x(end)/zr_dx) * zr_dx;
+        m_y0 = floor(y(end)/zr_dx) * zr_dx;
+        m_y1 = ceil( y(1)  /zr_dx) * zr_dx;
+        m_x = m_x0:zr_dx:m_x1;
+        m_y = m_y1:-zr_dx:m_y0;
+        z_at_zr_res = interp2(x,y(:),z,m_x,m_y(:),'*bilinear');
+    else
+        m_x0 = x(1);
+        m_x1 = x(end);
+        m_y0 = y(end);
+        m_y1 = y(1);
+        m_x = x;
+        m_y = y;
+        z_at_zr_res = z;
+    end
+    I_ref = getDataFromTileAndNeighbors(refDemFile,m_x0,m_x1,m_y0,m_y1,zr_dx,nan);
+    zr = I_ref.z;
+    M = slopeDifferenceFilter(m_x,m_y,z_at_zr_res,zr);
+    if zr_dx ~= dx
+        M_at_z_res = interp2(m_x,m_y(:),M,x,y(:),'*nearest');
+    else
+        M_at_z_res = M;
+    end
+    slope_filter_mask = ~M_at_z_res;
+    z(slope_filter_mask) = NaN;
+end
+
+z_mad = [];
+N = [];
+if applyWaterFill
+    fprintf('applying water fill\n')
+    if isempty(z)
+        z = m.z;
+    end
+    z_mad = m.z_mad;
+    N = m.N;
+    [z,water_fill_mask] = fillWater('',waterMaskFile,refDemFile,z,z_mad,N,x,y,fillWaterInterpMethod);
+end
+
+% add ocean surface (egm96 height above ellipsoid) if specified - requires mask array in matfile
+if addSeaSurface
+    fprintf('applying sea surface height\n')
+    if isempty(z)
+        z = m.z;
+    end
+    land = m.land;
+    [z,sea_surface_mask] = addSeaSurfaceHeight(x,y,z,land,'epsg',addSeaSurface_epsg,'adaptCoastline');
+end
+
+if exist('qcMaskFile','var')
+    fprintf('applying qc mask\n')
+    qc_mat = load(qcMaskFile);
+    if isempty(z)
+        z = m.z;
+    end
+    if isempty(qc_mask)
+        qc_mask = zeros(size(z),'logical');
+    end
+
+    tilePoly = polyshape([x(1,1);x(1,1);x(end);x(end);x(1)],...
+            [y(1);y(end);y(end);y(1);y(1)]);
+
+    n = find(overlaps(tilePoly,qc_mat.polyShapes));
+
+    for j = 1:length(n)
+        qc_x = qc_mat.polyShapes(n(j)).Vertices(:,1);
+        qc_y = qc_mat.polyShapes(n(j)).Vertices(:,2);
+        try
+            M = roipoly(x,y,z,qc_x,qc_y);
+            M = imdilate(M,ones(3));
+            if qc_mat.seaSurface(n(j))
+                [z,sea_poly_mask]=addSeaSurfaceHeight(x,y,z,~M,'epsg',addSeaSurface_epsg,'landIsQcMask');
+                qc_mask(sea_poly_mask) = 1;
+            else
+                z(M) = NaN;
+                qc_mask(M) = 1;
+            end
+        catch ME
+            qc_x
+            qc_y
+            rethrow(ME)
+        end
+    end
+end
+
+bad_data_or_filled_mask = [];
+masks_array = {
+    slope_filter_mask,
+    water_fill_mask,
+    sea_surface_mask,
+    qc_mask
+};
+if ~all(cellfun(@isempty, masks_array))
+    if isempty(z)
+        z = m.z;
+    end
+    bad_data_or_filled_mask = zeros(size(z), 'logical');
+    for i = 1:length(masks_array)
+        M = masks_array{i};
+        if ~isempty(M)
+            bad_data_or_filled_mask(M) = 1;
+        end
+    end
+end
+
+
+% crop coordinate vectors
+x=x(nx(1):nx(2));
+y=y(ny(1):ny(2));
 
 fprintf('Writing DEM\n')
 if exist(outNameDem,'file') && ~overwrite
@@ -237,75 +378,10 @@ else
         delete(outNameBrowse);
     end
 
-    z=m.z(ny(1):ny(end),nx(1):nx(end));
-
-    if applySlopeDiffFilt
-        % TODO: Apply filter to all components, not just DEM.
-        % -t    Also apply sea surface and final QC mask to all components.
-        fprintf('applying slope difference filter\n')
-        I_ref = readGeotiff(refDem,'mapinfoonly');
-        zr_dx = I_ref.x(2)-I_ref.x(1);
-        if zr_dx ~= dx
-            m_x0 = floor(x(1)  /zr_dx) * zr_dx;
-            m_x1 = ceil( x(end)/zr_dx) * zr_dx;
-            m_y0 = floor(y(end)/zr_dx) * zr_dx;
-            m_y1 = ceil( y(1)  /zr_dx) * zr_dx;
-            m_x = m_x0:zr_dx:m_x1;
-            m_y = m_y1:-zr_dx:m_y0;
-            z_at_zr_res = interp2(x,y(:),z,m_x,m_y(:),'*bilinear');
-        else
-            m_x0 = x(1);
-            m_x1 = x(end);
-            m_y0 = y(end);
-            m_y1 = y(1);
-            m_x = x;
-            m_y = y;
-            z_at_zr_res = z;
-        end
-        I_ref = getDataFromTileAndNeighbors(refDem,m_x0,m_x1,m_y0,m_y1,zr_dx,nan);
-        zr = I_ref.z;
-        M = slopeDifferenceFilter(m_x,m_y,z_at_zr_res,zr);
-        if zr_dx ~= dx
-            m_at_z_res = interp2(m_x,m_y(:),M,x,y(:),'*nearest');
-        else
-            m_at_z_res = M;
-        end
-        z(~m_at_z_res) = NaN;
+    if isempty(z)
+        z = m.z;
     end
-    
-    % add ocean surface (egm96 height above ellipsoid) if specified - requires mask array in matfile
-    if addSeaSurface
-        fprintf('applying sea surface height\n')
-        land=m.land(ny(1):ny(end),nx(1):nx(end));
-        z=addSeaSurfaceHeight(x,y,z,land,'epsg',addSeaSurface_epsg,'adaptCoastline');
-    end
-    
-    if exist('mask','var')
-        fprintf('applying mask\n')
-        
-        tilePoly = polyshape([x(1,1);x(1,1);x(end);x(end);x(1)],...
-                [y(1);y(end);y(end);y(1);y(1)]);
-                
-        n = find(overlaps(tilePoly,mask.polyShapes));
- 
-        for j = 1:length(n)
-            qc_x = mask.polyShapes(n(j)).Vertices(:,1);
-            qc_y = mask.polyShapes(n(j)).Vertices(:,2);
-            try
-                M = roipoly(x,y,z,qc_x,qc_y);
-                M =imdilate(M,ones(3));
-                if mask.seaSurface(n(j))
-                    z=addSeaSurfaceHeight(x,y,z,~M,'epsg',addSeaSurface_epsg,'landIsQcMask');
-                else
-                    z(M) = NaN;
-                end
-            catch ME
-                qc_x
-                qc_y
-                rethrow(ME)
-            end
-        end
-    end
+    z=z(ny(1):ny(end),nx(1):nx(end));
     
     % Round DEM values to 1/128 meters to greatly improve compression effectiveness
     z=round(z*128.0)/128.0;
@@ -333,7 +409,13 @@ if ~(browse_only || dem_and_browse)
         if exist(outNameTif,'file') && ~overwrite
             fprintf('%s exists, skipping\n',outNameTif);
         else
-            z_mad=m.z_mad(ny(1):ny(end),nx(1):nx(end));
+            if isempty(z_mad)
+                z_mad = m.z_mad;
+            end
+            if ~isempty(bad_data_or_filled_mask)
+                z_mad(bad_data_or_filled_mask) = NaN;
+            end
+            z_mad=z_mad(ny(1):ny(end),nx(1):nx(end));
             % Round MAD values to 1/128 meters to greatly improve compression effectiveness
             z_mad=round(z_mad*128.0)/128.0;
             z_mad(isnan(z_mad)) = -9999;
@@ -354,7 +436,13 @@ if ~(browse_only || dem_and_browse)
         if exist(outNameTif,'file') && ~overwrite
             fprintf('%s exists, skipping\n',outNameTif);
         else
-            N=m.N(ny(1):ny(end),nx(1):nx(end));
+            if isempty(N)
+                N = m.N;
+            end
+            if ~isempty(bad_data_or_filled_mask)
+                N(bad_data_or_filled_mask) = 0;
+            end
+            N=N(ny(1):ny(end),nx(1):nx(end));
             if outFormat_is_cog
                 co_predictor = 'NO';
 %                co_predictor = 'STANDARD';
@@ -374,7 +462,11 @@ if ~(browse_only || dem_and_browse)
         if exist(outNameTif,'file') && ~overwrite
             fprintf('%s exists, skipping\n',outNameTif);
         else
-            Nmt=m.Nmt(ny(1):ny(end),nx(1):nx(end));
+            Nmt=m.Nmt;
+            if ~isempty(bad_data_or_filled_mask)
+                Nmt(bad_data_or_filled_mask) = 0;
+            end
+            Nmt=Nmt(ny(1):ny(end),nx(1):nx(end));
             if outFormat_is_cog
                 co_predictor = 'NO';
 %                co_predictor = 'STANDARD';
@@ -394,7 +486,11 @@ if ~(browse_only || dem_and_browse)
         if exist(outNameTif,'file') && ~overwrite
             fprintf('%s exists, skipping\n',outNameTif);
         else
-            tmax=m.tmax(ny(1):ny(end),nx(1):nx(end));
+            tmax=m.tmax;
+            if ~isempty(bad_data_or_filled_mask)
+                tmax(bad_data_or_filled_mask) = 0;
+            end
+            tmax=tmax(ny(1):ny(end),nx(1):nx(end));
             if outFormat_is_cog
                 co_predictor = 'NO';
 %                co_predictor = 'STANDARD';
@@ -414,7 +510,11 @@ if ~(browse_only || dem_and_browse)
         if exist(outNameTif,'file') && ~overwrite
             fprintf('%s exists, skipping\n',outNameTif);
         else
-            tmin=m.tmin(ny(1):ny(end),nx(1):nx(end));
+            tmin=m.tmin;
+            if ~isempty(bad_data_or_filled_mask)
+                tmin(bad_data_or_filled_mask) = 0;
+            end
+            tmin=tmin(ny(1):ny(end),nx(1):nx(end));
             if outFormat_is_cog
                 co_predictor = 'NO';
 %                co_predictor = 'STANDARD';

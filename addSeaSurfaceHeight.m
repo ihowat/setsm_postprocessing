@@ -1,4 +1,4 @@
-function z=addSeaSurfaceHeight(x,y,z,land,varargin)
+function [z,seaSurfaceMask]=addSeaSurfaceHeight(x,y,z,land,varargin)
 % Add sea surface height above the ellipsoid where land mask is false
 %
 %  z=addSeaSurfaceHeight(x,y,z,land)
@@ -77,7 +77,7 @@ catch ME
     warning('Caught err in egm96geoid method')
     fprintf(1,'Err identifier: %s\n',ME.identifier);
     fprintf(1,'Err message:\n%s\n',ME.message);
-    fprintf(1, 'Trying geoidheight method instead\n')
+    fprintf(1,'Trying geoidheight method instead\n')
 
 %    ellipsoidHeight = geoidheight(LAT,LON,'egm96');
 %    ellipsoidHeight = reshape(ellipsoidHeight, size(LAT));
@@ -104,6 +104,7 @@ ellipsoidHeight = interp2(xi,yi(:),ellipsoidHeight,x,y(:),'*bilinear');
 % set heights below the sea level height to sea level height
 M = z < ellipsoidHeight;
 z(M) = ellipsoidHeight(M);
+seaSurfaceMask = M;
 
 
 if adaptCoastlineFlag
@@ -128,5 +129,6 @@ if adaptCoastlineFlag
 end
 
 z(~land) = ellipsoidHeight(~land);
+seaSurfaceMask(~land) = 1;
 
 fprintf('sea surface height applied\n')

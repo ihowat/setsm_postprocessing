@@ -1,4 +1,4 @@
-function z_filled = fillWater(tileMatFile,maskFile,refDemFile)
+function [z_filled,water_mask] = fillWater(tileMatFile,maskFile,refDemFile,varargin)
 %input args
 % tileMatFile
 % maskefile
@@ -13,11 +13,42 @@ function z_filled = fillWater(tileMatFile,maskFile,refDemFile)
 % retile
 % inpaint_nans
 
-% read tile DEM mat file
-m = matfile(tileMatFile);
+z = [];
+z_mad = [];
+N = [];
+x = [];
+y = [];
+if length(varargin) >= 1
+    z = varargin{1};
+end
+if length(varargin) >= 3
+    z_mad = varargin{2};
+    N = varargin{3};
+end
+if length(varargin) >= 5
+    x = varargin{4};
+    y = varargin{5};
+end
 
-x = m.x;
-y = m.y;
+if any(cellfun(@isempty,{z, z_mad, N, x, y}))
+    % read tile DEM mat file
+    m = matfile(tileMatFile);
+    if isempty(z)
+        z = m.z;
+    end
+    if isempty(z_mad)
+        z_mad = m.z_mad;
+    end
+    if isempty(N)
+        N = m.N;
+    end
+    if isempty(x)
+        x = m.x;
+    end
+    if isempty(y)
+        y = m.y;
+    end
+end
 
 % load mask
 C = readGeotiff(maskFile);
@@ -28,10 +59,6 @@ C.z(C.z == 0) = 80;
 % make sure mask is same grid as dem (just do nn interp)
 C = interp2(C.x,C.y(:),C.z,x,y(:),'*nearest');
 
-% load z_mad and N from matfile
-z_mad = m.z_mad;
-N = m.N;
-
 % define water mask using classification and MAD and repeat criteria
 M = ( C == 80 | C == 0 ) & ...
     ( (z_mad > 0.3 & N > 4 ) | N <= 4 );
@@ -40,8 +67,10 @@ M = ( C == 80 | C == 0 ) & ...
 M = ~bwareaopen(~M,5);
 
 % read z from matfile and apply water and no data (ocean) mask to z
-z_masked = m.z;
+z_masked = z;
 z_masked(M) = NaN;
+water_mask = M;
+clear z;
 
 % read reference DEM
 R = readGeotiff(refDemFile);
