@@ -34,6 +34,11 @@ domain_refDemPath_dict = {
     'earthdem': None,
     'rema': "/mnt/pgc/data/elev/dem/copernicus-dem-30m/mosaic/rema_tiles_wgs84/<supertile>_10m_cop30_wgs84.tif",
 }
+domain_waterMaskPath_dict = {
+    'arcticdem': "/mnt/pgc/data/thematic/landcover/esa_worldcover_2020/mosaics/arctic_tiles/<supertile>_10m_cover.tif",
+    'earthdem': "/mnt/pgc/data/projects/earthdem/watermasks/global_surface_water/tiled_watermasks/<supertile>_water.tif",
+    'rema': None,
+}
 
 
 class RawTextArgumentDefaultsHelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter): pass
@@ -136,6 +141,20 @@ def get_arg_parser():
         )))
     )
     parser.add_argument(
+        '--water-mask-path',
+        type=str,
+        default=None,
+        help=wrap_multiline_str(r"""
+            Path to watermask raster used for filling water bodies with the reference DEM
+            if the --apply-water-fill option is provided. The path should include the '{}'
+            substring to be replaced with supertile name.
+            \n(default is {})
+        """.format(
+            supertile_key,
+            ', '.join(["{} if domain={}".format(val, dom) for dom, val in domain_refDemPath_dict.items()]
+        )))
+    )
+    parser.add_argument(
         '--apply-ref-filter',
         type=str,
         choices=['true', 'false'],
@@ -143,6 +162,17 @@ def get_arg_parser():
         help=wrap_multiline_str("""
             Apply Ian's slopeDifferenceFilter to tile DEM data in memory before tif export,
             using the reference DEM from the --ref-dem-path argument.
+        """)
+    )
+    parser.add_argument(
+        '--apply-water-fill',
+        type=str,
+        choices=['true', 'false'],
+        default='false',
+        help=wrap_multiline_str("""
+            Apply Ian's fillWater to tile DEM data in memory before tif export,
+            using the reference DEM and watermask raster from the --ref-dem-path
+            and --water-mask-path arguments.
         """)
     )
     parser.add_argument(
@@ -282,6 +312,8 @@ def main():
 
     if script_args.ref_dem_path is None:
         script_args.ref_dem_path = domain_refDemPath_dict[script_args.domain]
+    if script_args.water_mask_path is None:
+        script_args.water_mask_path = domain_waterMaskPath_dict[script_args.domain]
     if script_args.final_qc_mask is None:
         script_args.final_qc_mask = domain_finalQcMask_dict[script_args.domain]
 
@@ -314,7 +346,7 @@ def main():
     if script_args.add_sea_surface_height == 'true':
         single_t2t_args += ", 'addSeaSurface'"
     if script_args.use_final_qc_mask == 'true' and script_args.final_qc_mask is not None:
-        single_t2t_args += ", 'maskFile','{}'".format(script_args.final_qc_mask)
+        single_t2t_args += ", 'qcMaskFile','{}'".format(script_args.final_qc_mask)
 
     batch_t2t_args = single_t2t_args
     if script_args.output_set == 'meta':
@@ -330,6 +362,8 @@ def main():
         arg_parser.error("Argument 'tiledir' is not an existing directory: {}".format(root_tiledir))
     if script_args.apply_ref_filter == 'true' and script_args.ref_dem_path is None:
         arg_parser.error("--ref-dem-path cannot be None when --apply-ref-filter=true")
+    if script_args.apply_water_fill == 'true' and (script_args.ref_dem_path is None or script_args.water_mask_path is None):
+        arg_parser.error("--ref-dem-path and --water-mask-path cannot be None when --fill-water=true")
     if script_args.tile_org == 'osu' and script_args.process_by == 'supertile-dir':
         arg_parser.error("--process-by must be set to to 'tile-file' when --tile-org='osu'")
 
@@ -374,9 +408,16 @@ def main():
             tile_projstr = utm_tilename_prefix
 
         supertile_args = ''
+        if script_args.ref_dem_path is not None:
+            ref_dem_file = script_args.ref_dem_path.replace(supertile_key, supertile)
+            supertile_args += ", 'refDemFile','{}'".format(ref_dem_file)
+        if script_args.water_mask_path is not None:
+            water_mask_file = script_args.water_mask_path.replace(supertile_key, supertile)
+            supertile_args += ", 'waterMaskFile','{}'".format(water_mask_file)
         if script_args.apply_ref_filter == 'true':
-            ref_dem = script_args.ref_dem_path.replace(supertile_key, supertile)
-            supertile_args += ", 'applySlopeDiffFilt','{}'".format(ref_dem)
+            supertile_args += ", 'applySlopeDiffFilt'"
+        if script_args.apply_water_fill == 'true':
+            supertile_args += ", 'applyWaterFill'"
 
         run_tile_matlist = []
 
