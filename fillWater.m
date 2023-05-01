@@ -66,14 +66,8 @@ M = ( C == 80 | C == 0 ) & ...
     ( (z_mad > 0.3 & N > 4 ) | N <= 4 | isnan(z) );
 
 % remove small non water clusters
-M = ~bwareaopen(~M,5);
-
-% apply water and no data (ocean) mask to z
-z_masked = z;
-z_masked(M) = NaN;
-z_nonwater_nans = isnan(z) & ~M;
-water_mask = M;
-clear z;
+cluster_size_px = double(5 * (10.0 / dx) ^ 2);
+M = ~bwareaopen(~M,cluster_size_px);
 
 % read reference DEM
 R = readGeotiff(refDemFile);
@@ -82,6 +76,29 @@ R.z(R.z < -600) = NaN;
 % make sure reference DEM is same grid as dem
 R = interp2(R.x,R.y(:),R.z,x,y(:),'*bilinear');
 
+% keep z data that is close enough to the mean difference with reference DEM
+dz = z - R;
+sample_buff_px = int32(1000 / dx);
+keep_area_px = int32(50 / dx);
+keep_thresh_meters = 2.0;
+coastal_diff_zone = xor(M, imdilate(M, ones(sample_buff_px * 2)));
+coastal_diff_vals = rmoutliers(dz(coastal_diff_zone & ~isnan(dz)));
+coastal_diff_mean = mean(coastal_diff_vals);
+%coastal_diff_mean = 0;
+%coastal_diff_stdev = std(coastal_diff_vals);
+dz_keep = dz > (coastal_diff_mean - keep_thresh_meters) & dz < (coastal_diff_mean + keep_thresh_meters);
+dz_keep = imdilate(imerode(dz_keep, ones(keep_area_px)), ones(keep_area_px));
+M(dz_keep) = 0;
+dz_full = dz;
+clear dz;
+
+% apply water and no data (ocean) mask to z
+z_masked = z;
+z_masked(M) = NaN;
+z_nonwater_nans = isnan(z) & ~M;
+water_mask = M;
+clear z;
+
 % Fill the DEM with reference DEM using the Delta method
 
 % difference map between z_masked and reference DEM with NaNs in voids
@@ -89,10 +106,7 @@ dz = z_masked - R;
 
 % force water fill to meet reference surface at a set distance from land
 interp_buff_px = int32(500 / dx);
-sample_buff_px = int32(1000 / dx);
 force_ref_zone = ~imdilate(~M, ones(interp_buff_px * 2));
-coastal_diff_zone = xor(M, imdilate(M, ones(sample_buff_px * 2)));
-coastal_diff_mean = mean(rmoutliers(dz(coastal_diff_zone & ~isnan(dz))));
 dz(force_ref_zone) = coastal_diff_mean;
 fprintf('cop30 fill height adjustment (meters): %g\n', coastal_diff_mean);
 
