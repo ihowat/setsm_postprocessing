@@ -61,13 +61,15 @@ C.z(C.z == 0) = 80;
 % make sure mask is same grid as dem (just do nn interp)
 C = interp2(C.x,C.y(:),C.z,x,y(:),'*nearest');
 
+cluster_size_px = double(int32(500 / dx^2));
+
 % define water mask using classification and MAD and repeat criteria
-M = ( C == 80 | C == 0 ) & ...
-    ( (z_mad > 0.3 & N > 4 ) | N <= 4 | isnan(z) );
+M = ( C == 80 | C == 0 );
+M = bwareaopen(M, cluster_size_px);
+M = M & ( (z_mad > 0.3 & N > 4 ) | N <= 4 | isnan(z) );
 
 % remove small non water clusters
-cluster_size_px = double(5 * (10.0 / dx) ^ 2);
-M = ~bwareaopen(~M,cluster_size_px);
+M = ~bwareaopen(~M, cluster_size_px);
 
 % read reference DEM
 R = readGeotiff(refDemFile);
@@ -76,21 +78,31 @@ R.z(R.z < -600) = NaN;
 % make sure reference DEM is same grid as dem
 R = interp2(R.x,R.y(:),R.z,x,y(:),'*bilinear');
 
-% keep z data that is close enough to the mean difference with reference DEM
 dz = z - R;
-sample_buff_px = int32(1000 / dx);
-keep_area_px = int32(50 / dx);
-keep_thresh_meters = 2.0;
-coastal_diff_zone = xor(M, imdilate(M, ones(sample_buff_px * 2)));
-coastal_diff_vals = rmoutliers(dz(coastal_diff_zone & ~isnan(dz)));
-coastal_diff_mean = mean(coastal_diff_vals);
-%coastal_diff_mean = 0;
-%coastal_diff_stdev = std(coastal_diff_vals);
-dz_keep = dz > (coastal_diff_mean - keep_thresh_meters) & dz < (coastal_diff_mean + keep_thresh_meters);
-dz_keep = imdilate(imerode(dz_keep, ones(keep_area_px)), ones(keep_area_px));
-M(dz_keep) = 0;
-dz_full = dz;
-clear dz;
+
+% Define a buffer zone near the edge of water in the water mask.
+water_mask_uncertain_px = int32(100 / dx);
+water_mask_uncertain_zone = xor(imdilate(M, ones(water_mask_uncertain_px * 2)), imerode(M, ones(water_mask_uncertain_px * 2)));
+
+% Get the height of water from the reference surface
+% (copernicus generally has good level water surfaces)
+% by sampling the water height a short distance out from land
+% and extending that sample back to shore.
+get_water_height_erode_px = int32(500 / dx);
+get_water_height_mask = imerode(M, ones(get_water_height_erode_px * 2));
+water_height = nan(size(M));
+water_height(get_water_height_mask) = R(get_water_height_mask);
+water_height = movmean(movmean(water_height, (get_water_height_erode_px+water_mask_uncertain_px+1)*2, 1, 'omitnan'), (get_water_height_erode_px+water_mask_uncertain_px+1)*2, 2, 'omitnan');
+
+% Add clusters of land to the water mask where the land is within
+% a short distance from the water's edge and the z height is below
+% both water level and the reference surface.
+fill_water_minarea_px = double(int32(3500 / dx^2));
+fill_water_fillhole_px = double(int32(500 / dx^2));
+fill_water = M | (water_mask_uncertain_zone & z < water_height & z < R);
+fill_water = bwareaopen(fill_water, fill_water_minarea_px);
+fill_water = fill_water | (water_mask_uncertain_zone & ~bwareaopen(~fill_water, fill_water_fillhole_px));
+M(water_mask_uncertain_zone & fill_water) = 1;
 
 % apply water and no data (ocean) mask to z
 z_masked = z;
@@ -104,11 +116,10 @@ clear z;
 % difference map between z_masked and reference DEM with NaNs in voids
 dz = z_masked - R;
 
-% force water fill to meet reference surface at a set distance from land
-interp_buff_px = int32(500 / dx);
+% Force water fill to meet reference surface at a set distance from land.
+interp_buff_px = int32(50 / dx);
 force_ref_zone = ~imdilate(~M, ones(interp_buff_px * 2));
-dz(force_ref_zone) = coastal_diff_mean;
-fprintf('cop30 fill height adjustment (meters): %g\n', coastal_diff_mean);
+dz(force_ref_zone) = 0;
 
 % interpolate differences across void, breaking dz into tiles to speed up
 A = tile(dz,5,5,200);
@@ -122,7 +133,7 @@ i=1;
 for i=1:numel(A)
     fprintf('%d of %d\n',i, numel(A));
     if all(M_tiles{i}(:))  % all water, fill with mean difference from reference
-        B{i} = coastal_diff_mean * ones(size(A{i}),'single');
+        B{i} = 0 * ones(size(A{i}),'single');
     elseif ~any(M_tiles{i}(:))  % no water, skip
         B{i} = A{i};
     else  % mix of water and no water, interpolate
@@ -137,5 +148,13 @@ dz_filled = retile(B,200,'linear');
 % calculate filled DEM
 z_filled = R + dz_filled;
 
-% set back to nan all no data that was outside water mask
+% Flatten to water level divets in the filled DEM caused by interpolation.
+flatten_water_zone = xor(M, imerode(M, ones(water_mask_uncertain_px * 2)));
+underwater = flatten_water_zone & z_filled < water_height;
+z_filled(underwater) = water_height(underwater);
+M(underwater) = 1;
+
+% Set back to NaN all original NoData that was outside water mask
+% at the beginning of this routine (includes data removed by slope filter).
+z_nonwater_nans = z_nonwater_nans & ~M;
 z_filled(z_nonwater_nans) = NaN;
