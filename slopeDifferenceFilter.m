@@ -32,10 +32,10 @@ F(zslopeSDF < 0.02 & zrslopeSDF < 0.02) = 0;
 
 if ~isempty(water_mask)
     % Define a buffer zone near the edge of water in the water mask.
-    water_edge_px = int32(250 / dx);
+    water_edge_px = ceil(250 / dx);
     water_edge_zone = xor(...
-        imdilate(water_mask, ones(water_edge_px * 2)),...
-        imerode( water_mask, ones(water_edge_px * 2))...
+        imdilate(water_mask, circleMaskSE(water_edge_px)),...
+        imerode( water_mask, circleMaskSE(water_edge_px))...
     );
 
     % Don't use fracional slope stdev as an indicator close to the
@@ -73,7 +73,7 @@ M = imopen(M,ones(kernel));
 if ~isempty(water_mask)
     % Don't allow removal of small chunks of ones ("good" data)
     % where those chunks are in small islands (as determined from water mask).
-    islands = imdilate(xor(water_mask, ~bwareaopen(~water_mask, 2000)), ones(20));
+    islands = imdilate(xor(water_mask, ~bwareaopen(~water_mask, 2000)), circleMaskSE(10));
     remove_good_data_chunks = xor(M, bwareaopen(M,1000));
     remove_good_data_chunks(islands) = 0;
     M(remove_good_data_chunks) = 0;
@@ -90,7 +90,7 @@ if ~isempty(water_mask)
     M_old = M;
     M_new = M;
     M_new(water_edge_zone) = 0;
-    dilate_px = int32(700 / dx);
-    M_new = M_old & imdilate(M_new & ~water_mask, ones(dilate_px * 2));
+    dilate_px = ceil(700 / dx);
+    M_new = M_old & imdilate(M_new & ~water_mask, circleMaskSE(dilate_px));
     M = ~M_new;
 end
