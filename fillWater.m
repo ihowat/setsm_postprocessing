@@ -117,7 +117,7 @@ water_mask_uncertain_zone = xor(imdilate(M, ones(water_mask_uncertain_px*2+1)), 
 % and extending that sample back to shore.
 get_water_height_dist_from_shore_px = ceil(150 / dx);
 avg_water_height_interp_dist_px = ceil(1000/dx);
-get_water_height_mask = imerode(M, ones(get_water_height_dist_from_shore_px*2+1));
+get_water_height_mask = imerode(M, circleMaskSE(get_water_height_dist_from_shore_px));
 water_height = nan(size(M));
 water_height(get_water_height_mask) = R(get_water_height_mask);
 water_height = movmean(movmean(water_height, avg_water_height_interp_dist_px*2+1, 1, 'omitnan'), avg_water_height_interp_dist_px*2+1, 2, 'omitnan');
@@ -156,9 +156,9 @@ interp_short_px = ceil(50 / dx);
 interp_long_px = ceil(1000 / dx);
 long_interp_saved_z_dist_from_shore_px = ceil(100 / dx);
 
-force_ref_zone = ~imdilate(~M, ones(interp_short_px*2+1));
-long_interp_area = saved_good_z_over_water & imerode(M0, ones(long_interp_saved_z_dist_from_shore_px*2+1));
-long_interp_area = imdilate(long_interp_area, ones(interp_long_px*2+1));
+force_ref_zone = ~imdilate(~M, circleMaskSE(interp_short_px));
+long_interp_area = saved_good_z_over_water & imerode(M0, circleMaskSE(long_interp_saved_z_dist_from_shore_px));
+long_interp_area = imdilate(long_interp_area, circleMaskSE(interp_long_px));
 
 shoreline_area = xor(M, imdilate(M, ones(max(3, floor(10/dx)*2+1))));
 dz_shoreline = nan(size(M));
@@ -176,7 +176,7 @@ dz_interp_short_keep = dz_interp_short_keep | dz_interp_short;
 
 clear shoreline_area dz_shoreline dz_interp_short;
 
-long_interp_area(imdilate(dz_interp_short_keep, ones((interp_short_px*2)*2+1))) = 0;
+long_interp_area(imdilate(dz_interp_short_keep, circleMaskSE(interp_short_px*2))) = 0;
 force_ref_zone(long_interp_area) = 0;
 dz(force_ref_zone) = 0;
 
@@ -204,7 +204,7 @@ for i=1:numel(A)
     else  % mix of water and no water, interpolate
 %        B{i} = single(inpaint_nans(double(A{i}),2));
         water_border = ~imerode(ones(size(M_tiles{i})), ones(7)) & M_tiles{i};
-        water_border(imdilate(~M_tiles{i}, ones(floor(300/dx)*2+1))) = 0;
+        water_border(imdilate(~M_tiles{i}, circleMaskSE(floor(300/dx)))) = 0;
         Ai = A{i};
         Ai(water_border) = 0;
         B{i} = single(inpaint_nans(double(Ai),fillWaterInterpMethod));
