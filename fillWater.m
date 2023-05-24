@@ -117,8 +117,8 @@ water_mask_uncertain_zone = xor(imdilate(M, ones(water_mask_uncertain_px*2+1)), 
 % and extending that sample back to shore.
 get_water_height_dist_from_shore_px = ceil(150 / dx);
 avg_water_height_interp_dist_px = ceil(1000/dx);
-get_water_height_mask = imerode(M, circleMaskSE(get_water_height_dist_from_shore_px));
-water_height = nan(size(M));
+get_water_height_mask = imerode(M0, circleMaskSE(get_water_height_dist_from_shore_px));
+water_height = nan(size(M0));
 water_height(get_water_height_mask) = R(get_water_height_mask);
 water_height = movmean(movmean(water_height, avg_water_height_interp_dist_px*2+1, 1, 'omitnan'), avg_water_height_interp_dist_px*2+1, 2, 'omitnan');
 water_height(get_water_height_mask) = R(get_water_height_mask);
