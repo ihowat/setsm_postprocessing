@@ -152,7 +152,7 @@ dz = z_masked - R;
 clear z_masked;
 
 % Force water fill to meet reference surface at a set distance from land.
-interp_short_px = ceil(50 / dx);
+interp_short_px = ceil(30 / dx);
 interp_long_px = ceil(1000 / dx);
 long_interp_saved_z_dist_from_shore_px = ceil(100 / dx);
 
@@ -163,14 +163,14 @@ long_interp_area = imdilate(long_interp_area, circleMaskSE(interp_long_px));
 shoreline_area = xor(M, imdilate(M, ones(max(3, floor(10/dx)*2+1))));
 dz_shoreline = nan(size(M));
 dz_shoreline(shoreline_area) = dz(shoreline_area);
-dz_interp_short = abs(dz_shoreline) >= 15.0;
+dz_interp_short = abs(dz_shoreline) >= 8.0;
 dz_interp_short = bwareaopen(dz_interp_short, floor(60 / dx^2));
 dz_interp_short_keep = dz_interp_short;
 
 shoreline_area = xor(M, imdilate(M, ones(3)));
 dz_shoreline = nan(size(M));
 dz_shoreline(shoreline_area) = dz(shoreline_area);
-dz_interp_short = abs(dz_shoreline) >= 15.0;
+dz_interp_short = abs(dz_shoreline) >= 8.0;
 dz_interp_short = bwareaopen(dz_interp_short, 3);
 dz_interp_short_keep = dz_interp_short_keep | dz_interp_short;
 
