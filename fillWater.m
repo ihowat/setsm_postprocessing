@@ -232,4 +232,27 @@ z_nonwater_nans = z_nonwater_nans & ~M;
 
 % Set back to NaN all original NoData that was outside water mask
 % at the beginning of this routine (includes data removed by slope filter).
-z_filled(z_nonwater_nans) = NaN;
+z_filled(z_nonwater_nans) = nan;
+
+% Remove blobs of filled water that are surrounded by original NoData.
+waterblobs_in_nodata = zeros(size(M), 'logical');
+kept_z_or_waterblobs = ~z_nonwater_nans;
+CC_1 = bwconncomp(kept_z_or_waterblobs);
+CC_M = bwconncomp(M);
+mapM = containers.Map(cellfun(@(x) x(1), CC_M.PixelIdxList), 1:CC_M.NumObjects);
+blob_idxlist = [];
+for i = 1:CC_1.NumObjects
+    blob_idxlist = CC_1.PixelIdxList{i};
+    blob_startidx = blob_idxlist(1);
+    if isKey(mapM, blob_startidx) && isequal(blob_idxlist, CC_M.PixelIdxList{mapM(blob_startidx)})
+        waterblobs_in_nodata(blob_idxlist) = 1;
+    end
+end
+clear kept_z_or_waterblobs z_nonwater_nans;
+clear CC_1 CC_M mapM blob_idxlist;
+
+water_mask = M;
+clear M M0;
+
+z_filled(waterblobs_in_nodata) = nan;
+water_mask(waterblobs_in_nodata) = 0;
