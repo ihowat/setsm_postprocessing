@@ -1,4 +1,4 @@
-function [z_filled,water_mask] = fillWater(tileMatFile,maskFile,refDemFile,varargin)
+function [z_filled,water_mask,dz_filled,water_height,M0_waterblobs_forced] = fillWater(tileMatFile,maskFile,refDemFile,varargin)
 %input args
 % tileMatFile
 % maskefile
@@ -12,6 +12,10 @@ function [z_filled,water_mask] = fillWater(tileMatFile,maskFile,refDemFile,varar
 % tile
 % retile
 % inpaint_nans
+
+M0_waterblobs_forced = [];
+
+logMessage('Loading data at beginning of fillWater');
 
 z = [];
 z_mad = [];
@@ -215,13 +219,14 @@ clear B;
 
 % calculate filled DEM
 z_filled = R + dz_filled;
-clear dz_filled;
+%clear dz_filled;
 
 % Flatten to water level divets in the filled DEM caused by interpolation.
 underwater = M & z_filled < water_height;
 z_filled(underwater) = water_height(underwater);
 M(underwater) = 1;
-clear underwater water_height;
+%clear underwater water_height;
+clear underwater;
 
 z_nonwater_nans = z_nonwater_nans & ~M;
 
