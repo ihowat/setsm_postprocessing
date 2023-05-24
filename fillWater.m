@@ -73,7 +73,7 @@ cluster_size_px = ceil(500 / dx^2);
 
 % define water mask using classification and MAD and repeat criteria
 M0 = ( C == 80 | C == 0 );
-M = M0 & ( (z_mad > 0.3 & N > 4 ) | N <= 4 | isnan(z) ) & slope_filter_mask;
+M = M0 & ( (z_mad > 0.3 & N > 4 ) | N <= 4 | isnan(z) );
 M0 = bwareaopen(M0, cluster_size_px);
 M = bwareaopen(M, cluster_size_px);
 
@@ -133,7 +133,6 @@ interp_short_px = ceil(50 / dx);
 interp_long_px = ceil(1000 / dx);
 
 force_ref_zone = ~imdilate(~M, ones(interp_short_px*2+1));
-%long_interp_area = saved_good_z_over_water & imerode(M0, ones(int32(100/dx)*2+1)) & ~slope_filter_mask;
 long_interp_area = saved_good_z_over_water & imerode(M0, ones(int32(100/dx)*2+1));
 long_interp_area = imdilate(long_interp_area, ones(interp_long_px*2+1));
 
