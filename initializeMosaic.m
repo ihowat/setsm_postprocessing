@@ -304,8 +304,8 @@ if endsWith(stripDatabaseFile,'.shp', 'IgnoreCase',true)
     meta.strip = {S.strip};
 
     % ensure strip filename scheme is as expected
-    if isempty(regexp(meta.fileName{1}, 'SETSM_s2s041'))
-        error("Expected meta.fileName items to contain 'SETSM_s2s041' substring, but it is not present: %s", meta.fileName{1});
+    if isempty(regexp(meta.fileName{1}, 'SETSM_s2s\d{3}'))
+        error("Expected meta.fileName items to contain 'SETSM_s2sXXX' substring, but it is not present: %s", meta.fileName{1});
     end
 
     % convert shapefile vertices to cells in meta struct, removing nans
@@ -324,8 +324,8 @@ elseif endsWith(stripDatabaseFile,'.mat', 'IgnoreCase',true)
     meta=load(stripDatabaseFile);
 
     % ensure strip filename scheme is as expected
-    if isempty(regexp(meta.fileName{1}, 'SETSM_s2s041'))
-        error("Expected meta.fileName items to contain 'SETSM_s2s041' substring, but it is not present: %s", meta.fileName{1});
+    if isempty(regexp(meta.fileName{1}, 'SETSM_s2s\d{3}'))
+        error("Expected meta.fileName items to contain 'SETSM_s2sXXX' substring, but it is not present: %s", meta.fileName{1});
     end
 
     % trim strip database to only strips with a projection matching the tile
@@ -407,8 +407,8 @@ if exist(qcFile,'file') == 2
     qc = load(qcFile);
 
     % ensure qc stripID scheme is as expected
-    if isempty(regexp(qc.stripID{1}, 'SETSM_s2s041'))
-        error("Expected qc.stripID items to contain 'SETSM_s2s041' substring, but it is not present: %s", qc.stripID{1});
+    if isempty(regexp(qc.stripID{1}, 'SETSM_s2s\d{3}'))
+        error("Expected qc.stripID items to contain 'SETSM_s2sXXX' substring, but it is not present: %s", qc.stripID{1});
     end
     
     A = cellfun( @(x,y) [x,'_',num2str(y)], qc.stripID, num2cell(qc.seg), 'uniformoutput',0);
@@ -452,12 +452,12 @@ end
 
 
 function strip_seg_id = stripFileNameToSegID(fileName)
-pname_seg_re = '^.+/(?<pairname>SETSM_s2s041_[A-Z0-9]{4}_[0-9]{8}_[A-F0-9]{16}_[A-F0-9]{16})_[^/]+/[^/]+_seg(?<seg_id>\d+)_[^/]+$';
+pname_seg_re = '(?<prefix>SETSM_s2s\d{3}_)?(?<pairname>[A-Z0-9]{4}_[0-9]{8}_[A-F0-9]{16}_[A-F0-9]{16})[^/]*_seg(?<seg_id>\d+)[^/]*$';
 [tokens, match_idx] = regexp(fileName, pname_seg_re, 'names');
 if isempty(match_idx)
-    error("Cannot parse strip fileName parts with regex '%s' from input fileName string: %s", tilename_re, tilename);
+    error("Cannot parse strip fileName parts with regex '%s' from input fileName string: %s", pname_seg_re, tilename);
 end
-strip_seg_id = [tokens.pairname,'_',tokens.seg_id];
+strip_seg_id = [tokens.prefix,tokens.pairname,'_',tokens.seg_id];
 
 
 
