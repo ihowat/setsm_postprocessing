@@ -9,8 +9,8 @@ end
 
 res=2;
 %dbase_in =[homeDir,'/data4/REMA/polarDEMdatabase_',num2str(res),'m.mat'];
-dbase_in='';
-dbase_out='/mnt/pgc/data/projects/earthdem/strip_databases/ArcticDEMdatabase4_2m_v4.1_20220511_north.mat';
+dbase_in ='';
+dbase_out='/mnt/pgc/data/projects/earthdem/strip_databases/ArcticDEMdatabase4_2m_v4.1_20230425_north.mat';
 
 stripFilePrefix='SETSM_s2s041_';
 %stripOrg='strips_v4';
@@ -121,7 +121,7 @@ for i=1:length(regionDirs)
         is_reprojected = true;
     end
 
-    if exist(regionDir,'dir')
+    if exist(regionDir,'dir') == 7
 
 %        if exist('out0','var')
 %            [~,IA] = intersect(metaFiles, out0.fileName);

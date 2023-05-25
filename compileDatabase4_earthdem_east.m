@@ -116,7 +116,7 @@ for i=1:length(regionDirs)
         is_reprojected = true;
     end
 
-    if exist(regionDir,'dir')
+    if exist(regionDir,'dir') == 7
 
 %        if exist('out0','var')
 %            [~,IA] = intersect(metaFiles, out0.fileName);
