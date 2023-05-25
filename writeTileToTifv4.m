@@ -883,8 +883,13 @@ else
         error('Non-zero exit status (%d) from gdaldem hillshade',status)
     end
 
-    if ~strcmp(outNameTemp, outNameDem) || (browse_only && wrote_dem)
+    if ~strcmp(outNameTemp, outNameDem)
         fprintf('Removing temporary DEM output:\n%s\n', outNameTemp)
         delete(outNameTemp);
+    end
+
+    if (browse_only && wrote_dem) && exist(outNameDem,'file') == 2
+        fprintf('Removing temporary DEM output:\n%s\n', outNameDem)
+        delete(outNameDem);
     end
 end
