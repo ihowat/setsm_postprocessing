@@ -110,6 +110,13 @@ else
     qcMaskFile = [];
 end
 
+n = find(strcmpi('fillWaterInterpMethod',varargin));
+if ~isempty(n)
+    fillWaterInterpMethod = varargin{n+1};
+else
+    fillWaterInterpMethod = 2;
+end
+
 if strcmpi(projstr, 'polar stereo north')
     addSeaSurface_epsg = 3413;
 elseif strcmpi(projstr, 'polar stereo south')
@@ -317,14 +324,17 @@ end
 
 z_mad = [];
 N = [];
+water_fill_dz = [];
+water_height = [];
+M0_waterblobs_forced = [];
 if applyWaterFill
     fprintf('applying water fill\n')
     if isempty(z)
         z = m.z;
     end
-    z_mad = m.z_mad;
-    N = m.N;
-    [z,water_fill_mask] = fillWater('',waterMaskFile,refDemFile,z,z_mad,N,x,y,fillWaterInterpMethod);
+%    z_mad = m.z_mad;
+%    N = m.N;
+    [z,water_fill_mask,water_fill_dz,water_height,M0_waterblobs_forced] = fillWater(m,waterMaskFile,refDemFile,z,z_mad,N,x,y,[],fillWaterInterpMethod);
 end
 
 % add ocean surface (egm96 height above ellipsoid) if specified - requires mask array in matfile
@@ -343,9 +353,8 @@ if ~isempty(qcMaskFile)
     if isempty(z)
         z = m.z;
     end
-    if isempty(qc_mask)
-        qc_mask = zeros(size(z),'logical');
-    end
+    qc_mask_sea = zeros(size(z),'logical');
+    qc_mask_nan = zeros(size(z),'logical');
 
     tilePoly = polyshape([x(1,1);x(1,1);x(end);x(end);x(1)],...
             [y(1);y(end);y(end);y(1);y(1)]);
@@ -360,10 +369,10 @@ if ~isempty(qcMaskFile)
             M = imdilate(M,ones(3));
             if qc_mat.seaSurface(n(j))
                 [z,sea_poly_mask]=addSeaSurfaceHeight(x,y,z,~M,'epsg',addSeaSurface_epsg,'landIsQcMask');
-                qc_mask(sea_poly_mask) = 1;
+                qc_mask_sea(sea_poly_mask) = 1;
             else
                 z(M) = NaN;
-                qc_mask(M) = 1;
+                qc_mask_nan(M) = 1;
             end
         catch ME
             qc_x
@@ -373,18 +382,24 @@ if ~isempty(qcMaskFile)
     end
 end
 
+
+if isempty(z)
+    z = m.z;
+end
+
 bad_data_or_filled_mask = [];
 masks_array = {
     slope_filter_mask,
     water_fill_mask,
     sea_surface_mask,
-    qc_mask
+    qc_mask_sea,
+    qc_mask_nan
 };
+if ~applySlopeDiffFilt
+    masks_array(1) = [];
+end
 if ~all(cellfun(@isempty, masks_array))
-    if isempty(z)
-        z = m.z;
-    end
-    bad_data_or_filled_mask = zeros(size(z), 'logical');
+    bad_data_or_filled_mask = zeros(length(y), length(x), 'logical');
     for i = 1:length(masks_array)
         M = masks_array{i};
         if ~isempty(M)
@@ -392,6 +407,22 @@ if ~all(cellfun(@isempty, masks_array))
         end
     end
 end
+
+filled_mask = zeros(length(y), length(x), 'logical');
+filled_masks_array = {
+    water_fill_mask,
+    qc_mask_sea
+};
+if ~all(cellfun(@isempty, filled_masks_array))
+    for i = 1:length(masks_array)
+        M = masks_array{i};
+        if ~isempty(M)
+            filled_mask(M) = 1;
+        end
+    end
+end
+datamask = ~filled_mask;
+clear filled_mask;
 
 
 % crop coordinate vectors
@@ -457,6 +488,146 @@ if ~(browse_only || dem_and_browse)
             end
             writeGeotiff(outNameTif,x,y,z_mad,4,-9999,projstr,'out_format',tif_format,'co_predictor',co_predictor,'cog_overview_resampling','BILINEAR')
             clear z_mad
+        end
+    end
+
+    if ~isempty(datamask)
+        fprintf('Writing data mask\n')
+        outNameTif = strrep(outNameBase,'.mat','_datamask.tif');
+        if exist(outNameTif,'file') && ~overwrite
+            fprintf('%s exists, skipping\n',outNameTif);
+        else
+            datamask=datamask(ny(1):ny(end),nx(1):nx(end));
+            if outFormat_is_cog
+                co_predictor = 'NO';
+%                co_predictor = 'STANDARD';
+            else
+                co_predictor = '1';
+%                co_predictor = '2';
+            end
+            datamask = uint8(datamask);
+            writeGeotiff(outNameTif,x,y,datamask,1,0,projstr,'out_format',tif_format,'co_predictor',co_predictor,'cog_overview_resampling','NEAREST')
+            clear datamask
+        end
+    end
+
+    if ~isempty(slope_filter_mask)
+        fprintf('Writing slope filter mask\n')
+        outNameTif = strrep(outNameBase,'.mat','_slopefilt_mask.tif');
+        if exist(outNameTif,'file') && ~overwrite
+            fprintf('%s exists, skipping\n',outNameTif);
+        else
+            slope_filter_mask=slope_filter_mask(ny(1):ny(end),nx(1):nx(end));
+            if outFormat_is_cog
+                co_predictor = 'NO';
+%                co_predictor = 'STANDARD';
+            else
+                co_predictor = '1';
+%                co_predictor = '2';
+            end
+            slope_filter_mask = uint8(slope_filter_mask);
+            writeGeotiff(outNameTif,x,y,slope_filter_mask,1,0,projstr,'out_format',tif_format,'co_predictor',co_predictor,'cog_overview_resampling','NEAREST')
+            clear slope_filter_mask
+        end
+    end
+
+    if ~isempty(slope_filter_mask_for_waterfill)
+        fprintf('Writing slope filter mask for waterfill\n')
+        outNameTif = strrep(outNameBase,'.mat','_slopefilt_mask_for_waterfill.tif');
+        if exist(outNameTif,'file') && ~overwrite
+            fprintf('%s exists, skipping\n',outNameTif);
+        else
+            slope_filter_mask_for_waterfill=slope_filter_mask_for_waterfill(ny(1):ny(end),nx(1):nx(end));
+            if outFormat_is_cog
+                co_predictor = 'NO';
+%                co_predictor = 'STANDARD';
+            else
+                co_predictor = '1';
+%                co_predictor = '2';
+            end
+            slope_filter_mask_for_waterfill = uint8(slope_filter_mask_for_waterfill);
+            writeGeotiff(outNameTif,x,y,slope_filter_mask_for_waterfill,1,0,projstr,'out_format',tif_format,'co_predictor',co_predictor,'cog_overview_resampling','NEAREST')
+            clear slope_filter_mask_for_waterfill_trim
+        end
+    end
+
+    if ~isempty(water_fill_mask)
+        fprintf('Writing water fill mask\n')
+        outNameTif = strrep(outNameBase,'.mat','_waterfill_mask.tif');
+        if exist(outNameTif,'file') && ~overwrite
+            fprintf('%s exists, skipping\n',outNameTif);
+        else
+            water_fill_mask=water_fill_mask(ny(1):ny(end),nx(1):nx(end));
+            if outFormat_is_cog
+                co_predictor = 'NO';
+%                co_predictor = 'STANDARD';
+            else
+                co_predictor = '1';
+%                co_predictor = '2';
+            end
+            water_fill_mask = uint8(water_fill_mask);
+            writeGeotiff(outNameTif,x,y,water_fill_mask,1,0,projstr,'out_format',tif_format,'co_predictor',co_predictor,'cog_overview_resampling','NEAREST')
+            clear water_fill_mask
+        end
+    end
+
+    if ~isempty(M0_waterblobs_forced)
+        fprintf('Writing M0_waterblobs_forced mask\n')
+        outNameTif = strrep(outNameBase,'.mat','_M0_waterblobs_forced.tif');
+        if exist(outNameTif,'file') && ~overwrite
+            fprintf('%s exists, skipping\n',outNameTif);
+        else
+            M0_waterblobs_forced=M0_waterblobs_forced(ny(1):ny(end),nx(1):nx(end));
+            if outFormat_is_cog
+                co_predictor = 'NO';
+%                co_predictor = 'STANDARD';
+            else
+                co_predictor = '1';
+%                co_predictor = '2';
+            end
+            M0_waterblobs_forced = uint8(M0_waterblobs_forced);
+            writeGeotiff(outNameTif,x,y,M0_waterblobs_forced,1,0,projstr,'out_format',tif_format,'co_predictor',co_predictor,'cog_overview_resampling','NEAREST')
+            clear M0_waterblobs_forced
+        end
+    end
+
+    if ~isempty(water_fill_dz)
+        fprintf('Writing water fill diff dz\n')
+        outNameTif = strrep(outNameBase,'.mat','_waterfill_dz.tif');
+        if exist(outNameTif,'file') && ~overwrite
+            fprintf('%s exists, skipping\n',outNameTif);
+        else
+            water_fill_dz=water_fill_dz(ny(1):ny(end),nx(1):nx(end));
+            % Round float values to 1/128 meters to greatly improve compression effectiveness
+            water_fill_dz=round(water_fill_dz*128.0)/128.0;
+            water_fill_dz(isnan(water_fill_dz)) = -9999;
+            if outFormat_is_cog
+                co_predictor = 'FLOATING_POINT';
+            else
+                co_predictor = '3';
+            end
+            writeGeotiff(outNameTif,x,y,water_fill_dz,4,-9999,projstr,'out_format',tif_format,'co_predictor',co_predictor,'cog_overview_resampling','BILINEAR')
+            clear water_fill_dz
+        end
+    end
+
+    if ~isempty(water_height)
+        fprintf('Writing water fill water height\n')
+        outNameTif = strrep(outNameBase,'.mat','_waterfill_waterheight.tif');
+        if exist(outNameTif,'file') && ~overwrite
+            fprintf('%s exists, skipping\n',outNameTif);
+        else
+            water_height=water_height(ny(1):ny(end),nx(1):nx(end));
+            % Round float values to 1/128 meters to greatly improve compression effectiveness
+            water_height=round(water_height*128.0)/128.0;
+            water_height(isnan(water_height)) = -9999;
+            if outFormat_is_cog
+                co_predictor = 'FLOATING_POINT';
+            else
+                co_predictor = '3';
+            end
+            writeGeotiff(outNameTif,x,y,water_height,4,-9999,projstr,'out_format',tif_format,'co_predictor',co_predictor,'cog_overview_resampling','BILINEAR')
+            clear water_height
         end
     end
 
