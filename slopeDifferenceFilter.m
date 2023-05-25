@@ -1,6 +1,8 @@
-function M = slopeDifferenceFilter(x,y,z,zr)
+function M = slopeDifferenceFilter(x,y,z,zr,water_mask)
 % slopeDifferenceFilter: mask using the fractional difference in roughness
 %
+
+dx = x(2)-x(1);
 
 % kernel over which to calculate slope standard deviation
 kernel = 5;
@@ -28,6 +30,20 @@ F = (zslopeSDF - zrslopeSDF)./zrslopeSDF;
 % zero out very low slope, slope sdf areas
 F(zslopeSDF < 0.02 & zrslopeSDF < 0.02) = 0;
 
+if ~isempty(water_mask)
+    % Define a buffer zone near the edge of water in the water mask.
+    water_edge_px = ceil(250 / dx);
+    water_edge_zone = xor(...
+        imdilate(water_mask, circleMaskSE(water_edge_px)),...
+        imerode( water_mask, circleMaskSE(water_edge_px))...
+    );
+
+    % Don't use fracional slope stdev as an indicator close to the
+    % edge of water where the reference surface is very smooth
+    % (copernicus has a very smooth water fill).
+    F((water_mask | water_edge_zone) & zrslopeSDF < 0.02) = 0;
+end
+
 dz = z-zr;
 dz = dz - median(dz(:),'omitnan');
 
@@ -54,6 +70,27 @@ M = M > 0.99;
 M = imopen(M,ones(kernel));
 
 % remove small clusters of ones and zeroes
-M = bwareaopen(M,1000);
-M = ~bwareaopen(~M,100);
+if ~isempty(water_mask)
+    % Don't allow removal of small chunks of ones ("good" data)
+    % where those chunks are in small islands (as determined from water mask).
+    islands = imdilate(xor(water_mask, ~bwareaopen(~water_mask, 2000)), circleMaskSE(10));
+    remove_good_data_chunks = xor(M, bwareaopen(M,1000));
+    remove_good_data_chunks(islands) = 0;
+    M(remove_good_data_chunks) = 0;
+    M = ~bwareaopen(~M,100);
+else
+    M = bwareaopen(M,1000);
+    M = ~bwareaopen(~M,100);
+end
 
+if ~isempty(water_mask)
+    % Only keep pixels marked as "bad" near the edge of water
+    % that are close enough to pixels marked as bad further inland.
+    M = ~M;
+    M_old = M;
+    M_new = M;
+    M_new(water_edge_zone) = 0;
+    dilate_px = ceil(700 / dx);
+    M_new = M_old & imdilate(M_new & ~water_mask, circleMaskSE(dilate_px));
+    M = ~M_new;
+end

@@ -71,11 +71,15 @@ end
 n = find(strcmpi('refDemFile',varargin));
 if ~isempty(n)
     refDemFile = varargin{n+1};
+else
+    refDemFile = [];
 end
 
 n = find(strcmpi('waterMaskFile',varargin));
 if ~isempty(n)
     waterMaskFile = varargin{n+1};
+else
+    waterMaskFile = [];
 end
 
 n = find(strcmpi('applySlopeDiffFilt',varargin));
@@ -102,6 +106,8 @@ end
 n = find(strcmpi('qcMaskFile',varargin));
 if ~isempty(n)
     qcMaskFile = varargin{n+1};
+else
+    qcMaskFile = [];
 end
 
 if strcmpi(projstr, 'polar stereo north')
@@ -112,6 +118,14 @@ elseif contains(projstr,'UTM','IgnoreCase',true)
     [addSeaSurface_epsg,~,~] = getProjstrInfo(projstr);
 else
     addSeaSurface_epsg = [];
+end
+
+if applySlopeDiffFilt && isempty(refDemFile)
+    error("'applySlopeDiffFilt' option requires 'refDemFile' to be provided")
+end
+
+if applyWaterFill && (isempty(refDemFile) || isempty(waterMaskFile))
+    error("'applyWaterFill' option requires 'refDemFile' and 'waterMaskFile' to be provided")
 end
 
 if addSeaSurface && isempty(addSeaSurface_epsg)
@@ -274,9 +288,26 @@ if applySlopeDiffFilt
     end
     I_ref = getDataFromTileAndNeighbors(refDemFile,m_x0,m_x1,m_y0,m_y1,zr_dx,nan);
     zr = I_ref.z;
-    M = slopeDifferenceFilter(m_x,m_y,z_at_zr_res,zr);
+
+    if applyWaterFill
+        % load mask
+        C = readGeotiff(waterMaskFile);
+
+        % set no data (which should be ocean) to water
+        C.z(C.z == 0) = 80;
+
+        % make sure mask is same grid as dem (just do nn interp)
+        C = interp2(C.x,C.y(:),C.z,I_ref.x,I_ref.y(:),'*nearest');
+
+        water_mask = ( C == 80 | C == 0 );
+    else
+        water_mask = [];
+    end
+
+    M = slopeDifferenceFilter(I_ref.x,I_ref.y,z_at_zr_res,zr,water_mask);
+    clear water_mask;
     if zr_dx ~= dx
-        M_at_z_res = interp2(m_x,m_y(:),M,x,y(:),'*nearest');
+        M_at_z_res = interp2(I_ref.x,I_ref.y(:),M,x,y(:),'*nearest');
     else
         M_at_z_res = M;
     end
@@ -306,7 +337,7 @@ if addSeaSurface
     [z,sea_surface_mask] = addSeaSurfaceHeight(x,y,z,land,'epsg',addSeaSurface_epsg,'adaptCoastline');
 end
 
-if exist('qcMaskFile','var')
+if ~isempty(qcMaskFile)
     fprintf('applying qc mask\n')
     qc_mat = load(qcMaskFile);
     if isempty(z)
