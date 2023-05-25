@@ -10,7 +10,7 @@ qc.x =[];
 qc.y=[];
 for i=1:length(uniqueRegionDir)
     
-    if exist([uniqueRegionDir{i},'/qc.mat'],'file')
+    if exist([uniqueRegionDir{i},'/qc.mat'],'file') == 2
         
         qci=load([uniqueRegionDir{i},'/qc.mat']);
                 

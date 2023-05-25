@@ -8,7 +8,7 @@ function addLandMask2REMATile(fileName,tileDefs)
 
 % load tile definition file into structure
 if ~isstruct(tileDefs)
-    if exist(tileDefs,'file')
+    if exist(tileDefs,'file') == 2
         tileDefs=load(tileDefFile);
         if isfield(tileDefs,'I') && ~isfield(tileDefs,'tileName')
             tileDefs.tileName=tileDefs.I;

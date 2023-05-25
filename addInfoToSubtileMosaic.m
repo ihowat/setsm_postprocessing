@@ -2,7 +2,7 @@ function addInfoToSubtileMosaic(subTileDir,dx,outName,varargin)
 % addInfoToSubtileMosaic loop through subtiles for info and add to
 % existing mosaic file
 
-if ~exist(outName,'file')
+if exist(outName,'file') ~= 2
     fprintf('File %s not found, returning\n',outName)
     return
 end

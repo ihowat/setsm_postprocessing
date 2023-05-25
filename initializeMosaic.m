@@ -72,7 +72,7 @@ if ~isempty(project)
     subTileDir = [outDir,'/',tileName];
 
     outName=[subTileDir,'_10m.mat'];
-    if exist(outName,'file')
+    if exist(outName,'file') == 2
         fprintf('%s exists, skipping\n',outName)
         return
     end
@@ -207,7 +207,7 @@ minStripOverlap=0.1;
 filterFlag= true;
 
 if ~isempty(tileParamListFile)
-    if exist(tileParamListFile,'file')
+    if exist(tileParamListFile,'file') == 2
         [~,tileParams]=system(['grep ',tileName,' ',tileParamListFile]);
         paramReadFailFlag=true;
         if ~isempty(isempty(tileParams))
@@ -401,7 +401,7 @@ end
 
 
 %% load qc file if it exists and add to meta struct
-if exist(qcFile,'file')
+if exist(qcFile,'file') == 2
     
     fprintf('reading qc file: %s\n',qcFile)
     qc = load(qcFile);
