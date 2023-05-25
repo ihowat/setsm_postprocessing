@@ -82,6 +82,25 @@ else
     waterMaskFile = [];
 end
 
+n = find(strcmpi('registerToRef',varargin));
+if ~isempty(n)
+    registerToRef = varargin{n+1};
+else
+    registerToRef = 'none';
+end
+registerToRef_choices = {'none', 'tiles', 'blobs', 'reportOffsetOnly'};
+if ~any(strcmpi(registerToRef, registerToRef_choices))
+    error("'registerToRef' must be one of the following, but was '%s': {'%s'}", registerToRef, strjoin(registerToRef_choices, "', '"))
+end
+
+n = find(strcmpi('registerToRefDebug',varargin));
+if ~isempty(n)
+    registerToRefDebug = true;
+else
+    registerToRefDebug = false;
+end
+
+
 n = find(strcmpi('applySlopeDiffFilt',varargin));
 if ~isempty(n)
     applySlopeDiffFilt = true;
@@ -125,6 +144,14 @@ elseif contains(projstr,'UTM','IgnoreCase',true)
     [addSeaSurface_epsg,~,~] = getProjstrInfo(projstr);
 else
     addSeaSurface_epsg = [];
+end
+
+if ~strcmp(registerToRef, 'none') && (isempty(refDemFile) || isempty(waterMaskFile))
+    error("'registerToRef' ~= 'none' option requires 'refDemFile' and 'waterMaskFile' to be provided")
+end
+
+if registerToRefDebug && strcmp(registerToRef, 'none')
+    error("'registerToRefDebug' option requires 'registerToRef' ~= 'none' option to be provided")
 end
 
 if applySlopeDiffFilt && isempty(refDemFile)
@@ -264,63 +291,128 @@ outNameBrowse = strrep(outNameBase,'.mat','_browse.tif');
 
 
 z = [];
-slope_filter_mask = [];
-water_fill_mask = [];
-sea_surface_mask = [];
-qc_mask = [];
+I_ref = [];
+z_at_zr_res = [];
+watermask_at_zr_res = [];
 
+%if applySlopeDiffFilt || applyWaterFill
 if applySlopeDiffFilt
-    fprintf('applying slope difference filter\n')
+    calcSlopeDiffFilt = true;
+else
+    calcSlopeDiffFilt = false;
+end
+
+if calcSlopeDiffFilt || ~strcmp(registerToRef, 'none')
     if isempty(z)
         z = m.z;
     end
-    I_ref = readGeotiff(refDemFile,'mapinfoonly');
-    zr_dx = I_ref.x(2)-I_ref.x(1);
-    if zr_dx ~= dx
-        m_x0 = floor(x(1)  /zr_dx) * zr_dx;
-        m_x1 = ceil( x(end)/zr_dx) * zr_dx;
-        m_y0 = floor(y(end)/zr_dx) * zr_dx;
-        m_y1 = ceil( y(1)  /zr_dx) * zr_dx;
-        m_x = m_x0:zr_dx:m_x1;
-        m_y = m_y1:-zr_dx:m_y0;
-        z_at_zr_res = interp2(x,y(:),z,m_x,m_y(:),'*bilinear');
+    if applyWaterFill || ~strcmp(registerToRef, 'none')
+        use_waterMaskFile = waterMaskFile;
     else
-        m_x0 = x(1);
-        m_x1 = x(end);
-        m_y0 = y(end);
-        m_y1 = y(1);
-        m_x = x;
-        m_y = y;
-        z_at_zr_res = z;
+        use_waterMaskFile = [];
     end
-    I_ref = getDataFromTileAndNeighbors(refDemFile,m_x0,m_x1,m_y0,m_y1,zr_dx,nan);
-    zr = I_ref.z;
-
-    if applyWaterFill
-        % load mask
-        C = readGeotiff(waterMaskFile);
-
-        % set no data (which should be ocean) to water
-        C.z(C.z == 0) = 80;
-
-        % make sure mask is same grid as dem (just do nn interp)
-        C = interp2(C.x,C.y(:),C.z,I_ref.x,I_ref.y(:),'*nearest');
-
-        water_mask = ( C == 80 | C == 0 );
+    if strcmp(registerToRef, 'none')
+        [~,~,~,z_at_zr_res,I_ref,C] = loadSlopefiltWaterfillArrays(z,x,y,refDemFile,use_waterMaskFile);
     else
-        water_mask = [];
+        if strcmp(registerToRef, 'tiles')
+            register_opt = [];
+        elseif strcmp(registerToRef, 'blobs')
+            register_opt = 'registerBlobs';
+        elseif strcmp(registerToRef, 'reportOffsetOnly')
+            register_opt = 'reportOffsetOnly';
+        end
+        [z,z_at_zr_res,I_ref,C] = registerTileToCOP30(z,x,y,refDemFile,use_waterMaskFile,register_opt);
     end
-
-    M = slopeDifferenceFilter(I_ref.x,I_ref.y,z_at_zr_res,zr,water_mask);
-    clear water_mask;
-    if zr_dx ~= dx
-        M_at_z_res = interp2(I_ref.x,I_ref.y(:),M,x,y(:),'*nearest');
-    else
-        M_at_z_res = M;
-    end
-    slope_filter_mask = ~M_at_z_res;
-    z(slope_filter_mask) = NaN;
+    watermask_at_zr_res = (C.z == 80);
 end
+
+if registerToRefDebug
+    fprintf('Writing debug dem_reg_%s\n', registerToRef)
+    outNameTif = strrep(outNameBase,'.mat',sprintf('_dem_debug-reg_%s2.tif', registerToRef));
+%    if exist(outNameTif,'file') && ~overwrite
+%        fprintf('%s exists, skipping\n',outNameTif);
+    if exist(outNameTif,'file')
+        delete(outNameTif);
+    end
+    if true
+        % Round float values to 1/128 meters to greatly improve compression effectiveness
+        z_at_zr_res_inst=round(z_at_zr_res*128.0)/128.0;
+        z_at_zr_res_inst(isnan(z_at_zr_res)) = -9999;
+        if outFormat_is_cog
+            co_predictor = 'FLOATING_POINT';
+        else
+            co_predictor = '3';
+        end
+        writeGeotiff(outNameTif,I_ref.x,I_ref.y,z_at_zr_res_inst,4,-9999,projstr,'out_format',tif_format,'co_predictor',co_predictor,'cog_overview_resampling','BILINEAR')
+        clear z_at_zr_res_inst
+    end
+
+    dz = z_at_zr_res - I_ref.z;
+
+    fprintf('Writing debug demdiff_reg_%s\n', registerToRef)
+    outNameTif = strrep(outNameBase,'.mat',sprintf('_demdiff_debug-reg_%s2.tif', registerToRef));
+%    if exist(outNameTif,'file') && ~overwrite
+%        fprintf('%s exists, skipping\n',outNameTif);
+    if exist(outNameTif,'file')
+        delete(outNameTif);
+    end
+    if true
+        % Round float values to 1/128 meters to greatly improve compression effectiveness
+        dz=round(dz*128.0)/128.0;
+        dz(isnan(dz)) = -9999;
+        if outFormat_is_cog
+            co_predictor = 'FLOATING_POINT';
+        else
+            co_predictor = '3';
+        end
+        writeGeotiff(outNameTif,I_ref.x,I_ref.y,dz,4,-9999,projstr,'out_format',tif_format,'co_predictor',co_predictor,'cog_overview_resampling','BILINEAR')
+    end
+    return;
+end
+
+slope_filter_mask = [];
+water_fill_mask = [];
+sea_surface_mask = [];
+qc_mask_sea = [];
+qc_mask_nan = [];
+
+slope_filter_mask_for_waterfill = [];
+if calcSlopeDiffFilt
+    fprintf('calculating slope difference filter\n')
+
+    if applySlopeDiffFilt
+        if applyWaterFill
+            water_mask = watermask_at_zr_res;
+        else
+            water_mask = [];
+        end
+        M = slopeDifferenceFilter(I_ref.x,I_ref.y,z_at_zr_res,I_ref.z,water_mask);
+        clear water_mask;
+
+        zr_dx = I_ref.x(2)-I_ref.x(1);
+        if zr_dx ~= dx
+            M_at_z_res = interp2(I_ref.x,I_ref.y(:),M,x,y(:),'*nearest');
+        else
+            M_at_z_res = M;
+        end
+        slope_filter_mask = ~M_at_z_res;
+        z(slope_filter_mask) = NaN;
+
+        clear M M_at_z_res;
+    end
+
+%    if applyWaterFill
+%        M = slopeDifferenceFilter(I_ref.x,I_ref.y,z_at_zr_res,zr,[]);
+%        if zr_dx ~= dx
+%            M_at_z_res = interp2(I_ref.x,I_ref.y(:),M,x,y(:),'*nearest');
+%        else
+%            M_at_z_res = M;
+%        end
+%        slope_filter_mask_for_waterfill = ~M_at_z_res;
+%        clear M M_at_z_res;
+%    end
+end
+clear I_ref z_at_zr_res watermask_at_zr_res;
 
 z_mad = [];
 N = [];

@@ -1,11 +1,11 @@
-function batchRegisterTiles(tileDir,is2Dir,varargin)
+function batchRegisterTiles(tileDir,is2DirOrFile,varargin)
 % set paths
 
 %     %   tileDir='/Users/ihowat/project/howat.4/rema_mosaic/rema_mosaic_v13e';
-%     is2Dir='/Users/ihowat/data4/REMA/altimetryByTile';
+%     is2DirOrFile='/Users/ihowat/data4/REMA/altimetryByTile';
 
 %     %    tileDir='/fs/project/howat.4/howat.4/rema_mosaic_v13e/rema_19_victoria_land';
-%     is2Dir='/fs/byo/howat-data4/REMA/altimetryByTile';
+%     is2DirOrFile='/fs/byo/howat-data4/REMA/altimetryByTile';
 
 strt=1;
 inc=1;
@@ -14,6 +14,18 @@ overwrite=false;
 overwrite_flag='';
 skipDzfit=false;
 dzfitMinPoints=[];
+
+is2Dir = [];
+arg_is2TileFile = [];
+if exist(is2DirOrFile, 'dir') == 7
+    is2Dir = is2DirOrFile;
+elseif exist(is2DirOrFile, 'file') == 2
+    arg_is2TileFile = is2DirOrFile;
+elseif endsWith(is2DirOrFile, '.mat')
+    error('is2 tile file does not exist: %s', is2DirOrFile);
+else
+    error('is2 tile dir does not exist: %s', is2DirOrFile);
+end
 
 if length(varargin) == 2 && ~isnan(str2double(varargin{1})) && ~isnan(str2double(varargin{2}))
     strt=varargin{1};
@@ -54,7 +66,7 @@ elseif ~isempty(varargin)
     end
 end
 
-fprintf('processing every %d tile, starting at %d\n',inc,strt)
+fprintf('Processing every %d tile, starting at %d\n',inc,strt)
 
 tileFiles = dir(sprintf('%s/*_%s.mat', tileDir, resolution));
 %tileFiles = dir([tileDir,'/*.mat']);
@@ -74,29 +86,38 @@ for i=strt:inc:length(tileFiles)
         continue
     end
     tileName10m = tileNames10m{i};
-    is2TileFile = [is2Dir,'/',tileName10m,'_is2.mat'];
+    if ~isempty(arg_is2TileFile)
+        is2TileFile = arg_is2TileFile;
+    else
+        is2TileFile = [is2Dir,'/',tileName10m,'_is2.mat'];
+    end
     
-    fprintf('%d of %d, %s\n',i,length(tileNames10m),tileFile)
+    fprintf('Working on tile %d of %d: %s\n',i,length(tileFiles),tileFile);
 
     regTileFile=strrep(tileFile,'.mat','_reg.mat');
     unregTileFile=strrep(tileFile,'.mat','_unreg.mat.bak');
 
-    if ~exist(unregTileFile,'file')
+    if exist(unregTileFile,'file') ~= 2
         fprintf('Creating backup copy of unaltered tile matfile: %s\n',unregTileFile);
         eval(['!cp --preserve=timestamps ',tileFile,' ',unregTileFile]);
     end
 
-    if ~exist(is2TileFile,'file')
-        fprintf('icesat registration file does not exist, skipping registration and dzfit: %s\n',is2TileFile);
-        return;
+    missing_aux_file = false;
+    if exist(is2TileFile,'file') ~= 2
+        fprintf('icesat registration file does not exist: %s\n',is2TileFile);
+        missing_aux_file = true;
+    end
+    if missing_aux_file
+        fprintf('skipping registration and/or dzfit: %s\n',unregTileFile);
+        continue;
     end
 
-    if ~exist(regTileFile,'file') || overwrite
+    if exist(regTileFile,'file') ~= 2 || overwrite
         registerTileToIS2(tileFile,is2TileFile)
         applyRegistration(tileFile,[],overwrite_flag)
     end
 
-    if ~exist(regTileFile,'file')
+    if exist(regTileFile,'file') ~= 2
         fprintf('registered tile was not created, skipping dzfit\n')
     else
         if skipDzfit
