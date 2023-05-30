@@ -1,7 +1,7 @@
 
-shp_dbase_path = '/mnt/pgc/data/projects/earthdem/strip_databases/unity_databases/rema_strips_v13e.shp';
-mat_dbase_path = '/mnt/pgc/data/projects/earthdem/strip_databases/REMAdatabase4_2m_v4.1_20220511.mat';
-mat_dbase_cropped_path = '/mnt/pgc/data/projects/earthdem/strip_databases/REMAdatabase4_2m_v4.1_20220511_clip_v13e2.mat';
+shp_dbase_path = '/mnt/pgc/data/projects/earthdem/strip_databases/unity_databases/arcticdem_v4.1_greenland/arcticdem_strips.shp';
+mat_dbase_path = '/mnt/pgc/data/projects/earthdem/strip_databases/ArcticDEMdatabase4_2m_v4.1_20230425_all_plus_reproj.mat';
+mat_dbase_cropped_path = '/mnt/pgc/data/projects/earthdem/strip_databases/ArcticDEMdatabase4_2m_v4.1_20230425_clip_iangreenland.mat';
 
 fprintf('Loading shapefile dbase: %s\n', shp_dbase_path);
 shp_dbase = shaperead(shp_dbase_path);

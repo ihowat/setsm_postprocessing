@@ -1,9 +1,9 @@
 
-qc_dir_in  = '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_qc/tile_qc_v13e';
-qc_dir_out = '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_qc/tile_qc_v13e_strips_v4.1_2022dec12';
+qc_dir_in  = '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/tile_qc/greenland_automosaic_qc';
+qc_dir_out = '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/tile_qc/greenland_automosaic_qc_strips_v4.1';
 
-old_strip_dbase = '/mnt/pgc/data/projects/earthdem/strip_databases/unity_databases/rema_strips_v13e.shp';
-remerge_info_matfile = '/mnt/pgc/data/projects/earthdem/strip_databases/REMAdatabase4_2m_v4.1_20220511_remerge_info.mat';
+old_strip_dbase = '/mnt/pgc/data/projects/earthdem/strip_databases/unity_databases/arcticdem_v4.1_greenland/arcticdem_strips.shp';
+remerge_info_matfile = '/mnt/pgc/data/projects/earthdem/strip_databases/ArcticDEMdatabase4_2m_v4.1_20230425_all_plus_reproj_remerge_info.mat';
 
 fprintf('Reading strips_v4 strip database shapefile: %s\n', old_strip_dbase);
 old_strip_dbase_shp = shaperead(old_strip_dbase);
@@ -168,7 +168,7 @@ for qc_file_idx = 1:length(qc_files_cellarr)
 
             end
 
-            qc_out.stripID{end+1} = stripID;
+            qc_out.stripID{end+1} = ['SETSM_s2s041_', stripID];
             qc_out.seg(end+1) = v41_seg_seg;
             qc_out.flag(end+1) = v41_seg_flag;
             qc_out.x{end+1} = v41_seg_x;

@@ -1,6 +1,6 @@
 
-dbase_in    = '/mnt/pgc/data/projects/earthdem/strip_databases/REMAdatabase4_2m_v4.1_20220511.mat';
-matfile_out = '/mnt/pgc/data/projects/earthdem/strip_databases/REMAdatabase4_2m_v4.1_20220511_remerge_info.mat';
+dbase_in    = '/mnt/pgc/data/projects/earthdem/strip_databases/ArcticDEMdatabase4_2m_v4.1_20230425_all_plus_reproj.mat';
+matfile_out = '/mnt/pgc/data/projects/earthdem/strip_databases/ArcticDEMdatabase4_2m_v4.1_20230425_all_plus_reproj_remerge_info.mat';
 
 fprintf('Loading strip database: %s\n', dbase_in);
 meta = matfile(dbase_in);
