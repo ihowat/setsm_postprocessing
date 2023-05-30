@@ -47,7 +47,7 @@ for i = 1:numel(regionDirs)
 
 
     run_setfacl = true;
-    if exist(qcFile, 'file')
+    if exist(qcFile, 'file') == 2
 
         cmd = sprintf('getfacl %s', qcFile);
         [status, out] = system(cmd);
@@ -169,7 +169,7 @@ for i = 1:numel(regionDirs)
 
 
     run_setfacl = true;
-    if exist(qcLockFile, 'file')
+    if exist(qcLockFile, 'file') == 2
 
         cmd = sprintf('getfacl %s', qcLockFile);
         [status, out] = system(cmd);
