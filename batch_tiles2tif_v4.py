@@ -391,12 +391,23 @@ def main():
 
     if not os.path.isdir(root_tiledir):
         arg_parser.error("Argument 'tiledir' is not an existing directory: {}".format(root_tiledir))
-    if script_args.apply_ref_filter == 'true' and script_args.ref_dem_path is None:
-        arg_parser.error("--ref-dem-path cannot be None when --apply-ref-filter=true")
-    if script_args.apply_water_fill == 'true' and (script_args.ref_dem_path is None or script_args.water_mask_path is None):
-        arg_parser.error("--ref-dem-path and --water-mask-path cannot be None when --fill-water=true")
+    if script_args.apply_ref_filter == 'true' and not script_args.ref_dem_path:
+        arg_parser.error("--ref-dem-path cannot be empty when --apply-ref-filter=true")
+    if script_args.apply_water_fill == 'true' and (not script_args.ref_dem_path or not script_args.water_mask_path):
+        arg_parser.error("--ref-dem-path and --water-mask-path cannot be empty when --fill-water=true")
     if script_args.tile_org == 'osu' and script_args.process_by == 'supertile-dir':
         arg_parser.error("--process-by must be set to to 'tile-file' when --tile-org='osu'")
+
+    if script_args.apply_ref_filter == 'true' or script_args.apply_water_fill == 'true':
+        check_dir, _, _ = script_args.ref_dem_path.partition(supertile_key)
+        check_dir = os.path.dirname(check_dir)
+        if not os.path.isdir(check_dir):
+            arg_parser.error("--ref-dem-path directory does not exist: {}".format(check_dir))
+        if script_args.apply_water_fill:
+            check_dir, _, _ = script_args.water_mask_path.partition(supertile_key)
+            check_dir = os.path.dirname(check_dir)
+            if not os.path.isdir(check_dir):
+                arg_parser.error("--water-mask-path directory does not exist: {}".format(check_dir))
 
     jobscript_utils.verify_args(script_args, arg_parser)
 
@@ -439,10 +450,10 @@ def main():
             tile_projstr = utm_tilename_prefix
 
         supertile_args = ''
-        if script_args.ref_dem_path is not None:
+        if script_args.ref_dem_path:
             ref_dem_file = script_args.ref_dem_path.replace(supertile_key, supertile)
             supertile_args += ", 'refDemFile','{}'".format(ref_dem_file)
-        if script_args.water_mask_path is not None:
+        if script_args.water_mask_path:
             water_mask_file = script_args.water_mask_path.replace(supertile_key, supertile)
             supertile_args += ", 'waterMaskFile','{}'".format(water_mask_file)
         if script_args.apply_ref_filter == 'true':
@@ -468,6 +479,12 @@ def main():
             metafp          = '{}_meta.txt'.format(tile_rootpath)
             matfile         = regmatfile if os.path.isfile(regmatfile) else unregmatfile
 
+            fp_mad      = '{}_mad.tif'.format(tile_rootpath)
+            fp_count    = '{}_count.tif'.format(tile_rootpath)
+            fp_countmt  = '{}_countmt.tif'.format(tile_rootpath)
+            fp_mindate  = '{}_mindate.tif'.format(tile_rootpath)
+            fp_maxdate  = '{}_maxdate.tif'.format(tile_rootpath)
+
             if not os.path.isfile(unregmatfile) and not os.path.isfile(regmatfile):
                 print("Tile {} {}m mat and reg.mat files do not exist{}: {}".format(
                     tile_name, script_args.resolution,
@@ -478,7 +495,7 @@ def main():
 
             else:
                 output_set_results_files_dict = {
-                    'full':         [metafp, demfp, browsefp],
+                    'full':         [metafp, demfp, browsefp, fp_mad, fp_count, fp_countmt, fp_mindate, fp_maxdate],
                     'dem-browse':   [metafp, demfp, browsefp],
                     'dem':          [metafp, demfp],
                     'browse':       [metafp, browsefp],
