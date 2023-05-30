@@ -21,6 +21,36 @@ SCRIPT_DIR = os.path.dirname(SCRIPT_FILE)
 MATLAB_LIBDIR = os.path.join(SCRIPT_DIR, "../setsm_postprocessing4")
 
 
+## Argument defaults by 'project'
+
+domain_choices = [
+    'arcticdem',
+    'rema',
+    'earthdem',
+]
+domain_regMethod_dict = {
+    'arcticdem': 'cop30',
+    'earthdem':  'cop30',
+    'rema':      'is2'
+}
+supertile_key = '<supertile>'
+domain_is2path_dict = {
+    'arcticdem': None,
+    'earthdem': None,
+    'rema': "/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/from_unity/altimetryByTile/<supertile>_is2.mat",
+}
+domain_refDemPath_dict = {
+    'arcticdem': "/mnt/pgc/data/elev/dem/copernicus-dem-30m/mosaic/arctic_tiles_wgs84/<supertile>_10m_cop30_wgs84.tif",
+    'earthdem': None,
+    'rema': "/mnt/pgc/data/elev/dem/copernicus-dem-30m/mosaic/rema_tiles_wgs84/<supertile>_10m_cop30_wgs84.tif",
+}
+domain_waterMaskPath_dict = {
+    'arcticdem': "/mnt/pgc/data/thematic/landcover/esa_worldcover_2020/mosaics/arctic_tiles/<supertile>_10m_cover.tif",
+    'earthdem': "/mnt/pgc/data/projects/earthdem/watermasks/global_surface_water/tiled_watermasks/<supertile>_water.tif",
+    'rema': None,
+}
+
+
 class RawTextArgumentDefaultsHelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter): pass
 
 def get_arg_parser():
@@ -52,6 +82,12 @@ def get_arg_parser():
         """)
     )
     parser.add_argument(
+        'domain',
+        type=str,
+        choices=['arcticdem', 'earthdem', 'rema'],
+        help="DEM production domain of source tiles"
+    )
+    parser.add_argument(
         'resolution',
         type=int,
         choices=[10, 2],
@@ -64,10 +100,58 @@ def get_arg_parser():
     ## Optional args
 
     parser.add_argument(
-        '--is2dir',
+        '--reg-method',
         type=str,
-        default="/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/from_unity/altimetryByTile/",
-        help="Path ICESat-2 altimetry-by-supertile files."
+        choices=['is2', 'cop30', 'fillWater'],
+        default=None,
+        help=wrap_multiline_str(r"""
+            Registration method to employ.
+            \n(default is {})
+        """.format(
+            supertile_key,
+            ', '.join(["{} if domain={}".format(val, dom) for dom, val in domain_regMethod_dict.items()]
+        )))
+    )
+
+    parser.add_argument(
+        '--ref-dem-path',
+        type=str,
+        default=None,
+        help=wrap_multiline_str(r"""
+            Path to reference DEM used for 'cop30' registration method, or 'fillWater'.
+            The path should include the '{}' substring to be replaced with supertile name.
+            \n(default is {})
+        """.format(
+            supertile_key,
+            ', '.join(["{} if domain={}".format(val, dom) for dom, val in domain_refDemPath_dict.items()]
+        )))
+    )
+    parser.add_argument(
+        '--water-mask-path',
+        type=str,
+        default=None,
+        help=wrap_multiline_str(r"""
+            Path to watermask raster used for 'cop30' registration method or 'fillWater'.
+            The path should include the '{}' substring to be replaced with supertile name.
+            \n(default is {})
+        """.format(
+            supertile_key,
+            ', '.join(["{} if domain={}".format(val, dom) for dom, val in domain_waterMaskPath_dict.items()]
+        )))
+    )
+
+    parser.add_argument(
+        '--is2-path',
+        type=str,
+        default=None,
+        help=wrap_multiline_str(r"""
+            Path to '*_is2.mat' ICESat-2 altimetry-by-supertile files.
+            The path should include the '{}' substring to be replaced with supertile name.
+            \n(default is {})
+        """.format(
+            supertile_key,
+            ', '.join(["{} if domain={}".format(val, dom) for dom, val in domain_is2path_dict.items()]
+        )))
     )
 
     parser.add_argument(
@@ -160,6 +244,15 @@ def main():
 
     res_name = '{}m'.format(script_args.resolution)
 
+    if script_args.reg_method is None:
+        script_args.reg_method = domain_regMethod_dict[script_args.domain]
+    if script_args.is2_path is None:
+        script_args.is2_path = domain_is2path_dict[script_args.domain]
+    if script_args.ref_dem_path is None:
+        script_args.ref_dem_path = domain_refDemPath_dict[script_args.domain]
+    if script_args.water_mask_path is None:
+        script_args.water_mask_path = domain_waterMaskPath_dict[script_args.domain]
+
     jobscript_utils.adjust_args(script_args, arg_parser)
     jobscript_utils.create_dirs(script_args, arg_parser)
 
@@ -169,8 +262,27 @@ def main():
     if not os.path.isdir(root_tiledir):
         arg_parser.error("Argument 'tiledir' is not an existing directory: {}".format(root_tiledir))
 
-    if not os.path.isdir(script_args.is2dir):
-        arg_parser.error("--is2dir is not an existing directory: {}".format(script_args.is2dir))
+    if script_args.reg_method == 'is2':
+        if not script_args.is2_path:
+            arg_parser.error("--is2-path cannot be empty --reg-method='is2'")
+        else:
+            check_dir, _, _ = script_args.is2_path.partition(supertile_key)
+            check_dir = os.path.dirname(check_dir)
+            if not os.path.isdir(check_dir):
+                arg_parser.error("--is2-path directory does not exist: {}".format(check_dir))
+
+    elif script_args.reg_method == 'cop30':
+        if (not script_args.ref_dem_path) or (not script_args.water_mask_path):
+            arg_parser.error("--ref-dem-path and --water-mask-path cannot be empty when --reg-method='cop30'")
+        else:
+            check_dir, _, _ = script_args.ref_dem_path.partition(supertile_key)
+            check_dir = os.path.dirname(check_dir)
+            if not os.path.isdir(check_dir):
+                arg_parser.error("--ref-dem-path directory does not exist: {}".format(check_dir))
+            check_dir, _, _ = script_args.water_mask_path.partition(supertile_key)
+            check_dir = os.path.dirname(check_dir)
+            if not os.path.isdir(check_dir):
+                arg_parser.error("--water-mask-path directory does not exist: {}".format(check_dir))
 
     jobscript_utils.verify_args(script_args, arg_parser)
 
@@ -181,19 +293,40 @@ def main():
     for supertile in supertile_list:
         run_tile = True
 
+        if supertile.startswith('utm'):
+            if script_args.domain != 'earthdem':
+                arg_parser.error("domain should be 'earthdem' when 'utm*' prefix tilenames are provided")
+        else:
+            if script_args.domain == 'earthdem':
+                arg_parser.error("domain should NOT be 'earthdem' when tilenames do not have 'utm*' prefix")
+
+
         supertile_folder = root_tiledir if script_args.tile_org == 'osu' else os.path.join(root_tiledir, supertile)
         tile_basename_pat = '{}{}{}'.format(supertile, '_*_' if script_args.resolution == 2 else '_', res_name)
 
-        matfile_unreg_pattern = os.path.join(supertile_folder, '{}.mat'.format(tile_basename_pat))
-        matfile_unreg_list = glob.glob(matfile_unreg_pattern)
-        if len(matfile_unreg_list) == 0:
-            print("Tile {} {} unreg .mat file does not exist: {}".format(supertile, res_name, matfile_unreg_pattern))
-            run_tile = False
-        else:
-            matfile_reg_list = [f.replace('.mat', '_reg.mat') for f in matfile_unreg_list]
-            matfile_reg_exist_list = [f for f in matfile_reg_list if os.path.isfile(f)]
-            if len(matfile_reg_exist_list) == len(matfile_unreg_list):
+        if script_args.reg_method == 'fillWater':
+            matfile_unreg_pattern = os.path.join(supertile_folder, '{}.mat'.format(tile_basename_pat))
+            matfile_reg_pattern = os.path.join(supertile_folder, '{}_reg.mat'.format(tile_basename_pat))
+            matfile_reg_files = glob.glob(matfile_reg_pattern)
+            matfile_unreg_files = glob.glob(matfile_unreg_pattern)
+            matfile_unreg_files = list(set(matfile_unreg_files).difference(set([f.replace('_reg.mat', '.mat') for f in matfile_reg_files])))
+            matfile_list = matfile_reg_files + matfile_unreg_files
+            matfile_fill_list = [f.replace('.mat', '_fill.mat') for f in matfile_list]
+            matfile_fill_exist_list = [f for f in matfile_fill_list if os.path.isfile(f)]
+            if len(matfile_fill_exist_list) == len(matfile_list):
                 run_tile = False
+
+        else:
+            matfile_unreg_pattern = os.path.join(supertile_folder, '{}.mat'.format(tile_basename_pat))
+            matfile_unreg_list = glob.glob(matfile_unreg_pattern)
+            if len(matfile_unreg_list) == 0:
+                print("Tile {} {} unreg .mat file does not exist: {}".format(supertile, res_name, matfile_unreg_pattern))
+                run_tile = False
+            else:
+                matfile_reg_list = [f.replace('.mat', '_reg.mat') for f in matfile_unreg_list]
+                matfile_reg_exist_list = [f for f in matfile_reg_list if os.path.isfile(f)]
+                if len(matfile_reg_exist_list) == len(matfile_unreg_list):
+                    run_tile = False
 
         finfile_pattern = os.path.join(supertile_folder, '{}.fin'.format(tile_basename_pat))
         finfile_list = glob.glob(finfile_pattern)
@@ -205,12 +338,27 @@ def main():
             
         if not run_tile:
             continue
-            
-        altimetry_file = os.path.join(script_args.is2dir, '{}_is2.mat'.format(supertile))
-        if not os.path.isfile(altimetry_file):
-            print("WARNING: Tile {} altimetry file does not exist: {}".format(supertile, altimetry_file))
-            print("Running this tile anyways in order to produce tile *_unreg.mat.bak backup tile matfile")
-            # run_tile = False
+
+        if script_args.reg_method == 'is2':
+            altimetry_file = script_args.is2_path.replace(supertile_key, supertile)
+            if not os.path.isfile(altimetry_file):
+                print("WARNING: Tile {} altimetry file does not exist: {}".format(supertile, altimetry_file))
+                print("Running this tile anyways in order to produce tile *_unreg.mat.bak backup tile matfile")
+                # run_tile = False
+
+        elif script_args.reg_method == 'cop30':
+            auxfile_dne = False
+            ref_dem_file = script_args.ref_dem_path.replace(supertile_key, supertile)
+            water_mask_file = script_args.water_mask_path.replace(supertile_key, supertile)
+            if not os.path.isfile(ref_dem_file):
+                print("WARNING: Tile {} reference DEM file does not exist: {}".format(supertile, ref_dem_file))
+                auxfile_dne = True
+            if not os.path.isfile(water_mask_file):
+                print("WARNING: Tile {} water mask file does not exist: {}".format(supertile, water_mask_file))
+                auxfile_dne = True
+            if auxfile_dne:
+                print("Running this tile anyways in order to produce tile *_unreg.mat.bak backup tile matfile")
+                # run_tile = False
             
         if not run_tile:
             continue
@@ -220,6 +368,7 @@ def main():
             os.path.join(supertile_folder, '{}_meta.txt'.format(tile_basename_pat))
         ]
         tif_meta_files = [f for pat in tif_meta_patterns for f in glob.glob(pat)]
+        tif_meta_files = [f for f in tif_meta_files if '_debug-reg_' not in f]
         if len(tif_meta_files) > 0:
             if len(matfile_unreg_list) == 0:
                 print("ERROR! Tile .mat file does not exist, but tif/meta results exist matching {}".format(tif_meta_patterns))
@@ -262,7 +411,7 @@ def main():
     num_tasks = num_groups
     job_handler = jobscript_utils.JobHandler(
         script_args, num_tasks,
-        init_env_requests='matlab'
+        init_env_requests='matlab gdal'
     )
 
     for group_key in group_key_list:
@@ -285,15 +434,34 @@ def main():
                 matscript_args += ", 'rows'"
             elif script_args.process_group == 'column':
                 matscript_args += ", 'cols'"
-        if script_args.skip_dzfit:
-            matscript_args += ", 'skipDzfit'"
-        matscript_args += ", 'dzfitMinPoints',{}".format(script_args.dzfit_minpoints)
 
-        task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
-            addpath('{SCRIPT_DIR}');
-            addpath('{script_args.matlib}');
-            batchRegisterTiles('{supertile_dir}', '{script_args.is2dir}', 'resolution','{res_name}' {matscript_args});
-        """))
+        if script_args.reg_method == 'is2':
+            altimetry_file = script_args.is2_path.replace(supertile_key, supertile)
+
+            if script_args.skip_dzfit:
+                matscript_args += ", 'skipDzfit'"
+            matscript_args += ", 'dzfitMinPoints',{}".format(script_args.dzfit_minpoints)
+
+            task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
+                addpath('{SCRIPT_DIR}');
+                addpath('{script_args.matlib}');
+                batchRegisterTiles('{supertile_dir}', '{altimetry_file}', 'resolution','{res_name}' {matscript_args});
+            """))
+
+        elif script_args.reg_method in ('cop30', 'fillWater'):
+            ref_dem_file = script_args.ref_dem_path.replace(supertile_key, supertile)
+            water_mask_file = script_args.water_mask_path.replace(supertile_key, supertile)
+
+            if script_args.reg_method == 'cop30':
+                matlab_script = 'batchRegisterTilesToCOP30'
+            elif script_args.reg_method == 'fillWater':
+                matlab_script = 'batchWaterFillTiles'
+
+            task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
+                addpath('{SCRIPT_DIR}');
+                addpath('{script_args.matlib}');
+                {matlab_script}('{supertile_dir}', '{ref_dem_file}', '{water_mask_file}', 'resolution','{res_name}' {matscript_args});
+            """))
 
         submit_cmd = job_handler.add_task_cmd(task_cmd, job_id)
         if submit_cmd is not None:
