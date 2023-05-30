@@ -100,6 +100,12 @@ else
     registerToRefDebug = false;
 end
 
+n = find(strcmpi('filterFillDebug',varargin));
+if ~isempty(n)
+    filterFillDebug = true;
+else
+    filterFillDebug = false;
+end
 
 n = find(strcmpi('applySlopeDiffFilt',varargin));
 if ~isempty(n)
@@ -596,7 +602,7 @@ if ~(browse_only || dem_and_browse)
         end
     end
 
-    if ~isempty(slope_filter_mask)
+    if filterFillDebug && ~isempty(slope_filter_mask)
         fprintf('Writing slope filter mask\n')
         outNameTif = strrep(outNameBase,'.mat','_slopefilt_mask.tif');
         if exist(outNameTif,'file') && ~overwrite
@@ -616,7 +622,7 @@ if ~(browse_only || dem_and_browse)
         end
     end
 
-    if ~isempty(slope_filter_mask_for_waterfill)
+    if filterFillDebug && ~isempty(slope_filter_mask_for_waterfill)
         fprintf('Writing slope filter mask for waterfill\n')
         outNameTif = strrep(outNameBase,'.mat','_slopefilt_mask_for_waterfill.tif');
         if exist(outNameTif,'file') && ~overwrite
@@ -636,7 +642,7 @@ if ~(browse_only || dem_and_browse)
         end
     end
 
-    if ~isempty(water_fill_mask)
+    if filterFillDebug && ~isempty(water_fill_mask)
         fprintf('Writing water fill mask\n')
         outNameTif = strrep(outNameBase,'.mat','_waterfill_mask.tif');
         if exist(outNameTif,'file') && ~overwrite
@@ -656,7 +662,7 @@ if ~(browse_only || dem_and_browse)
         end
     end
 
-    if ~isempty(M0_waterblobs_forced)
+    if filterFillDebug && ~isempty(M0_waterblobs_forced)
         fprintf('Writing M0_waterblobs_forced mask\n')
         outNameTif = strrep(outNameBase,'.mat','_M0_waterblobs_forced.tif');
         if exist(outNameTif,'file') && ~overwrite
@@ -676,7 +682,7 @@ if ~(browse_only || dem_and_browse)
         end
     end
 
-    if ~isempty(water_fill_dz)
+    if filterFillDebug && ~isempty(water_fill_dz)
         fprintf('Writing water fill diff dz\n')
         outNameTif = strrep(outNameBase,'.mat','_waterfill_dz.tif');
         if exist(outNameTif,'file') && ~overwrite
@@ -696,7 +702,7 @@ if ~(browse_only || dem_and_browse)
         end
     end
 
-    if ~isempty(water_height)
+    if filterFillDebug && ~isempty(water_height)
         fprintf('Writing water fill water height\n')
         outNameTif = strrep(outNameBase,'.mat','_waterfill_waterheight.tif');
         if exist(outNameTif,'file') && ~overwrite
