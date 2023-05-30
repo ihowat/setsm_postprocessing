@@ -120,6 +120,11 @@ project_tileParamList_dict = {
     'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_params/tileParamList_v13e.txt',
     'earthdem':  '',
 }
+project_dateFiltEnd_dict = {
+    'arcticdem': '20220614',
+    'rema':      '20220614',
+    'earthdem':  '',
+}
 
 
 with open(os.path.join(SCRIPT_DIR, 'watermask_tiles_greenland.txt'), 'r') as tilelist_fp:
@@ -182,10 +187,12 @@ def main():
                         help="tile parameters text file (default is {})".format(
                             ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_tileParamList_dict.items()])
                         ))
-    parser.add_argument("--datefilt-start", default='',
+    parser.add_argument("--datefilt-start", default=None,
                         help="filter strip database to (first image) acquisition date on or after this date in 'yyyymmdd' format")
-    parser.add_argument("--datefilt-end", default='',
-                        help="filter strip database to (first image) acquisition date on or before this date in 'yyyymmdd' format")
+    parser.add_argument("--datefilt-end", default=None,
+                        help="filter strip database to (first image) acquisition date on or before this date in 'yyyymmdd' format (default is {})".format(
+                            ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_dateFiltEnd_dict.items()])
+                        ))
     
     parser.add_argument("--libdir", default=default_matlab_scriptdir,
                         help="directory of referenced Matlab functions (default={})".format(default_matlab_scriptdir))
@@ -303,6 +310,14 @@ def main():
         args.tileqc_dir = project_tileqcDir_dict[args.project]
     if args.tileparam_list is None:
         args.tileparam_list = project_tileParamList_dict[args.project]
+    if args.datefilt_start is None:
+        args.datefilt_start = ''
+    if args.datefilt_end is None:
+        args.datefilt_end = project_dateFiltEnd_dict[args.project]
+        if args.datefilt_end:
+            print(">>> WARNING: {} project default --datefilt-end '{}' is applied! <<<"
+                  "\n>>> To disable this for non-public release production, provide --datefilt-end '' <<<".format(args.project, args.datefilt_end))
+            time.sleep(8)
 
     ## Convert argument paths to absolute paths
     args.dstdir = os.path.abspath(args.dstdir)
