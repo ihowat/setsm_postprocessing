@@ -11,6 +11,8 @@ function [z,seaSurfaceMask]=addSeaSurfaceHeight(x,y,z,land,varargin)
 %epsg = 3413;
 epsg = [];
 
+seaSurfaceMask = false(size(z));
+
 % parse vargins
 n = find(strcmpi(varargin,'epsg'));
 if ~isempty(n)
