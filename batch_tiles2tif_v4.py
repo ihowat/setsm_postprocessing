@@ -209,6 +209,33 @@ def get_arg_parser():
             QC mask matfile provided through argument `--final-qc-mask`.
         """)
     )
+    parser.add_argument(
+        '--register-to-ref',
+        type=str,
+        choices=['none', 'tiles', 'blobs', 'reportOffsetOnly'],
+        default='none',
+        help=wrap_multiline_str("""
+            Register DEM to reference DEM. Requires both reference DEM and
+            water mask paths to be provided.
+        """)
+    )
+    parser.add_argument(
+        '--register-to-ref-debug',
+        action='store_true',
+        help=wrap_multiline_str("""
+            Only write out a debug version of the DEM at the resolution of
+            the reference DEM, with no filter or fill applied, and then exit.
+        """)
+    )
+    parser.add_argument(
+        '--fill-water-interp-method',
+        type=int,
+        choices=list(range(6)),
+        default=2,
+        help=wrap_multiline_str("""
+            Interpolation method to use for fillWater's inpaint_nans call.
+        """)
+    )
     
     parser.add_argument(
         '--rerun',
@@ -340,6 +367,7 @@ def main():
         , 'outFormat','{script_args.tif_format.upper()}'
         , 'outSet','{output_set_to_matscript_arg_dict[script_args.output_set]}'
         , 'bufferMeters',{script_args.tile_buffer_meters}
+        , 'registerToRef','{script_args.register_to_ref}'
     """)
     if script_args.tile_nocrop:
         single_t2t_args += ", 'noCrop'"
@@ -347,6 +375,9 @@ def main():
         single_t2t_args += ", 'addSeaSurface'"
     if script_args.use_final_qc_mask == 'true' and script_args.final_qc_mask is not None:
         single_t2t_args += ", 'qcMaskFile','{}'".format(script_args.final_qc_mask)
+    if script_args.register_to_ref_debug:
+        single_t2t_args += ", 'registerToRefDebug'"
+    single_t2t_args += ", 'fillWaterInterpMethod',{}".format(script_args.fill_water_interp_method)
 
     batch_t2t_args = single_t2t_args
     if script_args.output_set == 'meta':
