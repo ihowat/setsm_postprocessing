@@ -327,7 +327,7 @@ end
 
 if registerToRefDebug
     fprintf('Writing debug dem_reg_%s\n', registerToRef)
-    outNameTif = strrep(outNameBase,'.mat',sprintf('_dem_debug-reg_%s2.tif', registerToRef));
+    outNameTif = strrep(outNameBase,'.mat',sprintf('_dem_debug-reg_%s.tif', registerToRef));
 %    if exist(outNameTif,'file') && ~overwrite
 %        fprintf('%s exists, skipping\n',outNameTif);
     if exist(outNameTif,'file')
@@ -349,7 +349,7 @@ if registerToRefDebug
     dz = z_at_zr_res - I_ref.z;
 
     fprintf('Writing debug demdiff_reg_%s\n', registerToRef)
-    outNameTif = strrep(outNameBase,'.mat',sprintf('_demdiff_debug-reg_%s2.tif', registerToRef));
+    outNameTif = strrep(outNameBase,'.mat',sprintf('_demdiff_debug-reg_%s.tif', registerToRef));
 %    if exist(outNameTif,'file') && ~overwrite
 %        fprintf('%s exists, skipping\n',outNameTif);
     if exist(outNameTif,'file')
