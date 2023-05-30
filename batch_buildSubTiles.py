@@ -334,7 +334,7 @@ def main():
     if args.tileqc_dir != '':
         args.tileqc_dir = os.path.abspath(args.tileqc_dir)
     if args.tileparam_list != '':
-        args.tileparam_list = os.path.abspath(args.tileparam_list)
+        args.tileparam_list = os.path.abspath(args.tileparam_list if os.path.isfile(args.tileparam_list) else os.path.join(SCRIPT_DIR, args.tileparam_list))
     args.libdir = os.path.abspath(args.libdir)
     args.tempdir = os.path.abspath(args.tempdir)
     args.logdir = os.path.abspath(os.path.join(args.dstdir, args.logdir) if args.logdir.startswith('../') else args.logdir)
@@ -358,7 +358,7 @@ def main():
     if args.tileqc_dir != '' and not os.path.isdir(args.tileqc_dir):
         parser.error("--tileqc-dir does not exist: {}".format(args.tileqc_dir))
     if args.tileparam_list != '' and not os.path.isfile(args.tileparam_list):
-        parser.error("--tileqc-file does not exist: {}".format(args.tileparam_list))
+        parser.error("--tileparam-list file does not exist: {}".format(args.tileparam_list))
     if not os.path.isdir(args.libdir):
         parser.error("--libdir does not exist: {}".format(args.libdir))
     if not os.path.isfile(args.jobscript):

@@ -249,8 +249,10 @@ def main():
 
     ## Convert argument paths to absolute paths
     args.srcdir = os.path.abspath(args.srcdir)
-    args.tile_def = os.path.abspath(args.tile_def if os.path.isfile(args.tile_def) else os.path.join(SCRIPT_DIR, args.tile_def))
-    args.tileparam_list = os.path.abspath(args.tileparam_list if os.path.isfile(args.tileparam_list) else os.path.join(SCRIPT_DIR, args.tileparam_list))
+    if args.tile_def != '':
+        args.tile_def = os.path.abspath(args.tile_def if os.path.isfile(args.tile_def) else os.path.join(SCRIPT_DIR, args.tile_def))
+    if args.tileparam_list != '':
+        args.tileparam_list = os.path.abspath(args.tileparam_list if os.path.isfile(args.tileparam_list) else os.path.join(SCRIPT_DIR, args.tileparam_list))
     args.libdir = os.path.abspath(args.libdir)
     args.tempdir = os.path.abspath(args.tempdir)
     args.logdir = os.path.abspath(os.path.join(args.srcdir, args.logdir) if args.logdir.startswith('../') else args.logdir)
@@ -263,6 +265,8 @@ def main():
     if args.project != 'earthdem':
         if not os.path.isfile(args.tile_def):
             parser.error("--tile-def file does not exist: {}".format(args.tile_def))
+    if args.tileparam_list != '' and not os.path.isfile(args.tileparam_list):
+        parser.error("--tileparam-list file does not exist: {}".format(args.tileparam_list))
     if not os.path.isdir(args.libdir):
         parser.error("--libdir does not exist: {}".format(args.libdir))
     if not os.path.isfile(args.jobscript):
