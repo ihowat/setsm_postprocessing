@@ -100,8 +100,9 @@ for i=strt:inc:length(tileFiles)
     
     fprintf('Working on tile %d of %d: %s\n',i,length(tileFiles),tileFile);
 
-    regTileFile=strrep(tileFile,'.mat','_reg.mat');
     unregTileFile=strrep(tileFile,'.mat','_unreg.mat.bak');
+    regTempFile=strrep(tileFile,'.mat','_reg.mat.temp');
+    regTileFile=strrep(tileFile,'.mat','_reg.mat');
 
     if exist(unregTileFile,'file') ~= 2
         fprintf('Creating backup copy of unaltered tile matfile: %s\n',unregTileFile);
@@ -133,20 +134,37 @@ for i=strt:inc:length(tileFiles)
 
     if exist(regTileFile,'file') ~= 2 || overwrite
         try
-            fprintf('Copying unreg.mat file to new reg.mat file: %s\n',regTileFile);
-            eval(['!cp ',unregTileFile,' ',regTileFile]);
+            if exist(regTileFile, 'file') == 2
+                fprintf('Removing existing reg.mat file: %s\n', regTileFile);
+                delete(regTileFile);
+            end
+            if exist(regTempFile, 'file') == 2
+                fprintf('Removing existing reg.mat.tmp file: %s\n', regTempFile);
+                delete(regTempFile);
+            end
 
             fprintf('Calculating vertical registration\n');
             [z_reg,~,~,~] = registerTileToCOP30(unregTileFile,[],[],refDemTif,waterMaskTif,'registerBlobs');
 
-            fprintf('Writing registered z to reg.mat file\n');
-            m1=matfile(regTileFile);
+            fprintf('Copying unreg.mat file to new reg.mat.tmp file: %s\n',regTempFile);
+            eval(['!cp ',unregTileFile,' ',regTempFile]);
+
+            fprintf('Writing registered z to reg.mat.tmp file\n');
+            m1=matfile(regTempFile);
             m1.Properties.Writable = true;
             m1.z = z_reg;
+            m1.regToCOP30 = true;
+
+            fprintf('Renaming reg.mat.tmp file to reg.mat: %s\n',regTileFile);
+            eval(['!mv ',regTempFile,' ',regTileFile]);
         catch ME
             if exist(regTileFile, 'file') == 2
                 fprintf('Detected error, removing reg.mat file: %s\n',regTileFile);
                 delete(regTileFile);
+            end
+            if exist(regTempFile, 'file') == 2
+                fprintf('Detected error, removing reg.mat.tmp file: %s\n',regTempFile);
+                delete(regTempFile);
             end
             rethrow(ME);
         end
