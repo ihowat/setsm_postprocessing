@@ -65,8 +65,7 @@ z_masked = z_at_zr_res;
 zr_masked = I_ref.z;
 
 % Apply water mask
-M = (C.z == 80);
-watermask_at_zr_res = M;
+M = (C.z == 0 | C.z == 80);
 uncertain_dist_px = ceil(water_buffer_meters / zr_dx);
 M = imdilate(M, circleMask(uncertain_dist_px));
 z_masked(M) = nan;
@@ -84,11 +83,10 @@ clear M;
 
 % Apply slope filter
 fprintf('Calculating and applying slope filter\n');
-M = slopeDifferenceFilter(I_ref.x,I_ref.y,z_at_zr_res,I_ref.z,watermask_at_zr_res);
+avoidFilteringWaterFlag = true;
+M = slopeDifferenceFilter(I_ref.x,I_ref.y,z_at_zr_res,I_ref.z,C,avoidFilteringWaterFlag);
 z_masked(~M) = nan;
 clear M;
-
-clear watermask_at_zr_res;
 
 % Check if any islands from watermask are actually flat filled (water) surface
 % in the reference DEM, and set them to NaN so they won't be used in offset calc.

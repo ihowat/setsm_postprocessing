@@ -1,6 +1,14 @@
-function M = slopeDifferenceFilter(x,y,z,zr,water_mask)
+function M = slopeDifferenceFilter(x,y,z,zr,C,avoidFilteringWaterFlag)
 % slopeDifferenceFilter: mask using the fractional difference in roughness
 %
+
+if ~isempty(C)
+    water_mask = (C.z == 0 | C.z == 80);
+    snowice_mask = (C.z == 70);
+else
+    water_mask = [];
+    snowice_mask = [];
+end
 
 dx = x(2)-x(1);
 
@@ -30,7 +38,7 @@ F = (zslopeSDF - zrslopeSDF)./zrslopeSDF;
 % zero out very low slope, slope sdf areas
 F(zslopeSDF < 0.02 & zrslopeSDF < 0.02) = 0;
 
-if ~isempty(water_mask)
+if ~isempty(water_mask) && avoidFilteringWaterFlag
     % Define a buffer zone near the edge of water in the water mask.
     water_edge_px = ceil(250 / dx);
     water_edge_zone = xor(...
@@ -55,6 +63,12 @@ M(F < FThreshGood & abs(dz) < dzThreshGood) = 1;
 
 % define points with highly liklihood of being bad data
 M(F >= FThreshBad | abs(dz) >= dzThreshBad) = 0;
+
+if ~isempty(snowice_mask)
+    % Don't apply filter over snow/ice
+    buffer_px = ceil(250 / dx);
+    M(imdilate(snowice_mask, circleMaskSE(buffer_px))) = 1;
+end
 
 % interpolate voids, so that voids with no bad data will be ones and voids
 % with bad data will have values < 1. There's got to be a better/faster way
@@ -83,14 +97,14 @@ else
     M = ~bwareaopen(~M,100);
 end
 
-if ~isempty(water_mask)
+if ~isempty(water_mask) && avoidFilteringWaterFlag
     % Only keep pixels marked as "bad" near the edge of water
     % that are close enough to pixels marked as bad further inland.
     M = ~M;
     M_old = M;
     M_new = M;
-    M_new(water_edge_zone) = 0;
+    M_new(water_edge_zone | water_mask) = 0;
     dilate_px = ceil(700 / dx);
-    M_new = M_old & imdilate(M_new & ~water_mask, circleMaskSE(dilate_px));
+    M_new = M_old & imdilate(M_new, circleMaskSE(dilate_px));
     M = ~M_new;
 end

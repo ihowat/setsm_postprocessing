@@ -293,7 +293,6 @@ outNameBrowse = strrep(outNameBase,'.mat','_browse.tif');
 z = [];
 I_ref = [];
 z_at_zr_res = [];
-watermask_at_zr_res = [];
 
 %if applySlopeDiffFilt || applyWaterFill
 if applySlopeDiffFilt
@@ -306,13 +305,8 @@ if calcSlopeDiffFilt || ~strcmp(registerToRef, 'none')
     if isempty(z)
         z = m.z;
     end
-    if applyWaterFill || ~strcmp(registerToRef, 'none')
-        use_waterMaskFile = waterMaskFile;
-    else
-        use_waterMaskFile = [];
-    end
     if strcmp(registerToRef, 'none')
-        [~,~,~,z_at_zr_res,I_ref,C] = loadSlopefiltWaterfillArrays(z,x,y,refDemFile,use_waterMaskFile);
+        [~,~,~,z_at_zr_res,I_ref,C] = loadSlopefiltWaterfillArrays(z,x,y,refDemFile,waterMaskFile);
     else
         if strcmp(registerToRef, 'tiles')
             register_opt = [];
@@ -321,9 +315,8 @@ if calcSlopeDiffFilt || ~strcmp(registerToRef, 'none')
         elseif strcmp(registerToRef, 'reportOffsetOnly')
             register_opt = 'reportOffsetOnly';
         end
-        [z,z_at_zr_res,I_ref,C] = registerTileToCOP30(z,x,y,refDemFile,use_waterMaskFile,register_opt);
+        [z,z_at_zr_res,I_ref,C] = registerTileToCOP30(z,x,y,refDemFile,waterMaskFile,register_opt);
     end
-    watermask_at_zr_res = (C.z == 80);
 end
 
 if registerToRefDebug
@@ -382,11 +375,11 @@ if calcSlopeDiffFilt
 
     if applySlopeDiffFilt
         if applyWaterFill
-            water_mask = watermask_at_zr_res;
+            avoidFilteringWaterFlag = true;
         else
-            water_mask = [];
+            avoidFilteringWaterFlag = true;
         end
-        M = slopeDifferenceFilter(I_ref.x,I_ref.y,z_at_zr_res,I_ref.z,water_mask);
+        M = slopeDifferenceFilter(I_ref.x,I_ref.y,z_at_zr_res,I_ref.z,C,avoidFilteringWaterFlag);
         clear water_mask;
 
         zr_dx = I_ref.x(2)-I_ref.x(1);
@@ -402,7 +395,7 @@ if calcSlopeDiffFilt
     end
 
 %    if applyWaterFill
-%        M = slopeDifferenceFilter(I_ref.x,I_ref.y,z_at_zr_res,zr,[]);
+%        M = slopeDifferenceFilter(I_ref.x,I_ref.y,z_at_zr_res,zr,[],false);
 %        if zr_dx ~= dx
 %            M_at_z_res = interp2(I_ref.x,I_ref.y(:),M,x,y(:),'*nearest');
 %        else
@@ -412,7 +405,7 @@ if calcSlopeDiffFilt
 %        clear M M_at_z_res;
 %    end
 end
-clear I_ref z_at_zr_res watermask_at_zr_res;
+clear I_ref z_at_zr_res;
 
 z_mad = [];
 N = [];
