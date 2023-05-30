@@ -183,7 +183,9 @@ if [ "$system" = 'pgc' ]; then
     MATLAB_USE_PARPOOL=true
 
     # Load Python/GDAL environment
-    module load gdal/2.1.3
+    set +u
+    source ~/.bashrc ; conda activate pgc
+    set -u
 
 elif [ "$system" = 'bw' ]; then
     # Matlab settings

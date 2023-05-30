@@ -7,7 +7,7 @@ function run_mosaicSubTiles(...
 if exportTif
     outRasterType = 'full-COG';
 else
-    outRasterType = 'browse-LZW';
+    outRasterType = 'browse-COG';
 end
 
 try
