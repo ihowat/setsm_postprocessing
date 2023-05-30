@@ -548,6 +548,13 @@ def main():
         water_tile_dir = args.water_tile_dir
         tile_missing_watermask = False
 
+        if tile.startswith('utm'):
+            if args.project != 'earthdem':
+                parser.error("project should be 'earthdem' when 'utm*' prefix tilenames are provided")
+        else:
+            if args.project == 'earthdem':
+                parser.error("domain should NOT be 'earthdem' when tilenames do not have 'utm*' prefix")
+
         if tile_projstr == '' or earthdem_hemisphere_key in tile_def or earthdem_tilePrefix_key in ref_dem:
             assert args.project == 'earthdem'
 
