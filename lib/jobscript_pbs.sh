@@ -98,7 +98,9 @@ if [ "$task_run_type" = 'single' ]; then
     task_cmd="$JOBSCRIPT_TASK_CMD";
     task_cmd="${task_cmd//\@COMMA\@/,}"; task_cmd="${task_cmd//\@SPACE\@/ }";
 
-    echo "Executing task command:"
+    echo ________________________________________________________
+    echo
+    echo $(date) -- "Executing task command:"
     printf '%s\n' "$task_cmd"
     echo ________________________________________________________
     echo
@@ -114,13 +116,16 @@ elif [ "$task_run_type" = 'batch' ]; then
     fi
 
     num_tasks=$(wc -l "$task_bundle_file" | cut -d' ' -f1)
+
+    echo "Will run batch of ${num_tasks} tasks in ${batch_run_mode} mode from bundle file: ${task_bundle_file}"
+
     task_num=0
     while IFS= read -r task_cmd; do
         ((task_num++))
 
         echo ________________________________________________________
         echo
-        echo "Executing task command (${task_num}/${num_tasks}):"
+        echo $(date) -- "Executing task command (${task_num}/${num_tasks}):"
         printf '%s\n' "$task_cmd"
         echo ________________________________________________________
         echo
