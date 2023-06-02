@@ -113,26 +113,58 @@ clear B
 A=inpaint_nans(A,2);
 A=A(2:end-1,2:end-1);
 
+A(A < 0) = 0;
+A(A > 1) = 1;
+A_interp = (A > 0) & (A < 1);
+
 %% Load base dem and merge insert
 if overwriteFlag
     m.z(rows,cols) = z1.*A + ...
         m.z(rows,cols).*(1-A);
-    
+
     clear z1
-    
+
     % merge z_mad
     m.z_mad(rows,cols) = m1.z_mad(subrows,subcols).*A + ...
         m.z_mad(rows,cols).*(1-A);
-    
 
-    m.N(rows,cols) = uint8(single(m1.N(subrows,subcols)).*A + ...
-        single(m.N(rows,cols)).*(1-A));
-    m.Nmt(rows,cols) = uint8(single(m1.Nmt(subrows,subcols)).*A + ...
-        single(m.Nmt(rows,cols)).*(1-A));
-      m.tmax(rows,cols) = uint16(single(m1.tmax(subrows,subcols)).*A + ...
-        single(m.tmax(rows,cols)).*(1-A));
-      m.tmin(rows,cols) = uint16(single(m1.tmin(subrows,subcols)).*A + ...
-        single(m.tmin(rows,cols)).*(1-A));
+    arr1 = m1.N(subrows,subcols);
+    arr2 = m.N(rows,cols);
+    I = uint8(single(arr1).*A + single(arr2).*(1-A));
+    I_interp = max(arr1, arr2);
+    I(A_interp) = I_interp(A_interp);
+    I(arr1 == 0) = arr2(arr1 == 0);
+    I(arr2 == 0) = arr1(arr2 == 0);
+    m.N(rows,cols) = I;
+
+    arr1 = m1.Nmt(subrows,subcols);
+    arr2 = m.Nmt(rows,cols);
+    I = uint8(single(arr1).*A + single(arr2).*(1-A));
+    I_interp = max(arr1, arr2);
+    I(A_interp) = I_interp(A_interp);
+    I(arr1 == 0) = arr2(arr1 == 0);
+    I(arr2 == 0) = arr1(arr2 == 0);
+    m.Nmt(rows,cols) = I;
+
+    arr1 = m1.tmax(subrows,subcols);
+    arr2 = m.tmax(rows,cols);
+    I = uint16(single(arr1).*A + single(arr2).*(1-A));
+    I_interp = max(arr1, arr2);
+    I(A_interp) = I_interp(A_interp);
+    I(arr1 == 0) = arr2(arr1 == 0);
+    I(arr2 == 0) = arr1(arr2 == 0);
+    m.tmax(rows,cols) = I;
+
+    arr1 = m1.tmin(subrows,subcols);
+    arr2 = m.tmin(rows,cols);
+    I = uint16(single(arr1).*A + single(arr2).*(1-A));
+    I_interp = min(arr1, arr2);
+    I(A_interp) = I_interp(A_interp);
+    I(arr1 == 0) = arr2(arr1 == 0);
+    I(arr2 == 0) = arr1(arr2 == 0);
+    m.tmin(rows,cols) = I;
+
+    clear I;
     
     
 else

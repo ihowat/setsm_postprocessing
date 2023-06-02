@@ -379,7 +379,10 @@ if preciseCorners
     end
 end
 
-N=(N0.*W0)+(N1.*(1-W0));
+%N = (N0.*W0) + (N1.*(1-W0));
+N = max(N0, N1);
+N(W0 == 1) = N0(W0 == 1);
+N(W0 == 0) = N1(W0 == 0);
 
 n= N0 == 0 & N1 ~= 0;
 N(n)=N1(n);
@@ -437,7 +440,10 @@ if preciseCorners
     end
 end
 
-Nmt=(Nmt0.*W0)+(Nmt1.*(1-W0));
+%Nmt = (Nmt0.*W0) + (Nmt1.*(1-W0));
+Nmt = max(Nmt0, Nmt1);
+Nmt(W0 == 1) = Nmt0(W0 == 1);
+Nmt(W0 == 0) = Nmt1(W0 == 0);
 
 n= Nmt0 == 0 & Nmt1 ~= 0;
 Nmt(n)=Nmt1(n);
@@ -495,7 +501,10 @@ if preciseCorners
     end
 end
 
-tmin=(tmin0.*W0)+(tmin1.*(1-W0));
+%tmin = (tmin0.*W0) + (tmin1.*(1-W0));
+tmin = min(tmin0, tmin1);
+tmin(W0 == 1) = tmin0(W0 == 1);
+tmin(W0 == 0) = tmin1(W0 == 0);
 
 n= tmin0 == 0 & tmin1 ~= 0;
 tmin(n)=tmin1(n);
@@ -553,7 +562,10 @@ if preciseCorners
     end
 end
 
-tmax=(tmax0.*W0)+(tmax1.*(1-W0));
+%tmax = (tmax0.*W0) + (tmax1.*(1-W0));
+tmax = max(tmax0, tmax1);
+tmax(W0 == 1) = tmax0(W0 == 1);
+tmax(W0 == 0) = tmax1(W0 == 0);
 
 n= tmax0 == 0 & tmax1 ~= 0;
 tmax(n)=tmax1(n);
