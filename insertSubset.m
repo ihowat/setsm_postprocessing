@@ -2,10 +2,17 @@ function insertSubset(baseFile,insertFile,xr,yr,p,outName)
 % insertSubset: overlay a subset from one tile onto another, including
 % metadata
 %
-% insertSubset(baseFile,insertFile,xr,yr) places the subset defined by xr =
-% [min(x) max(x)] and yr = [min(y) max(y)] from the insertFile into
+% insertSubset(baseFile,insertFile,xr,yr,p,outName) places the subset defined by xr =
+% [min(x) max(x)] and yr = [min(y) max(y)] and polygon p from the insertFile into
 % baseFile. Removed median offset around subset boundaries and applies edge
-% blending.Currently supports mat files only. Appends results to outName.
+% blending. Currently supports mat files only. Appends results to outName. 
+% If p=[], p is set to the polygon [xr,yr].
+
+% if no p given, make p vertices the xr yr rectangle boundary
+if isempty(p)
+    p = [[xr(1);xr(1);xr(2);xr(2);xr(1)];...
+         [yr(1);yr(2);yr(2):yr(1);yr(1)]];
+end
 
 %% load insert file into mat object
 %m1=matfile('~/Desktop/arcticdem_subset_mosaics/arcticdem_subset_mosaics_2020_m05/18_39a_10m.mat');
