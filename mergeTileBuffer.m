@@ -603,6 +603,60 @@ end
 
 clear tmax0 tmax1 tmax;
 
+%% merge waterFillMask
+if any(strcmp(varlist0,'waterFillMask')) || any(strcmp(varlist1,'waterFillMask'))
+
+    if ~any(strcmp(varlist0,'waterFillMaskbuff'))
+            m0.waterFillMaskbuff = cell(4,1);
+    end
+
+    if ~any(strcmp(varlist1,'waterFillMaskbuff'))
+            m1.waterFillMaskbuff = cell(4,1);
+    end
+
+    waterFillMask0=m0.waterFillMaskbuff(n0,1);
+    waterFillMask0=waterFillMask0{1};
+
+    if isempty(waterFillMask0)
+            waterFillMask0= m0.waterFillMask(r0(1):r0(2),c0(1):c0(2));
+            m0.waterFillMaskbuff(n0,1) = {waterFillMask0};
+    end
+
+    waterFillMask1=m1.waterFillMaskbuff(n1,1);
+    waterFillMask1=waterFillMask1{1};
+
+    if isempty(waterFillMask1)
+            waterFillMask1= m1.waterFillMask(r1(1):r1(2),c1(1):c1(2));
+            m1.waterFillMaskbuff(n1,1) = {waterFillMask1};
+    end
+
+    waterFillMask0=logical(waterFillMask0);
+    waterFillMask1=logical(waterFillMask1);
+
+    if preciseCorners
+        cacheOriginalCorners(m0, n0, 'waterFillMask', cornersSource);
+        cacheOriginalCorners(m1, n1, 'waterFillMask', cornersSource);
+        if n0 == n_right || n0 == n_left
+            waterFillMask0 = resetBuffCorners(m0, n0, 'waterFillMask', waterFillMask0);
+            waterFillMask1 = resetBuffCorners(m1, n1, 'waterFillMask', waterFillMask1);
+        end
+    end
+
+    waterFillMask = waterFillMask0 | waterFillMask1;
+
+    m0.waterFillMask(r0(1):r0(2),c0(1):c0(2))=waterFillMask;
+    m1.waterFillMask(r1(1):r1(2),c1(1):c1(2))=waterFillMask;
+
+    if preciseCorners
+        if n0 == n_right || n0 == n_left
+            burnCornersIntoAdjBuffs(m0, n0, 'waterFillMask', waterFillMask);
+            burnCornersIntoAdjBuffs(m1, n1, 'waterFillMask', waterFillMask);
+        end
+    end
+
+    clear waterFillMask0 waterFillMask1 waterFillMask;
+end
+
 fprintf('tile merge complete\n')
 
 if n0 == n_right

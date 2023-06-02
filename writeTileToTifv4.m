@@ -474,8 +474,14 @@ if ~isempty(qcMaskFile)
 end
 
 
+flds=fields(m);
+
 if isempty(z)
     z = m.z;
+end
+
+if isempty(water_fill_mask) && contains('waterFillMask',flds)
+    water_fill_mask = m.waterFillMask;
 end
 
 bad_data_or_filled_mask = [];
@@ -552,8 +558,6 @@ if dem_only
     return;
 end
 
-
-flds=fields(m);
 
 if ~(browse_only || dem_and_browse)
     if contains('z_mad',flds)
