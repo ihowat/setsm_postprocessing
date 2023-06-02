@@ -23,7 +23,7 @@ if isstr(f0) % it's a string, might be a filename
     if exist(f0,'file') % yup its a file
         m0 = matfile(f0); % load it
     else
-        error('File does not exist');
+        error('Tile 1 file does not exist');
     end
 elseif isvalid(f0) % not a string, is it a valid file handle?
     m0 = f0; % yes, so set m to f and get the filename for f
@@ -36,7 +36,7 @@ if isstr(f1) % it's a string, might be a filename
     if exist(f1,'file') % yup its a file
         m1 = matfile(f1); % load it
     else
-        error('File does not exist');
+        error('Tile 2 file does not exist');
     end
 elseif isvalid(f1) % not a string, is it a valid file handle?
     m1 = f1; % yes, so set m to f and get the filename for f
@@ -72,6 +72,11 @@ if ~lock_tiles(f0, f1, 'lock')
     error('failed to create tile lock files for this merge process')
 end
 
+
+[~,fname,fext] = fileparts(f0);
+f0_fname = [fname,fext];
+[~,fname,fext] = fileparts(f1);
+f1_fname = [fname,fext];
 
 % make sure writeable
 m0.Properties.Writable = true;
@@ -124,12 +129,15 @@ if diff(c0) < diff(r0) && c0(2) == sz0(2)
     n0 = n_right;
     n1 = n_left;
 
-    [w_r0,w_c0,w_r1,w_c1,failure,unequal_water_issue] = adjustFeatherZone(m0,m1,r0,c0,r1,c1,'right','left',n0,n1,max_feather_halfwidth,min_feather_halfwidth);
-    if unequal_water_issue
-        disp('cannot merge edges due to unequal land-water presence in tile overlap area')
-        return;
-    elseif failure
-        error('adjustFeatherZone failure, will not merge these edges')
+    [w_r0,w_c0,w_r1,w_c1,failure,failure_acceptable] = adjustFeatherZone(m0,m1,r0,c0,r1,c1,'right','left',n0,n1,max_feather_halfwidth,min_feather_halfwidth);
+    if failure
+        if failure_acceptable
+%            fprintf('Skipping merge of tiles due to acceptable error: %s, %s\n', f0_fname, f1_fname);
+%            return;
+            fprintf('Passing over acceptable error and merging tiles: %s, %s\n', f0_fname, f1_fname);
+        else
+            error('adjustFeatherZone failure is not an acceptable error, raising process-killing error')
+        end
     end
 
     W0 = [ones(1,w_c0(1)-c0(1)), linspace(1,0,diff(w_c0)+1), zeros(1,c0(2)-w_c0(2))];
@@ -151,12 +159,15 @@ elseif diff(c0) < diff(r0) && c0(1) == 1
     n0 = n_left;
     n1 = n_right;
 
-    [w_r0,w_c0,w_r1,w_c1,failure,unequal_water_issue] = adjustFeatherZone(m0,m1,r0,c0,r1,c1,'left','right',n0,n1,max_feather_halfwidth,min_feather_halfwidth);
-    if unequal_water_issue
-        disp('cannot merge edges due to unequal land-water presence in tile overlap area')
-        return;
-    elseif failure
-        error('adjustFeatherZone failure, will not merge these edges')
+    [w_r0,w_c0,w_r1,w_c1,failure,failure_acceptable] = adjustFeatherZone(m0,m1,r0,c0,r1,c1,'left','right',n0,n1,max_feather_halfwidth,min_feather_halfwidth);
+    if failure
+        if failure_acceptable
+%            fprintf('Skipping merge of tiles due to acceptable error: %s, %s\n', f0_fname, f1_fname);
+%            return;
+            fprintf('Passing over acceptable error and merging tiles: %s, %s\n', f0_fname, f1_fname);
+        else
+            error('adjustFeatherZone failure is not an acceptable error, raising process-killing error')
+        end
     end
 
     W0 = [zeros(1,w_c0(1)-c0(1)), linspace(0,1,diff(w_c0)+1), ones(1,c0(2)-w_c0(2))];
@@ -178,12 +189,15 @@ elseif diff(c0) > diff(r0) && r0(1) == 1
     n0 = n_top;
     n1 = n_bottom;
 
-    [w_r0,w_c0,w_r1,w_c1,failure,unequal_water_issue] = adjustFeatherZone(m0,m1,r0,c0,r1,c1,'top','bottom',n0,n1,max_feather_halfwidth,min_feather_halfwidth);
-    if unequal_water_issue
-        disp('cannot merge edges due to unequal land-water presence in tile overlap area')
-        return;
-    elseif failure
-        error('adjustFeatherZone failure, will not merge these edges')
+    [w_r0,w_c0,w_r1,w_c1,failure,failure_acceptable] = adjustFeatherZone(m0,m1,r0,c0,r1,c1,'top','bottom',n0,n1,max_feather_halfwidth,min_feather_halfwidth);
+    if failure
+        if failure_acceptable
+%            fprintf('Skipping merge of tiles due to acceptable error: %s, %s\n', f0_fname, f1_fname);
+%            return;
+            fprintf('Passing over acceptable error and merging tiles: %s, %s\n', f0_fname, f1_fname);
+        else
+            error('adjustFeatherZone failure is not an acceptable error, raising process-killing error')
+        end
     end
 
     W0 = [zeros(1,w_r0(1)-r0(1)), linspace(0,1,diff(w_r0)+1), ones(1,r0(2)-w_r0(2))];
@@ -205,12 +219,15 @@ elseif diff(c0) > diff(r0) && r0(2) == sz0(1)
     n0 = n_bottom;
     n1 = n_top;
 
-    [w_r0,w_c0,w_r1,w_c1,failure,unequal_water_issue] = adjustFeatherZone(m0,m1,r0,c0,r1,c1,'bottom','top',n0,n1,max_feather_halfwidth,min_feather_halfwidth);
-    if unequal_water_issue
-        disp('cannot merge edges due to unequal land-water presence in tile overlap area')
-        return;
-    elseif failure
-        error('adjustFeatherZone failure, will not merge these edges')
+    [w_r0,w_c0,w_r1,w_c1,failure,failure_acceptable] = adjustFeatherZone(m0,m1,r0,c0,r1,c1,'bottom','top',n0,n1,max_feather_halfwidth,min_feather_halfwidth);
+    if failure
+        if failure_acceptable
+%            fprintf('Skipping merge of tiles due to acceptable error: %s, %s\n', f0_fname, f1_fname);
+%            return;
+            fprintf('Passing over acceptable error and merging tiles: %s, %s\n', f0_fname, f1_fname);
+        else
+            error('adjustFeatherZone failure is not an acceptable error, raising process-killing error')
+        end
     end
 
     W0 = [ones(1,w_r0(1)-r0(1)), linspace(1,0,diff(w_r0)+1), zeros(1,r0(2)-w_r0(2))];
@@ -1212,14 +1229,14 @@ elseif n0 == n_bottom
 end
 
 
-
-function [r0_out,c0_out,r1_out,c1_out,failure,unequal_water_issue] = adjustFeatherZone(m0,m1,r0_in,c0_in,r1_in,c1_in,edge0,edge1,n0,n1,maxdist,mindist)
+function [r0_out,c0_out,r1_out,c1_out,failure,failure_acceptable] = adjustFeatherZone(m0,m1,r0_in,c0_in,r1_in,c1_in,edge0,edge1,n0,n1,maxdist,mindist)
 
 r0_out = r0_in;
 c0_out = c0_in;
 r1_out = r1_in;
 c1_out = c1_in;
 failure = false;
+failure_acceptable = false;
 unequal_water_issue = false;
 
 varlist0 = who(m0);
@@ -1238,6 +1255,9 @@ data_array_names = {
     'tmin',
     'tmax',
 };
+if ismember('waterFillMask', varlist0) || ismember('waterFillMask', varlist1)
+    data_array_names{end+1} = 'waterFillMask';
+end
 
 if ~all(ismember(data_array_names, varlist0))
     disp(data_array_names);
@@ -1426,7 +1446,7 @@ if ismember(edge0, {'right', 'left'})
     nan_equality_arr = nan_equality_arr((1+max_shrink_px):(buff_nrows-max_shrink_px), :);
     nan_equality_vec = all(nan_equality_arr, 1);
 elseif ismember(edge0, {'top', 'bottom'})
-    % Remove rows from the top and bottom of the NaN equality array
+    % Remove cols from the left and right of the NaN equality array
     % where a later "row" merge should fix a potential NaN stripe on the top or bottom edges.
     nan_equality_arr = nan_equality_arr(:, (1+max_shrink_px):(buff_ncols-max_shrink_px));
     nan_equality_vec = all(nan_equality_arr, 2);
@@ -1436,6 +1456,7 @@ clear nan_equality_arr;
 pre_iter_shrink = shrink_px;
 nan_check_vec = nan_equality_vec;
 checking_all_nan_stripes = false;
+checking_unequal_nan_stripes = false;
 check_for_unequal_water_issue = false;
 while true
     min_shrink_px = pre_iter_shrink;
@@ -1456,7 +1477,10 @@ while true
             ;
         else
             if ~displayed_warning
-                if checking_all_nan_stripes
+                if checking_unequal_nan_stripes
+                    disp("Found unequal NaN stripes between tiles within overlap area");
+                    disp("Will shrink feather zone one pixel at a time until out of unequal NaN stripes zone");
+                elseif checking_all_nan_stripes
                     disp("Found all-NaN zone on at least one tile's edge");
                     disp("Will shrink feather zone one pixel at a time until out of all-NaN zone");
                 else
@@ -1490,6 +1514,15 @@ while true
                 nan_check_vec = ~(all(isnan(z0), 2) | all(isnan(z1), 2));
             end
             continue;
+        elseif ~checking_unequal_nan_stripes
+            checking_unequal_nan_stripes = true;
+            disp("Trying again, checking unequal all-NaN stripes on tile edges")
+            if ismember(edge0, {'right', 'left'})
+                nan_check_vec = (all(isnan(z0), 1) == all(isnan(z1), 1));
+            elseif ismember(edge0, {'top', 'bottom'})
+                nan_check_vec = (all(isnan(z0), 2) == all(isnan(z1), 2));
+            end
+            continue;
         else
             failure = true;
             check_for_unequal_water_issue = true;
@@ -1500,29 +1533,35 @@ while true
 end
 
 if failure
-    if check_for_unequal_water_issue
-        if ismember('land', varlist0) && ismember('land', varlist1)
-            water0 = ~m0.land(r0_in(1):r0_in(2),c0_in(1):c0_in(2));
-            water1 = ~m1.land(r1_in(1):r1_in(2),c1_in(1):c1_in(2));
+    if check_for_unequal_water_issue && ismember('land', varlist0) && ismember('land', varlist1)
+        water0 = ~m0.land(r0_in(1):r0_in(2),c0_in(1):c0_in(2));
+        water1 = ~m1.land(r1_in(1):r1_in(2),c1_in(1):c1_in(2));
 
-            if ismember(edge0, {'right', 'left'})
-                if ~isequal(all(water0, 1), all(water1, 1))
-                    unequal_water_issue = true;
-                end
-            elseif ismember(edge0, {'top', 'bottom'})
-                if ~isequal(all(water0, 2), all(water1, 2))
-                    unequal_water_issue = true;
-                end
+        if ismember(edge0, {'right', 'left'})
+            if ~isequal(all(water0, 1), all(water1, 1))
+                unequal_water_issue = true;
             end
-
-            % I didn't want to have to resort to the following blanket check,
-            % but unfortunately we have to.
-            if ~unequal_water_issue
-                if all(water0, 'all') && all(water1, 'all')
-                    unequal_water_issue = true;
-                end
+        elseif ismember(edge0, {'top', 'bottom'})
+            if ~isequal(all(water0, 2), all(water1, 2))
+                unequal_water_issue = true;
             end
         end
+
+        % I didn't want to have to resort to the following blanket check,
+        % but unfortunately we have to.
+        if ~unequal_water_issue
+            if all(water0, 'all') && all(water1, 'all')
+                unequal_water_issue = true;
+            end
+        end
+    end
+    if unequal_water_issue
+        fprintf("Detected unequal land-water presence in tile overlap area")
+        fprintf("Deeming this a REMA v2 era acceptable error, assuming tiles straddle land-water boundary\n");
+        failure_acceptable = true;
+    else
+        fprintf("Deeming this an ArcticDEM v4.1 era acceptable error, assuming tiles straddle land-water boundary\n");
+        failure_acceptable = true;
     end
     return;
 end
