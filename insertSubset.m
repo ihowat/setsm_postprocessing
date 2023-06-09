@@ -10,8 +10,8 @@ function insertSubset(baseFile,insertFile,xr,yr,p,outName)
 
 % if no p given, make p vertices the xr yr rectangle boundary
 if isempty(p)
-    p = [[xr(1);xr(1);xr(2);xr(2);xr(1)];...
-         [yr(1);yr(2);yr(2):yr(1);yr(1)]];
+    p = [[xr(1);xr(1);xr(2);xr(2);xr(1)],...
+         [yr(1);yr(2);yr(2);yr(1);yr(1)]];
 end
 
 %% load insert file into mat object
