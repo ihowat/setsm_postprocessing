@@ -8,6 +8,9 @@ function insertSubset(baseFile,insertFile,xr,yr,p,outName)
 % blending. Currently supports mat files only. Appends results to outName. 
 % If p=[], p is set to the polygon [xr,yr].
 
+source_dzmed_dist_meters = 30;
+feather_dist_meters = 500;
+
 %% if no p given, make p vertices the xr yr rectangle boundary
 %if isempty(p)
 %    p = [[xr(1);xr(1);xr(2);xr(2);xr(1)],...
@@ -17,6 +20,8 @@ function insertSubset(baseFile,insertFile,xr,yr,p,outName)
 %% load insert file into mat object
 %m1=matfile('~/Desktop/arcticdem_subset_mosaics/arcticdem_subset_mosaics_2020_m05/18_39a_10m.mat');
 m1=matfile(insertFile);
+
+dx = abs(m1.x(1,2)-m1.x(1,1));
 
 % % extract coordinate arrays
 % x1=m1.x;
@@ -69,10 +74,11 @@ rows = find(y1(1) == m.y) :  find(y1(end) == m.y);
 z1 = m1.z(subrows,subcols);
 dz = z1 - m.z(rows,cols);
 
+buff_px = ceil(source_dzmed_dist_meters / dx);
 if ~isempty(p)
     % apply polygon mask
     BW0 = roipoly(x1,y1,dz,p(:,1),p(:,2));
-    BW1 = imdilate(BW0,ones(7));
+    BW1 = imdilate(BW0,ones(buff_px*2+1));
     BW1(BW0) = false;
 else
     BW0 = ones(size(dz),'logical');
@@ -81,7 +87,7 @@ else
     BW1(end,:) = 1;
     BW1(:,  1) = 1;
     BW1(:,end) = 1;
-    BW1 = imdilate(BW1,ones(7));
+    BW1 = imdilate(BW1,ones(buff_px*2+1));
 end
 
 % Median of differences along edges
@@ -121,9 +127,10 @@ z1(isnan(z1)) = 0;
 
 
 % This code can handle nans around border but needs inpaint_nan function
+buff_px = ceil(feather_dist_meters / dx);
 A = ~isnan(dz) & BW0;
 A = padarray(A,[1,1],0,'both');
-B= imerode(A,ones(100));
+B= imerode(A,ones(buff_px*2+1));
 A = double(A);
 A(A~=B) = NaN;
 clear B
