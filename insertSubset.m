@@ -8,11 +8,11 @@ function insertSubset(baseFile,insertFile,xr,yr,p,outName)
 % blending. Currently supports mat files only. Appends results to outName. 
 % If p=[], p is set to the polygon [xr,yr].
 
-% if no p given, make p vertices the xr yr rectangle boundary
-if isempty(p)
-    p = [[xr(1);xr(1);xr(2);xr(2);xr(1)],...
-         [yr(1);yr(2);yr(2);yr(1);yr(1)]];
-end
+%% if no p given, make p vertices the xr yr rectangle boundary
+%if isempty(p)
+%    p = [[xr(1);xr(1);xr(2);xr(2);xr(1)],...
+%         [yr(1);yr(2);yr(2);yr(1);yr(1)]];
+%end
 
 %% load insert file into mat object
 %m1=matfile('~/Desktop/arcticdem_subset_mosaics/arcticdem_subset_mosaics_2020_m05/18_39a_10m.mat');
@@ -69,10 +69,20 @@ rows = find(y1(1) == m.y) :  find(y1(end) == m.y);
 z1 = m1.z(subrows,subcols);
 dz = z1 - m.z(rows,cols);
 
-% apply polygon mask
-BW0 = roipoly(x1,y1,dz,p(:,1),p(:,2));
-BW1 = imdilate(BW0,ones(7));
-BW1(BW0) = false;
+if ~isempty(p)
+    % apply polygon mask
+    BW0 = roipoly(x1,y1,dz,p(:,1),p(:,2));
+    BW1 = imdilate(BW0,ones(7));
+    BW1(BW0) = false;
+else
+    BW0 = ones(size(dz),'logical');
+    BW1 = zeros(size(dz),'logical');
+    BW1(1,  :) = 1;
+    BW1(end,:) = 1;
+    BW1(:,  1) = 1;
+    BW1(:,end) = 1;
+    BW1 = imdilate(BW1,ones(7));
+end
 
 % Median of differences along edges
 %dzmed = nanmedian([dz(1,:),dz(end,:),dz(:,1)',dz(:,end)']);
