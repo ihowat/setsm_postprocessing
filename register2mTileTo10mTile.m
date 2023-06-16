@@ -89,7 +89,7 @@ dz_smooth_interp = interp2(xr,yr(:),dz_smooth,x,y(:),'*linear');
 clear dz_smooth
 
 % appy upsampled to map to transformed 2m DEM and add to file
-z = z_reg - ;
+z = z_reg - dz_smooth_interp;
   
 % save to out matfile
 save(outName,'reg','x','y','z','dz_smooth_interp','-v7.3');
