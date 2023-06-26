@@ -17,7 +17,8 @@ if ~isempty(n)
     registerBlobsSkipregShp = varargin{n+1};
 else
 %    registerBlobsSkipregShp = [];
-    registerBlobsSkipregShp = "/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/results/output_tiles/arcticdem_may19_mosaic_100m_v4.1_dem_debug-reg_blobs_offset_gt6.shp";
+    % TODO: Pass this path in properly through batch_registerTiles.py script
+    registerBlobsSkipregShp = "/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/arcticdem_v4.1_mosaic_reg-cop30_skip-reg.shp";
 end
 
 n = find(strcmpi('reportOffsetOnly',varargin));
@@ -31,8 +32,8 @@ n = find(strcmpi('writeDebugTifs',varargin));
 if ~isempty(n)
     writeDebugTifs = true;
 else
-%    writeDebugTifs = false;
-    writeDebugTifs = true;
+    writeDebugTifs = false;
+%    writeDebugTifs = true;
 end
 
 n = find(strcmpi('debugTifProjstr',varargin));
@@ -58,7 +59,7 @@ zr_dx = I_ref.x(2)-I_ref.x(1);
 if writeDebugTifs && ~reportOffsetOnly
     z_at_zr_res_unreg = z_at_zr_res;
 else
-    z_at_zr_res_unreg;
+    z_at_zr_res_unreg = [];
 end
 
 z_masked = z_at_zr_res;
