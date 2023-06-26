@@ -129,11 +129,12 @@ if diff(c0) < diff(r0) && c0(2) == sz0(2)
     n0 = n_right;
     n1 = n_left;
 
-    [w_r0,w_c0,w_r1,w_c1,failure,failure_acceptable] = adjustFeatherZone(m0,m1,r0,c0,r1,c1,'right','left',n0,n1,max_feather_halfwidth,min_feather_halfwidth);
+    [w_r0,w_c0,w_r1,w_c1,failure,failure_skip_merge,failure_merge_anyway] = adjustFeatherZone(m0,m1,r0,c0,r1,c1,'right','left',n0,n1,max_feather_halfwidth,min_feather_halfwidth);
     if failure
-        if failure_acceptable
-%            fprintf('Skipping merge of tiles due to acceptable error: %s, %s\n', f0_fname, f1_fname);
-%            return;
+        if failure_skip_merge
+            fprintf('Skipping merge of tiles due to acceptable error: %s, %s\n', f0_fname, f1_fname);
+            return;
+        elseif failure_merge_anyway
             fprintf('Passing over acceptable error and merging tiles: %s, %s\n', f0_fname, f1_fname);
         else
             error('adjustFeatherZone failure is not an acceptable error, raising process-killing error')
@@ -159,11 +160,12 @@ elseif diff(c0) < diff(r0) && c0(1) == 1
     n0 = n_left;
     n1 = n_right;
 
-    [w_r0,w_c0,w_r1,w_c1,failure,failure_acceptable] = adjustFeatherZone(m0,m1,r0,c0,r1,c1,'left','right',n0,n1,max_feather_halfwidth,min_feather_halfwidth);
+    [w_r0,w_c0,w_r1,w_c1,failure,failure_skip_merge,failure_merge_anyway] = adjustFeatherZone(m0,m1,r0,c0,r1,c1,'left','right',n0,n1,max_feather_halfwidth,min_feather_halfwidth);
     if failure
-        if failure_acceptable
-%            fprintf('Skipping merge of tiles due to acceptable error: %s, %s\n', f0_fname, f1_fname);
-%            return;
+        if failure_skip_merge
+            fprintf('Skipping merge of tiles due to acceptable error: %s, %s\n', f0_fname, f1_fname);
+            return;
+        elseif failure_merge_anyway
             fprintf('Passing over acceptable error and merging tiles: %s, %s\n', f0_fname, f1_fname);
         else
             error('adjustFeatherZone failure is not an acceptable error, raising process-killing error')
@@ -189,11 +191,12 @@ elseif diff(c0) > diff(r0) && r0(1) == 1
     n0 = n_top;
     n1 = n_bottom;
 
-    [w_r0,w_c0,w_r1,w_c1,failure,failure_acceptable] = adjustFeatherZone(m0,m1,r0,c0,r1,c1,'top','bottom',n0,n1,max_feather_halfwidth,min_feather_halfwidth);
+    [w_r0,w_c0,w_r1,w_c1,failure,failure_skip_merge,failure_merge_anyway] = adjustFeatherZone(m0,m1,r0,c0,r1,c1,'top','bottom',n0,n1,max_feather_halfwidth,min_feather_halfwidth);
     if failure
-        if failure_acceptable
-%            fprintf('Skipping merge of tiles due to acceptable error: %s, %s\n', f0_fname, f1_fname);
-%            return;
+        if failure_skip_merge
+            fprintf('Skipping merge of tiles due to acceptable error: %s, %s\n', f0_fname, f1_fname);
+            return;
+        elseif failure_merge_anyway
             fprintf('Passing over acceptable error and merging tiles: %s, %s\n', f0_fname, f1_fname);
         else
             error('adjustFeatherZone failure is not an acceptable error, raising process-killing error')
@@ -219,11 +222,12 @@ elseif diff(c0) > diff(r0) && r0(2) == sz0(1)
     n0 = n_bottom;
     n1 = n_top;
 
-    [w_r0,w_c0,w_r1,w_c1,failure,failure_acceptable] = adjustFeatherZone(m0,m1,r0,c0,r1,c1,'bottom','top',n0,n1,max_feather_halfwidth,min_feather_halfwidth);
+    [w_r0,w_c0,w_r1,w_c1,failure,failure_skip_merge,failure_merge_anyway] = adjustFeatherZone(m0,m1,r0,c0,r1,c1,'bottom','top',n0,n1,max_feather_halfwidth,min_feather_halfwidth);
     if failure
-        if failure_acceptable
-%            fprintf('Skipping merge of tiles due to acceptable error: %s, %s\n', f0_fname, f1_fname);
-%            return;
+        if failure_skip_merge
+            fprintf('Skipping merge of tiles due to acceptable error: %s, %s\n', f0_fname, f1_fname);
+            return;
+        elseif failure_merge_anyway
             fprintf('Passing over acceptable error and merging tiles: %s, %s\n', f0_fname, f1_fname);
         else
             error('adjustFeatherZone failure is not an acceptable error, raising process-killing error')
@@ -1283,14 +1287,15 @@ elseif n0 == n_bottom
 end
 
 
-function [r0_out,c0_out,r1_out,c1_out,failure,failure_acceptable] = adjustFeatherZone(m0,m1,r0_in,c0_in,r1_in,c1_in,edge0,edge1,n0,n1,maxdist,mindist)
+function [r0_out,c0_out,r1_out,c1_out,failure,failure_skip_merge,failure_merge_anyway] = adjustFeatherZone(m0,m1,r0_in,c0_in,r1_in,c1_in,edge0,edge1,n0,n1,maxdist,mindist)
 
 r0_out = r0_in;
 c0_out = c0_in;
 r1_out = r1_in;
 c1_out = c1_in;
 failure = false;
-failure_acceptable = false;
+failure_skip_merge = false;
+failure_merge_anyway = false;
 unequal_water_issue = false;
 
 varlist0 = who(m0);
@@ -1314,12 +1319,28 @@ if ismember('waterFillMask', varlist0) || ismember('waterFillMask', varlist1)
 end
 
 if ~all(ismember(data_array_names, varlist0))
-    disp(data_array_names);
-    error("One or more expected data arrays do not exist in 1st tile struct")
+    disp("ERROR: One or more expected data arrays do not exist in 1st tile struct");
+    missing_arrays = setdiff(data_array_names, varlist0);
+    data_array_names
+    missing_arrays
+    failure = true;
+%    if length(missing_arrays) == 1 && strcmp(missing_arrays{1}, 'waterFillMask')
+%        disp("Will skip merging from this error assuming that tile is missing waterFillMask for good reason")
+%        failure_skip_merge = true;
+%    end
+    return;
 end
 if ~all(ismember(data_array_names, varlist1))
-    disp(data_array_names);
-    error("One or more expected data arrays do not exist in 2nd tile struct")
+    disp("ERROR: One or more expected data arrays do not exist in 2nd tile struct");
+    missing_arrays = setdiff(data_array_names, varlist1);
+    data_array_names
+    missing_arrays
+    failure = true;
+%    if length(missing_arrays) == 1 && strcmp(missing_arrays{1}, 'waterFillMask')
+%        disp("Will skip merging from this error assuming that tile is missing waterFillMask for good reason")
+%        failure_skip_merge = true;
+%    end
+    return;
 end
 
 overlap_sz_0 = [diff(r0_in)+1, diff(c0_in)+1];
@@ -1612,10 +1633,10 @@ if failure
     if unequal_water_issue
         fprintf("Detected unequal land-water presence in tile overlap area")
         fprintf("Deeming this a REMA v2 era acceptable error, assuming tiles straddle land-water boundary\n");
-        failure_acceptable = true;
+        failure_merge_anyway = true;
     else
         fprintf("Deeming this an ArcticDEM v4.1 era acceptable error, assuming tiles straddle land-water boundary\n");
-        failure_acceptable = true;
+        failure_merge_anyway = true;
     end
     return;
 end
