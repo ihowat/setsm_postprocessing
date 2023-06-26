@@ -521,7 +521,7 @@ if any(underwater(:))
     logMessage('Flattening z_filled below "water height" (it=1)');
     feather_dist_px = ceil(10 / dx);
     underwater = underwater & imerode(M & ~isnan(water_height), circleMaskSE(feather_dist_px));
-    circle_feather_mask = circleFeatherMask(feather_dist_px, 0);
+    circle_feather_mask = circleFeatherMaskRadius(feather_dist_px, 0);
     flatten_water_weight = conv2(double(underwater), circle_feather_mask, 'same') / sum(circle_feather_mask(:));
     flatten_water_weight(isnan(water_height)) = 0;
     flatten_water_weight = min(1, max(0, flatten_water_weight));

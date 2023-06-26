@@ -8,16 +8,26 @@ function insertSubset(baseFile,insertFile,xr,yr,p,outName)
 % blending. Currently supports mat files only. Appends results to outName. 
 % If p=[], p is set to the polygon [xr,yr].
 
-source_dzmed_dist_meters = 30;
 feather_dist_meters = 500;
 
-%% if no p given, make p vertices the xr yr rectangle boundary
-%if isempty(p)
-%    p = [[xr(1);xr(1);xr(2);xr(2);xr(1)],...
-%         [yr(1);yr(2);yr(2);yr(1);yr(1)]];
-%end
+% if no p given, make p vertices the xr yr rectangle boundary
+if isempty(p)
+    p = [[xr(1);xr(1);xr(2);xr(2);xr(1)],...
+         [yr(1);yr(2);yr(2);yr(1);yr(1)]];
+end
+
+% We will use the *smoothed* border around the inside edge of 'p' as the feathering zone,
+% which is the space between 'p' and 'p_buff' below.
+p_ps_orig = polyshape(p(:,1), p(:,2));
+p_ps_eroded = polybuffer(p_ps_orig, -feather_dist_meters);
+p_ps = p_ps_eroded;
+p_ps_buff = polybuffer(p_ps_eroded, feather_dist_meters);
+
+p = p_ps.Vertices;
+p_buff = p_ps_buff.Vertices;
 
 %% load insert file into mat object
+fprintf('Loading insertFile: %s\n', insertFile);
 %m1=matfile('~/Desktop/arcticdem_subset_mosaics/arcticdem_subset_mosaics_2020_m05/18_39a_10m.mat');
 m1=matfile(insertFile);
 
@@ -28,14 +38,16 @@ dx = abs(m1.x(1,2)-m1.x(1,1));
 % y1=m1.y;
 
 % cols and rows of the insert DEM in the range
-subcols = find(m1.x >= min(xr) & m1.x <= max(xr));
-subrows = find(m1.y >= min(yr) & m1.y <= max(yr));
+% add small buffer to make sure we have enough room for calculations
+buff_meters = ceil(feather_dist_meters / 2);
+subcols = find(m1.x >= min(xr-buff_meters) & m1.x <= max(xr+buff_meters));
+subrows = find(m1.y >= min(yr-buff_meters) & m1.y <= max(yr+buff_meters));
 %
 % % load subset of insert DEM
 % z1 = m1.z(subrows,subcols);
 x1=m1.x(1,subcols);
 y1=m1.y(1,subrows);
-y1=y1(:); % make vertical for interp
+%y1=y1(:); % make vertical for interp
 %
 % %% crop all nan cols/rows
 % nancols =  ~any(~isnan(z1));
@@ -74,27 +86,18 @@ rows = find(y1(1) == m.y) :  find(y1(end) == m.y);
 z1 = m1.z(subrows,subcols);
 dz = z1 - m.z(rows,cols);
 
-buff_px = ceil(source_dzmed_dist_meters / dx);
-if ~isempty(p)
-    % apply polygon mask
-    BW0 = roipoly(x1,y1,dz,p(:,1),p(:,2));
-    BW1 = imdilate(BW0,ones(buff_px*2+1));
-    BW1(BW0) = false;
-else
-    BW0 = ones(size(dz),'logical');
-    BW1 = zeros(size(dz),'logical');
-    BW1(1,  :) = 1;
-    BW1(end,:) = 1;
-    BW1(:,  1) = 1;
-    BW1(:,end) = 1;
-    BW1 = imdilate(BW1,ones(buff_px*2+1));
-end
+BW0 = roipoly(x1,y1,dz,p(:,1),p(:,2));
+BW1 = roipoly(x1,y1,dz,p_buff(:,1),p_buff(:,2));
+BW1(BW0) = false;
 
 % Median of differences along edges
 %dzmed = nanmedian([dz(1,:),dz(end,:),dz(:,1)',dz(:,end)']);
 dzmed = nanmedian(dz(BW1));
+if isnan(dzmed)
+    error('dzmed cannot be nan');
+end
 
-% subtract dzed offset from insert
+% subtract dzmed offset from insert
 z1 = z1 - dzmed;
 
 %% set NaNs in insert to zero
@@ -115,7 +118,7 @@ z1 = z1 - dzmed;
 %
 % A(B < A) = B(B<A);
 
-% This code can handle nans around border but needs inpaint_nan function
+% This code can handle nans around border but needs inpaint_nans function
 % A = ~isnan(dz);
 % A = padarray(A,[1,1],0,'both');
 % B= imerode(A,ones(100));
@@ -126,16 +129,18 @@ z1 = z1 - dzmed;
 % A=A(2:end-1,2:end-1);
 
 
-% This code can handle nans around border but needs inpaint_nan function
-buff_px = ceil(feather_dist_meters / dx);
-A = ~isnan(dz) & BW0;
-A = padarray(A,[1,1],0,'both');
-B= imerode(A,ones(buff_px*2+1));
-A = double(A);
-A(A~=B) = NaN;
-clear B
-A=inpaint_nans(A,2);
-A=A(2:end-1,2:end-1);
+%% This code can handle nans around border but needs inpaint_nans function
+%feather_dist_px = ceil(feather_dist_meters / dx);
+%A = ~isnan(dz) & BW0;
+%A = padarray(A,[1,1],0,'both');
+%B= imerode(A,ones(feather_dist_px*2+1));
+%A = double(A);
+%A(A~=B) = NaN;
+%clear B
+%A=inpaint_nans(A,2);
+%A=A(2:end-1,2:end-1);
+
+A = featherDilatePoly(x1,y1,dz,p(:,1),p(:,2),feather_dist_meters);
 
 A(A < 0) = 0;
 A(A > 1) = 1;

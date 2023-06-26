@@ -1,12 +1,6 @@
-function mask = circleFeatherMask(diameter, featherStartRadius)
-
-if mod(diameter, 2) == 0
-   diameter = diameter - 1;
-end
-radius = (diameter - 1) / 2;
+function mask = circleFeatherMaskRadius(radius, featherStartRadius)
 
 dim = radius * 2 + 1;
-
 xdim = dim;
 ydim = dim;
 
