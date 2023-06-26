@@ -143,14 +143,24 @@ A_interp = (A > 0) & (A < 1);
 
 %% Load base dem and merge insert
 if overwriteFlag
-    m.z(rows,cols) = z1.*A + ...
-        m.z(rows,cols).*(1-A);
+%    m.z(rows,cols) = z1.*A + ...
+%        m.z(rows,cols).*(1-A);
+
+    arr1 = z1;
+    arr2 = m.z(rows,cols);
+    I = arr1.*A + arr2.*(1-A);
+    I(isnan(arr1)) = arr2(isnan(arr1));
+    I(isnan(arr2)) = arr1(isnan(arr2));
+    m.z(rows,cols) = I;
 
     clear z1
 
-    % merge z_mad
-    m.z_mad(rows,cols) = m1.z_mad(subrows,subcols).*A + ...
-        m.z_mad(rows,cols).*(1-A);
+    arr1 = m1.z_mad(subrows,subcols);
+    arr2 = m.z_mad(rows,cols);
+    I = arr1.*A + arr2.*(1-A);
+    I(isnan(arr1)) = arr2(isnan(arr1));
+    I(isnan(arr2)) = arr1(isnan(arr2));
+    m.z_mad(rows,cols) = I;
 
     arr1 = m1.N(subrows,subcols);
     arr2 = m.N(rows,cols);
