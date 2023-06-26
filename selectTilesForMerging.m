@@ -31,25 +31,13 @@ end
 
 if strcmp(org, 'osu')
     unregFiles=dir([tileDir,'/*_',resolution,'.mat']);
+    regFiles=dir([tileDir,'/*_',resolution,'_reg.mat']);
 else
     unregFiles=dir([tileDir,'/*/*_',resolution,'.mat']);
+    regFiles=dir([tileDir,'/*/*_',resolution,'_reg.mat']);
 end
-unregFiles=fullfile({unregFiles.folder}, {unregFiles.name});
 
-if ~isempty(unregFiles)
-    
-    regFiles = strrep(unregFiles, [resolution,'.mat'], [resolution,'_reg.mat']);
-    
-    n = cellfun(@exist, regFiles);
-    n = n==2;
-    
-    fileNames = [regFiles(n) unregFiles(~n)];
-    
-else
-    if strcmp(org, 'osu')
-        fileNames=dir([tileDir,'/*_',resolution,'_reg.mat']);
-    else
-        fileNames=dir([tileDir,'/*/*_',resolution,'_reg.mat']);
-    end
-    fileNames=fullfile({fileNames.folder}, {fileNames.name});
-end
+regFiles = fullfile({regFiles.folder}, {regFiles.name});
+unregFiles = fullfile({unregFiles.folder}, {unregFiles.name});
+unregFiles = setdiff(unregFiles, strrep(regFiles, '_reg.mat', '.mat'));
+fileNames = [unregFiles regFiles];
