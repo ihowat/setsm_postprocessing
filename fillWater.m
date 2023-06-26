@@ -360,11 +360,24 @@ for i=1:numel(A)
     elseif ~any(M_tiles{i}(:))  % no water, skip
         B{i} = A{i};
     else  % mix of water and no water, interpolate
-%        B{i} = single(inpaint_nans(double(A{i}),2));
-        water_border = ~imerode(ones(size(M_tiles{i})), ones(7)) & M_tiles{i};
-        water_border(imdilate(~M_tiles{i}, circleMaskSE(floor(300/dx)))) = 0;
         Ai = A{i};
-        Ai(water_border) = 0;
+
+        % The following method of forcing to reference at the border of
+        % the processing tile where the border is water was not implemented
+        % correctly for ArcticDEM v4.1 and had no effect. Subsequent tests
+        % of the corrected implementation (below) were inconclusive on whether
+        % this step should be applied.
+        if false
+            water_border = zeros(size(M_tiles{i}),'logical');
+            water_border(1,  :) = 1;
+            water_border(end,:) = 1;
+            water_border(:,  1) = 1;
+            water_border(:,end) = 1;
+            water_border = imdilate(water_border, ones(7)) & M_tiles{i};
+            water_border(imdilate(~M_tiles{i}, circleMaskSE(floor(300/dx)))) = 0;
+            Ai(water_border) = 0;
+        end;
+
         % Had an idea that inpaint_nans could run faster if you tell it which "known" (non-NaN)
         % pixels it should use for NaN interpolation, and have it use just the pixels within 200m
         % of the NaN gaps. It didn't work on the first attempt, and would need more testing.
