@@ -97,8 +97,8 @@ dzmed = nanmedian(dz(BW1));
 % subtract dzed offset from insert
 z1 = z1 - dzmed;
 
-% set NaNs in insert to zero
-z1(isnan(z1)) = 0;
+%% set NaNs in insert to zero
+%z1(isnan(z1)) = 0;
 
 %% make an edge feathering array
 
