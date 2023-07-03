@@ -246,31 +246,8 @@ fprintf('merging tiles...\n')
 W0_feather_zone = (W0 > 0) & (W0 < 1);
 
 %% merge z
-if ~any(strcmp(varlist0,'zbuff'))
-	m0.zbuff = cell(4,1);
-end
-
-if ~any(strcmp(varlist1,'zbuff'))
-    m1.zbuff = cell(4,1);
-end
-
-z0=m0.zbuff(n0,1);
-z0=z0{1};
-
-if isempty(z0)
-	z0= m0.z(r0(1):r0(2),c0(1):c0(2));
-	z0 = real(z0);
-	m0.zbuff(n0,1) = {z0};
-end
-
-z1=m1.zbuff(n1,1);
-z1=z1{1};
-
-if isempty(z1)
- 	z1= m1.z(r1(1):r1(2),c1(1):c1(2));
-	z1 = real(z1);
-    m1.zbuff(n1,1) = {z1};
-end
+z0 = loadBuffArray(m0,n0,r0,c0,'z',true);
+z1 = loadBuffArray(m1,n1,r1,c1,'z',true);
 
 if preciseCorners
     cacheOriginalCorners(m0, n0, 'z', cornersSource);
@@ -309,31 +286,8 @@ if ~isempty(varargin)
 end
 
 %% merge z_mad
-if ~any(strcmp(varlist0,'z_madbuff'))
-        m0.z_madbuff = cell(4,1);
-end
-
-if ~any(strcmp(varlist1,'z_madbuff'))
-        m1.z_madbuff = cell(4,1);
-end
-
-z_mad0=m0.z_madbuff(n0,1);
-z_mad0=z_mad0{1};
-
-if isempty(z_mad0)
-        z_mad0= m0.z_mad(r0(1):r0(2),c0(1):c0(2));
-        z_mad0 = real(z_mad0);
-        m0.z_madbuff(n0,1) = {z_mad0};
-end
-
-z_mad1=m1.z_madbuff(n1,1);
-z_mad1=z_mad1{1};
-
-if isempty(z_mad1)
-        z_mad1= m1.z_mad(r1(1):r1(2),c1(1):c1(2));
-        z_mad1 = real(z_mad1);
-        m1.z_madbuff(n1,1) = {z_mad1};
-end
+z_mad0 = loadBuffArray(m0,n0,r0,c0,'z_mad',true);
+z_mad1 = loadBuffArray(m1,n1,r1,c1,'z_mad',true);
 
 if preciseCorners
     cacheOriginalCorners(m0, n0, 'z_mad', cornersSource);
@@ -364,29 +318,8 @@ end
 clear z_mad0 z_mad1 z_mad;
 
 %% merge N
-if ~any(strcmp(varlist0,'Nbuff'))
-        m0.Nbuff = cell(4,1);
-end
-
-if ~any(strcmp(varlist1,'Nbuff'))
-        m1.Nbuff = cell(4,1);
-end
-
-N0=m0.Nbuff(n0,1);
-N0=N0{1};
-
-if isempty(N0)
-        N0= m0.N(r0(1):r0(2),c0(1):c0(2));
-        m0.Nbuff(n0,1) = {N0};
-end
-
-N1=m1.Nbuff(n1,1);
-N1=N1{1};
-
-if isempty(N1)
-        N1= m1.N(r1(1):r1(2),c1(1):c1(2));
-        m1.Nbuff(n1,1) = {N1};
-end
+N0 = loadBuffArray(m0,n0,r0,c0,'N',false);
+N1 = loadBuffArray(m1,n1,r1,c1,'N',false);
 
 N0=single(N0);
 N1=single(N1);
@@ -425,29 +358,8 @@ end
 clear N0 N1 N;
 
 %% merge Nmt
-if ~any(strcmp(varlist0,'Nmtbuff'))
-        m0.Nmtbuff = cell(4,1);
-end
-
-if ~any(strcmp(varlist1,'Nmtbuff'))
-        m1.Nmtbuff = cell(4,1);
-end
-
-Nmt0=m0.Nmtbuff(n0,1);
-Nmt0=Nmt0{1};
-
-if isempty(Nmt0)
-        Nmt0= m0.Nmt(r0(1):r0(2),c0(1):c0(2));
-        m0.Nmtbuff(n0,1) = {Nmt0};
-end
-
-Nmt1=m1.Nmtbuff(n1,1);
-Nmt1=Nmt1{1};
-
-if isempty(Nmt1)
-        Nmt1= m1.Nmt(r1(1):r1(2),c1(1):c1(2));
-        m1.Nmtbuff(n1,1) = {Nmt1};
-end
+Nmt0 = loadBuffArray(m0,n0,r0,c0,'Nmt',false);
+Nmt1 = loadBuffArray(m1,n1,r1,c1,'Nmt',false);
 
 Nmt0=single(Nmt0);
 Nmt1=single(Nmt1);
@@ -486,29 +398,8 @@ end
 clear Nmt0 Nmt1 Nmt;
 
 %% merge tmin
-if ~any(strcmp(varlist0,'tminbuff'))
-        m0.tminbuff = cell(4,1);
-end
-
-if ~any(strcmp(varlist1,'tminbuff'))
-        m1.tminbuff = cell(4,1);
-end
-
-tmin0=m0.tminbuff(n0,1);
-tmin0=tmin0{1};
-
-if isempty(tmin0)
-        tmin0= m0.tmin(r0(1):r0(2),c0(1):c0(2));
-        m0.tminbuff(n0,1) = {tmin0};
-end
-
-tmin1=m1.tminbuff(n1,1);
-tmin1=tmin1{1};
-
-if isempty(tmin1)
-        tmin1= m1.tmin(r1(1):r1(2),c1(1):c1(2));
-        m1.tminbuff(n1,1) = {tmin1};
-end
+tmin0 = loadBuffArray(m0,n0,r0,c0,'tmin',false);
+tmin1 = loadBuffArray(m1,n1,r1,c1,'tmin',false);
 
 tmin0=single(tmin0);
 tmin1=single(tmin1);
@@ -547,29 +438,8 @@ end
 clear tmin0 tmin1 tmin;
 
 %% merge tmax
-if ~any(strcmp(varlist0,'tmaxbuff'))
-        m0.tmaxbuff = cell(4,1);
-end
-
-if ~any(strcmp(varlist1,'tmaxbuff'))
-        m1.tmaxbuff = cell(4,1);
-end
-
-tmax0=m0.tmaxbuff(n0,1);
-tmax0=tmax0{1};
-
-if isempty(tmax0)
-        tmax0= m0.tmax(r0(1):r0(2),c0(1):c0(2));
-        m0.tmaxbuff(n0,1) = {tmax0};
-end
-
-tmax1=m1.tmaxbuff(n1,1);
-tmax1=tmax1{1};
-
-if isempty(tmax1)
-        tmax1= m1.tmax(r1(1):r1(2),c1(1):c1(2));
-        m1.tmaxbuff(n1,1) = {tmax1};
-end
+tmax0 = loadBuffArray(m0,n0,r0,c0,'tmax',false);
+tmax1 = loadBuffArray(m1,n1,r1,c1,'tmax',false);
 
 tmax0=single(tmax0);
 tmax1=single(tmax1);
@@ -610,29 +480,8 @@ clear tmax0 tmax1 tmax;
 %% merge waterFillMask
 if any(strcmp(varlist0,'waterFillMask')) || any(strcmp(varlist1,'waterFillMask'))
 
-    if ~any(strcmp(varlist0,'waterFillMaskbuff'))
-            m0.waterFillMaskbuff = cell(4,1);
-    end
-
-    if ~any(strcmp(varlist1,'waterFillMaskbuff'))
-            m1.waterFillMaskbuff = cell(4,1);
-    end
-
-    waterFillMask0=m0.waterFillMaskbuff(n0,1);
-    waterFillMask0=waterFillMask0{1};
-
-    if isempty(waterFillMask0)
-            waterFillMask0= m0.waterFillMask(r0(1):r0(2),c0(1):c0(2));
-            m0.waterFillMaskbuff(n0,1) = {waterFillMask0};
-    end
-
-    waterFillMask1=m1.waterFillMaskbuff(n1,1);
-    waterFillMask1=waterFillMask1{1};
-
-    if isempty(waterFillMask1)
-            waterFillMask1= m1.waterFillMask(r1(1):r1(2),c1(1):c1(2));
-            m1.waterFillMaskbuff(n1,1) = {waterFillMask1};
-    end
+    waterFillMask0 = loadBuffArray(m0,n0,r0,c0,'waterFillMask',false);
+    waterFillMask1 = loadBuffArray(m1,n1,r1,c1,'waterFillMask',false);
 
     waterFillMask0=logical(waterFillMask0);
     waterFillMask1=logical(waterFillMask1);
@@ -704,6 +553,43 @@ if preciseCorners
 end
 
 clear cleanup_locks;
+
+
+
+function z0 = loadBuffArray(m0, n0, r0, c0, data_array_name, make_real)
+
+n_top = 1;
+n_bottom = 2;
+n_left = 3;
+n_right = 4;
+
+varlist0 = who(m0);
+data_buff_name = [data_array_name,'buff'];
+
+if ~ismember(data_buff_name, varlist0)
+	setfield(m0, data_buff_name, cell(4,1));
+end
+
+z0 = getfield(m0, data_buff_name, {n0,1});
+z0 = z0{1};
+
+if isempty(z0)
+    if n0 == n_top || n0 == n_bottom
+	    eval(['z0 = m0.',data_array_name,'(r0(1):r0(2),:);']);
+	elseif n0 == n_left || n0 == n_right
+	    eval(['z0 = m0.',data_array_name,'(:,c0(1):c0(2));']);
+    end
+    if make_real
+	    z0 = real(z0);
+	end
+	setfield(m0, data_buff_name, {n0,1}, {z0});
+end
+
+if n0 == n_top || n0 == n_bottom
+    z0 = z0(:,c0(1):c0(2));
+elseif n0 == n_left || n0 == n_right
+    z0 = z0(r0(1):r0(2),:);
+end
 
 
 
