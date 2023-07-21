@@ -16,9 +16,7 @@ n = find(strcmpi('registerBlobsSkipregShp',varargin));
 if ~isempty(n)
     registerBlobsSkipregShp = varargin{n+1};
 else
-%    registerBlobsSkipregShp = [];
-    % TODO: Pass this path in properly through batch_registerTiles.py script
-    registerBlobsSkipregShp = "/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/arcticdem_v4.1_mosaic_reg-cop30_skip-reg.shp";
+    registerBlobsSkipregShp = [];
 end
 
 n = find(strcmpi('reportOffsetOnly',varargin));

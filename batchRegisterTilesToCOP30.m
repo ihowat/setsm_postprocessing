@@ -144,7 +144,7 @@ for i=strt:inc:length(tileFiles)
             end
 
             fprintf('Calculating vertical registration\n');
-            [z_reg,~,~,~] = registerTileToCOP30(unregTileFile,[],[],refDemTif,waterMaskTif,'registerBlobs');
+            [z_reg,~,~,~] = registerTileToCOP30(unregTileFile,[],[],refDemTif,waterMaskTif,varargin{:});
 
             fprintf('Copying unreg.mat file to new reg.mat.tmp file: %s\n',regTempFile);
             eval(['!cp ',unregTileFile,' ',regTempFile]);
