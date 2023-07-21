@@ -118,7 +118,7 @@ project_tileqcDir_dict = {
     'earthdem':  '',
 }
 project_tileParamList_dict = {
-    'arcticdem': '',
+    'arcticdem': '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/tile_params/tileParamList.txt',
     'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_params/tileParamList_v13e.txt',
     'earthdem':  '',
 }
