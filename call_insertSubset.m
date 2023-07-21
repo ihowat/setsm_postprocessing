@@ -21,16 +21,16 @@ if ~isfolder(annualRootDir)
     error("annualRootDir folder does not exist: %s\n", annualRootDir);
 end
 
+if ~isempty(pShp) && ~isfile(pShp)
+    error("pShp file does not exist: %s\n", pShp);
+end
+
 boxCsv = strrep(boxShp, '.shp', '.csv');
 if ~isfile(boxShp)
     error("boxShp file does not exist: %s\n", boxShp);
 end
-if ~isfile(boxCsv)
+if ~isempty(pShp) && ~isfile(boxCsv)
     error("boxShp partner CSV file does not exist: %s\n", boxCsv);
-end
-
-if ~isfile(pShp)
-    error("pShp file does not exist: %s\n", pShp);
 end
 
 n = find(strcmpi(varargin,'overwrite'));
@@ -43,14 +43,16 @@ end
 
 box_mapstruct = shaperead(boxShp);
 box_polyshape_arr = arrayfun(@(feat) polyshape(feat.X, feat.Y), box_mapstruct);
-box_csvarr = readtable(boxCsv);
-
-p_mapstruct = shaperead(pShp);
-p_polyshape_arr = arrayfun(@(feat) polyshape(feat.X, feat.Y), p_mapstruct);
-
 box_mapstruct_supertile = {box_mapstruct.supertile};
 box_mapstruct_patchid = cell2mat({box_mapstruct.patchid});
-p_mapstruct_patchid = cell2mat({p_mapstruct.patchid});
+
+if ~isempty(pShp)
+    p_mapstruct = shaperead(pShp);
+    p_polyshape_arr = arrayfun(@(feat) polyshape(feat.X, feat.Y), p_mapstruct);
+    p_mapstruct_patchid = cell2mat({p_mapstruct.patchid});
+
+    box_csvarr = readtable(boxCsv);
+end
 
 
 all_valid = true;
@@ -85,36 +87,42 @@ for i = 1:length(box_mapstruct)
 
     box_ms_p = box_ms.p;
     if ~strcmp(box_ms_p, '')
-        box_csv_idx = find(box_csvarr.patchid == box_patchid);
-        if isempty(box_csv_idx)
-            fprintf(2, "ERROR: No Box CSV feature matches Box shapefile feature [%d] patchid [%d]\n", i, box_patchid);
-            valid = false;
-        elseif length(box_csv_idx) > 1
-            fprintf(2, "ERROR: More than one Box CSV feature match Box shapefile feature [%d] patchid [%d]\n", i, box_patchid);
+        if isempty(pShp)
+            fprintf(2, "ERROR: Box CSV feature 'p' is NOT empty for Box shapefile feature [%d] patchid [%d]\n", i, box_patchid);
+            fprintf(2, "ERROR: pShp argument should be provided!\n");
             valid = false;
         else
-            box_csv_p = box_csvarr.p{box_csv_idx};
-            if strcmp(box_csv_p, '')
-                fprintf(2, "ERROR: Box CSV feature 'p' is empty while not empty in Box shapefile feature [%d] patchid [%d]\n", i, box_patchid);
+            box_csv_idx = find(box_csvarr.patchid == box_patchid);
+            if isempty(box_csv_idx)
+                fprintf(2, "ERROR: No Box CSV feature matches Box shapefile feature [%d] patchid [%d]\n", i, box_patchid);
+                valid = false;
+            elseif length(box_csv_idx) > 1
+                fprintf(2, "ERROR: More than one Box CSV feature match Box shapefile feature [%d] patchid [%d]\n", i, box_patchid);
                 valid = false;
             else
-                box_p = box_csv_p;
-
-                p_match_idx = find(p_mapstruct_patchid == box_patchid);
-                p_match_idx = p_match_idx(:);
-                if isempty(p_match_idx)
-                    fprintf(2, "ERROR: No P shapefile feature matches Box feature [%d] patchid [%d]\n", i, box_patchid);
-                    valid = false;
-                elseif length(p_match_idx) > 1
-                    fprintf(2, "ERROR: More than one P shapefile feature match Box feature [%d] patchid [%d]\n", i, box_patchid);
+                box_csv_p = box_csvarr.p{box_csv_idx};
+                if strcmp(box_csv_p, '')
+                    fprintf(2, "ERROR: Box CSV feature 'p' is empty while not empty in Box shapefile feature [%d] patchid [%d]\n", i, box_patchid);
                     valid = false;
                 else
-                    box_p_num = str2num(box_p);
-                    p_ps = p_polyshape_arr(p_match_idx);
-                    p_ps_vert = p_ps.Vertices;
-                    if ~isempty(setxor(box_p_num, p_ps_vert))
-                        fprintf(2, "ERROR: Box shapefile feature [%d] 'p' vertex coords string mismatch P feature [%d] patchid [%d] vertex coords\n", i, p_match_idx, box_patchid);
+                    box_p = box_csv_p;
+
+                    p_match_idx = find(p_mapstruct_patchid == box_patchid);
+                    p_match_idx = p_match_idx(:);
+                    if isempty(p_match_idx)
+                        fprintf(2, "ERROR: No P shapefile feature matches Box feature [%d] patchid [%d]\n", i, box_patchid);
                         valid = false;
+                    elseif length(p_match_idx) > 1
+                        fprintf(2, "ERROR: More than one P shapefile feature match Box feature [%d] patchid [%d]\n", i, box_patchid);
+                        valid = false;
+                    else
+                        box_p_num = str2num(box_p);
+                        p_ps = p_polyshape_arr(p_match_idx);
+                        p_ps_vert = p_ps.Vertices;
+                        if ~isempty(setxor(box_p_num, p_ps_vert))
+                            fprintf(2, "ERROR: Box shapefile feature [%d] 'p' vertex coords string mismatch P feature [%d] patchid [%d] vertex coords\n", i, p_match_idx, box_patchid);
+                            valid = false;
+                        end
                     end
                 end
             end
@@ -157,8 +165,8 @@ boxes_for_tile_idx = union(boxes_match_supername_idx, boxes_no_supername_idx);
 boxes_for_tile_idx = intersect(boxes_for_tile_idx, boxes_intersect_idx);
 boxes_for_tile_dropped_idx = setdiff(boxes_match_supername_idx, boxes_for_tile_idx);
 
-boxes_for_tile_pid = box_mapstruct_patchid(boxes_for_tile_idx);
-[~,~,p_for_tile_idx] = intersect(boxes_for_tile_pid, p_mapstruct_patchid);
+%boxes_for_tile_pid = box_mapstruct_patchid(boxes_for_tile_idx);
+%[~,~,p_for_tile_idx] = intersect(boxes_for_tile_pid, p_mapstruct_patchid);
 
 if isempty(boxes_for_tile_idx)
     fprintf("No patches to apply\n");
@@ -237,12 +245,13 @@ for i = 1:length(boxes_for_tile_idx)
     xr = [nanmin(box_vert(:,1)), nanmax(box_vert(:,1))];
     yr = [nanmin(box_vert(:,2)), nanmax(box_vert(:,2))];
 
-    p_idx = find(p_mapstruct_patchid == box_patchid);
-    if isempty(p_idx)
-        p = box_ps.Vertices;
-    else
-        p_ps = p_polyshape_arr(p_idx);
-        p = p_ps.Vertices;
+    p = box_ps.Vertices;
+    if ~isempty(pShp)
+        p_idx = find(p_mapstruct_patchid == box_patchid);
+        if ~isempty(p_idx)
+            p_ps = p_polyshape_arr(p_idx);
+            p = p_ps.Vertices;
+        end
     end
 
     insertSubset(patchTempFile, insertFile, xr, yr, p, patchTempFile);
