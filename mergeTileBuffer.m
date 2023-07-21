@@ -245,6 +245,43 @@ fprintf('merging tiles...\n')
 
 W0_feather_zone = (W0 > 0) & (W0 < 1);
 
+%% merge waterFillMask
+waterFillMask0 = [];
+waterFillMask1 = [];
+if any(strcmp(varlist0,'waterFillMask'))
+    waterFillMask0 = loadBuffArray(m0,n0,r0,c0,'waterFillMask',false);
+    waterFillMask0=logical(waterFillMask0);
+end
+if any(strcmp(varlist1,'waterFillMask'))
+    waterFillMask1 = loadBuffArray(m1,n1,r1,c1,'waterFillMask',false);
+    waterFillMask1=logical(waterFillMask1);
+end
+if any(strcmp(varlist0,'waterFillMask')) && any(strcmp(varlist1,'waterFillMask'))
+
+    if preciseCorners
+        cacheOriginalCorners(m0, n0, 'waterFillMask', cornersSource);
+        cacheOriginalCorners(m1, n1, 'waterFillMask', cornersSource);
+        if n0 == n_right || n0 == n_left
+            waterFillMask0 = resetBuffCorners(m0, n0, 'waterFillMask', waterFillMask0);
+            waterFillMask1 = resetBuffCorners(m1, n1, 'waterFillMask', waterFillMask1);
+        end
+    end
+
+    waterFillMask = waterFillMask0 | waterFillMask1;
+
+    m0.waterFillMask(r0(1):r0(2),c0(1):c0(2))=waterFillMask;
+    m1.waterFillMask(r1(1):r1(2),c1(1):c1(2))=waterFillMask;
+
+    if preciseCorners
+        if n0 == n_right || n0 == n_left
+            burnCornersIntoAdjBuffs(m0, n0, 'waterFillMask', waterFillMask);
+            burnCornersIntoAdjBuffs(m1, n1, 'waterFillMask', waterFillMask);
+        end
+    end
+
+    clear waterFillMask;
+end
+
 %% merge z
 z0 = loadBuffArray(m0,n0,r0,c0,'z',true);
 z1 = loadBuffArray(m1,n1,r1,c1,'z',true);
@@ -258,11 +295,21 @@ if preciseCorners
     end
 end
 
+z0_nodata = isnan(z0);
+if ~isempty(waterFillMask0)
+    z0_nodata = z0_nodata | waterFillMask0;
+end
+z1_nodata = isnan(z1);
+if ~isempty(waterFillMask1)
+    z1_nodata = z1_nodata | waterFillMask1;
+end
+clear waterFillMask0 waterFillMask1;
+
 z=(z0.*W0)+(z1.*(1-W0));
 
-n=isnan(z0) & ~isnan(z1);
+n=z0_nodata & ~z1_nodata;
 z(n)=z1(n);
-n=~isnan(z0) & isnan(z1);
+n=~z0_nodata & z1_nodata;
 z(n)=z0(n);
 
 m0.z(r0(1):r0(2),c0(1):c0(2))=z;
@@ -476,39 +523,6 @@ if preciseCorners
 end
 
 clear tmax0 tmax1 tmax;
-
-%% merge waterFillMask
-if any(strcmp(varlist0,'waterFillMask')) || any(strcmp(varlist1,'waterFillMask'))
-
-    waterFillMask0 = loadBuffArray(m0,n0,r0,c0,'waterFillMask',false);
-    waterFillMask1 = loadBuffArray(m1,n1,r1,c1,'waterFillMask',false);
-
-    waterFillMask0=logical(waterFillMask0);
-    waterFillMask1=logical(waterFillMask1);
-
-    if preciseCorners
-        cacheOriginalCorners(m0, n0, 'waterFillMask', cornersSource);
-        cacheOriginalCorners(m1, n1, 'waterFillMask', cornersSource);
-        if n0 == n_right || n0 == n_left
-            waterFillMask0 = resetBuffCorners(m0, n0, 'waterFillMask', waterFillMask0);
-            waterFillMask1 = resetBuffCorners(m1, n1, 'waterFillMask', waterFillMask1);
-        end
-    end
-
-    waterFillMask = waterFillMask0 | waterFillMask1;
-
-    m0.waterFillMask(r0(1):r0(2),c0(1):c0(2))=waterFillMask;
-    m1.waterFillMask(r1(1):r1(2),c1(1):c1(2))=waterFillMask;
-
-    if preciseCorners
-        if n0 == n_right || n0 == n_left
-            burnCornersIntoAdjBuffs(m0, n0, 'waterFillMask', waterFillMask);
-            burnCornersIntoAdjBuffs(m1, n1, 'waterFillMask', waterFillMask);
-        end
-    end
-
-    clear waterFillMask0 waterFillMask1 waterFillMask;
-end
 
 fprintf('tile merge complete\n')
 
@@ -1200,7 +1214,7 @@ data_array_names = {
     'tmin',
     'tmax',
 };
-if ismember('waterFillMask', varlist0) || ismember('waterFillMask', varlist1)
+if ismember('waterFillMask', varlist0) && ismember('waterFillMask', varlist1)
     data_array_names{end+1} = 'waterFillMask';
 end
 
@@ -1214,7 +1228,6 @@ if ~all(ismember(data_array_names, varlist0))
 %        disp("Will skip merging from this error assuming that tile is missing waterFillMask for good reason")
 %        failure_skip_merge = true;
 %    end
-    return;
 end
 if ~all(ismember(data_array_names, varlist1))
     disp("ERROR: One or more expected data arrays do not exist in 2nd tile struct");
@@ -1226,6 +1239,8 @@ if ~all(ismember(data_array_names, varlist1))
 %        disp("Will skip merging from this error assuming that tile is missing waterFillMask for good reason")
 %        failure_skip_merge = true;
 %    end
+end
+if failure
     return;
 end
 
@@ -1401,16 +1416,48 @@ max_shrink_dist = overlap_halfwidth - mindist;
 max_shrink_px = floor(max_shrink_dist / coord_res);
 [buff_nrows, buff_ncols] = size(z0);
 nan_equality_arr = (isnan(z0) == isnan(z1));
+
+water_arr = [];
+water_stripe_vec = [];
+if ismember('waterFillMask', varlist0) || ismember('land', varlist0)
+    if ismember('waterFillMask', varlist0)
+        water_arr = logical(m0.waterFillMask(r0_in(1):r0_in(2),c0_in(1):c0_in(2)));
+    elseif ismember('land', varlist0)
+        water_arr = ~logical(m0.land(r0_in(1):r0_in(2),c0_in(1):c0_in(2)));
+    end
+end
+if ismember('waterFillMask', varlist1) || ismember('land', varlist1)
+    if ismember('waterFillMask', varlist1)
+        water_arr_temp = logical(m1.waterFillMask(r1_in(1):r1_in(2),c1_in(1):c1_in(2)));
+    elseif ismember('land', varlist1)
+        water_arr_temp = ~logical(m1.land(r1_in(1):r1_in(2),c1_in(1):c1_in(2)));
+    end
+    if ~isempty(water_arr)
+        water_arr = water_arr | water_arr_temp;
+    else
+        water_arr = water_arr_temp;
+    end
+    clear water_arr_temp;
+end
+
 if ismember(edge0, {'right', 'left'})
     % Remove rows from the top and bottom of the NaN equality array
     % where a later "column" merge should fix a potential NaN stripe on the top or bottom edges.
     nan_equality_arr = nan_equality_arr((1+max_shrink_px):(buff_nrows-max_shrink_px), :);
     nan_equality_vec = all(nan_equality_arr, 1);
+    if ~isempty(water_arr)
+        water_arr = water_arr((1+max_shrink_px):(buff_nrows-max_shrink_px), :);
+        water_stripe_vec = all(water_arr, 1);
+    end
 elseif ismember(edge0, {'top', 'bottom'})
     % Remove cols from the left and right of the NaN equality array
     % where a later "row" merge should fix a potential NaN stripe on the top or bottom edges.
     nan_equality_arr = nan_equality_arr(:, (1+max_shrink_px):(buff_ncols-max_shrink_px));
     nan_equality_vec = all(nan_equality_arr, 2);
+    if ~isempty(water_arr)
+        water_arr = water_arr(:, (1+max_shrink_px):(buff_ncols-max_shrink_px));
+        water_stripe_vec = all(water_arr, 2);
+    end
 end
 clear nan_equality_arr;
 
@@ -1419,10 +1466,13 @@ nan_check_vec = nan_equality_vec;
 checking_all_nan_stripes = false;
 checking_unequal_nan_stripes = false;
 check_for_unequal_water_issue = false;
+nan_issue = false;
+water_issue = false;
 while true
     min_shrink_px = pre_iter_shrink;
     test_shrink_px = pre_iter_shrink;
-    displayed_warning = false;
+    displayed_nan_warning = false;
+    displayed_water_warning = false;
     iter_failure = false;
 
     if ismember(edge0, {'right', 'left'})
@@ -1431,13 +1481,21 @@ while true
         v0 = [1+pre_iter_shrink, buff_nrows-pre_iter_shrink];
     end
 
+    nan_issue = false;
+    water_issue = false;
     while v0(1) <= v0(2)
+        nan_issue = false;
+        water_issue = false;
         % if all(nan_check_vec(v0(1):v0(2)))
         %     break;
-        if nan_check_vec(v0(1)) == 1 && nan_check_vec(v0(2)) == 1
-            ;
-        else
-            if ~displayed_warning
+        if nan_check_vec(v0(1)) == 0 || nan_check_vec(v0(2)) == 0
+            nan_issue = true;
+        end
+        if ~isempty(water_stripe_vec) && (water_stripe_vec(v0(1)) == 1 || water_stripe_vec(v0(2)) == 1)
+            water_issue = true;
+        end
+        if nan_issue || water_issue
+            if nan_issue && ~displayed_nan_warning
                 if checking_unequal_nan_stripes
                     disp("Found unequal NaN stripes between tiles within overlap area");
                     disp("Will shrink feather zone one pixel at a time until out of unequal NaN stripes zone");
@@ -1448,7 +1506,12 @@ while true
                     disp("Found unequal NaN locations between tiles within overlap area");
                     disp("Will shrink feather zone one pixel at a time until out of unequal NaN zone");
                 end
-                displayed_warning = true;
+                displayed_nan_warning = true;
+            end
+            if water_issue && ~displayed_water_warning
+                disp("Found water stripe in 'land' or 'waterFillMask' array on at least one tile's edge");
+                disp("Will shrink feather zone one pixel at a time until out of water stripe zone");
+                displayed_water_warning = true;
             end
             min_shrink_px = test_shrink_px + 1;
             if min_shrink_px > max_shrink_px
@@ -1466,7 +1529,9 @@ while true
     end
 
     if iter_failure
-        if ~checking_all_nan_stripes
+        if water_issue
+            ;
+        elseif ~checking_all_nan_stripes
             checking_all_nan_stripes = true;
             disp("Trying again, checking for all-NaN zone (stripe) on tile edges instead of unequal NaN zone")
             if ismember(edge0, {'right', 'left'})
@@ -1484,10 +1549,9 @@ while true
                 nan_check_vec = (all(isnan(z0), 2) == all(isnan(z1), 2));
             end
             continue;
-        else
-            failure = true;
-            check_for_unequal_water_issue = true;
         end
+        failure = true;
+        check_for_unequal_water_issue = true;
     end
 
     break;
@@ -1520,18 +1584,29 @@ if failure
         fprintf("Detected unequal land-water presence in tile overlap area")
         fprintf("Deeming this a REMA v2 era acceptable error, assuming tiles straddle land-water boundary\n");
         failure_merge_anyway = true;
-    else
+    elseif nan_issue
         fprintf("Deeming this an ArcticDEM v4.1 era acceptable error, assuming tiles straddle land-water boundary\n");
         failure_merge_anyway = true;
+    elseif water_issue
+        fprintf("Deeming this an ArcticDEM v4.1 era acceptable error, assuming tile boundary is completely over water\n");
+        failure_merge_anyway = true;
+    else
+        fprintf("DEVELOPER ERROR! nan_issue=false and water_issue=false, which should not occur\n");
     end
-    return;
+    if ~failure_merge_anyway
+        return;
+    end
+end
+
+if min_shrink_px > max_shrink_px
+    min_shrink_px = max_shrink_px;
 end
 
 shrink_px = min_shrink_px;
 post_iter_shrink = shrink_px;
 
 if pre_iter_shrink ~= post_iter_shrink && ~failure
-    fprintf("Shrunk feather zone a total of %g pixels on each side of overlap area to be within unequal NaN zones on tile edges\n", shrink_px);
+    fprintf("Shrunk feather zone a total of %g pixels on each side of overlap area\n", shrink_px);
 
     if ismember(edge0, {'right', 'left'})
         c0_out = [c0_in(1)+shrink_px, c0_in(2)-shrink_px];
