@@ -90,10 +90,17 @@ data_array_names = {
     'Nmt',
     'tmin',
     'tmax',
+    'waterFillMask',
+};
+data_array_names_optional = {
+    'waterFillMask',
 };
 exclude_array_names = {
     'land',
+    'dz_smooth_interp',
 };
+remove_array_names = setdiff(data_array_names_optional, m_varlist);
+data_array_names = setdiff(data_array_names, remove_array_names);
 if ~all(ismember(data_array_names, m_varlist))
     data_array_names
     error("One or more expected data arrays do not exist in tile struct")
