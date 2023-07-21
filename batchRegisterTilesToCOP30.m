@@ -154,6 +154,7 @@ for i=strt:inc:length(tileFiles)
             m1.Properties.Writable = true;
             m1.z = z_reg;
             m1.regToCOP30 = true;
+            m1.aux_regCOP30_refDemTif = refDemTif;
 
             fprintf('Renaming reg.mat.tmp file to reg.mat: %s\n',regTileFile);
             eval(['!mv ',regTempFile,' ',regTileFile]);

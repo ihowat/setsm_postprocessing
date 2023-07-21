@@ -131,6 +131,8 @@ if ~isempty(sigma_dtrans)
     reg.tavg = nanmean(is2.t(~isnan(dzr)));
     
     m.reg = reg;
+
+    m.aux_regIS2_is2TileFile = is2TileFile;
 end
 
 

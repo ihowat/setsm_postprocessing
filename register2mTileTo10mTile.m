@@ -121,6 +121,8 @@ clear z dz_smooth_interp;
 m2reg=matfile(outName);
 m2reg.Properties.Writable = true;
 
+m2reg.aux_2mto10m_10mTileFile = tile10m;
+
 % make coregistration cluster mask - not currently used
 C = true(z_size);
 

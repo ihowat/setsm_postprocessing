@@ -155,6 +155,7 @@ for i=strt:inc:length(tileFiles)
             m1.z = z_fill;
             m1.waterFillMask = waterfill_mask;
             m1.waterFilled = true;
+            m1.aux_waterFill_waterMaskTif = waterMaskTif;
 
             fprintf('Renaming fill.mat.tmp file to fill.mat: %s\n',fillTileFile);
             eval(['!mv ',fillTempFile,' ',fillTileFile]);
