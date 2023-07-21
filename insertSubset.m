@@ -9,6 +9,7 @@ function insertSubset(baseFile,insertFile,xr,yr,p,outName)
 % If p=[], p is set to the polygon [xr,yr].
 
 feather_dist_meters = 500;
+feather_minres_meters = 10;
 
 % if no p given, make p vertices the xr yr rectangle boundary
 if isempty(p)
@@ -32,6 +33,7 @@ fprintf('Loading insertFile: %s\n', insertFile);
 m1=matfile(insertFile);
 
 dx = abs(m1.x(1,2)-m1.x(1,1));
+feather_res_meters = max(dx, feather_minres_meters);
 
 % % extract coordinate arrays
 % x1=m1.x;
@@ -47,7 +49,7 @@ subrows = find(m1.y >= min(yr-buff_meters) & m1.y <= max(yr+buff_meters));
 % z1 = m1.z(subrows,subcols);
 x1=m1.x(1,subcols);
 y1=m1.y(1,subrows);
-%y1=y1(:); % make vertical for interp
+y1=y1(:); % make vertical for interp
 %
 % %% crop all nan cols/rows
 % nancols =  ~any(~isnan(z1));
@@ -59,7 +61,7 @@ y1=m1.y(1,subrows);
 % y1(nanrows)=[];
 
 %% Load full mosaic as mat obj
-
+fprintf('Loading baseFile: %s\n', insertFile);
 if strcmp(baseFile,outName)
     m = matfile(baseFile ,'Writable',true);
     overwriteFlag=true;
@@ -146,7 +148,29 @@ z1 = z1 - dzmed;
 %A=inpaint_nans(A,2);
 %A=A(2:end-1,2:end-1);
 
-A = featherDilatePoly(x1,y1,dz,p(:,1),p(:,2),feather_dist_meters);
+fprintf('Calculating feather weight array\n');
+
+f_dx = feather_res_meters;
+if f_dx == dx
+    f_x = x1;
+    f_y = y1;
+else
+    f_x0 = floor(x1(1)  /f_dx) * f_dx;
+    f_x1 = ceil( x1(end)/f_dx) * f_dx;
+    f_y0 = floor(y1(end)/f_dx) * f_dx;
+    f_y1 = ceil( y1(1)  /f_dx) * f_dx;
+    f_x = f_x0:f_dx:f_x1;
+    f_y = f_y1:-f_dx:f_y0;
+end
+f_I = zeros(length(f_y), length(f_x));
+
+A = featherDilatePoly(f_x,f_y,f_I,p(:,1),p(:,2),feather_dist_meters);
+if f_dx ~= dx
+    A = interp2(f_x,f_y(:),A,x1,y1(:),'*linear');
+end
+if any(isnan(A(:)))
+    error('Calculated feather weight array has NaN values')
+end
 
 A(A < 0) = 0;
 A(A > 1) = 1;
@@ -154,6 +178,8 @@ A_interp = (A > 0) & (A < 1);
 
 %% Load base dem and merge insert
 if overwriteFlag
+    fprintf('Merging arrays and writing to baseFile: %s\n', baseFile)
+
 %    m.z(rows,cols) = z1.*A + ...
 %        m.z(rows,cols).*(1-A);
 
