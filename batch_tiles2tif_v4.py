@@ -182,7 +182,7 @@ def get_arg_parser():
         default='true',
         help=wrap_multiline_str("""
             In tile dem.tif area where ocean pixels ('land' mask is false) would
-            normally be set to NoData, set elevation values to height above the
+            normally be set to NoData, set elevation values to EGM2008 height above the
             WGS84 ellipsoid. 
         """)
     )

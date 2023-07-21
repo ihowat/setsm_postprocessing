@@ -56,7 +56,7 @@ else
 fi
 if [ -z "$resolution" ]; then
     resolution='10m';
-#    resolution='2m';
+    resolution='2m';
 fi
 
 if [ ! -d "$tiledir" ]; then

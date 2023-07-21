@@ -59,14 +59,17 @@ if [ -z "$resolution" ]; then
     resolution='2m';
 fi
 if [ -z "$annualRootDir" ]; then
-#    annualRootDir="/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/results/output_tiles_annual"
-    annualRootDir="/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/results/output_tiles_annual_greenland_ian"
+    annualRootDir="/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/results/output_tiles_annual"
+#    annualRootDir="/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/results/output_tiles_annual_greenland_ian"
+#    annualRootDir="/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/results/output_tiles_patch_greenland_canada_border"
 fi
 if [ -z "$boxShp" ]; then
     boxShp="/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/glacier_patching/arcticdem_v41_patches_box.shp"
+#    boxShp="/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/glacier_patching/lets_call_canada_one_giant_patch_and_patch_greenland_border_tiles.shp"
 fi
 if [ -z "$pShp" ]; then
     pShp="/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/glacier_patching/arcticdem_v41_patches_p.shp"
+#    pShp=""
 fi
 
 
