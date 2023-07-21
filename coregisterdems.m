@@ -14,7 +14,7 @@ function [z2out,p,perr,d0] = coregisterdems(x1,y1,z1,x2,y2,z2,varargin)
 % [...]= coregisterdems(x1,y1,z1,x2,y2,z2,m1,m2) allows a data mask to be applied
 % where 0 values will be ignored in the solution.
 
-verbose=false;
+verbose=true;
 
 % Maximum offset allowed
 maxp = 15;
