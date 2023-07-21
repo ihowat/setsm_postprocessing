@@ -434,8 +434,12 @@ if addSeaSurface
     if isempty(z)
         z = m.z;
     end
-    land = m.land;
-    [z,sea_surface_mask] = addSeaSurfaceHeight(x,y,z,land,'epsg',addSeaSurface_epsg,'adaptCoastline');
+    land = logical(m.land);
+    if ismember('reg_extrap_nodata', m_varlist)
+        [z,sea_surface_mask] = addSeaSurfaceHeight(x,y,z,land,'epsg',addSeaSurface_epsg,'adaptCoastline','doNotFillBorder',m.reg_extrap_nodata);
+    else
+        [z,sea_surface_mask] = addSeaSurfaceHeight(x,y,z,land,'epsg',addSeaSurface_epsg,'adaptCoastline');
+    end
 end
 
 if ~isempty(qcMaskFile)

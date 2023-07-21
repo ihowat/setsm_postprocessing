@@ -295,13 +295,13 @@ dzbuff = m0.z(r0(1):r0(2),c0(1):c0(2)) - m1.z(r1(1):r1(2),c1(1):c1(2));
 
 s=whos(m0);
 if any(strcmp({s.name},'land'))
-    land = m0.land(r0(1):r0(2),c0(1):c0(2));
+    land = logical(m0.land(r0(1):r0(2),c0(1):c0(2)));
     dzbuff(~land) = NaN;
 end
 
 s=whos(m1);
 if any(strcmp({s.name},'land'))
-    land = m1.land(r0(1):r0(2),c0(1):c0(2));
+    land = logical(m1.land(r0(1):r0(2),c0(1):c0(2)));
     dzbuff(~land) = NaN;
 end
 

@@ -272,7 +272,7 @@ for filen=1:NsubTileFiles
     z_mad1 = z_mad(row0:row1,col0:col1);
     
     % find overlapping non-nan and non-water pixels
-    n_overlap = ~isnan(z1(:)) & ~isnan(zsub.za_med(:)) & zsub.land(:);
+    n_overlap = ~isnan(z1(:)) & ~isnan(zsub.za_med(:)) & logical(zsub.land(:));
     
     % check if overlapping pixels exist to determine if blending is needed
     if any(n_overlap)
@@ -450,7 +450,7 @@ while ~isempty(nf)
     z_mad1 = z_mad(row0:row1,col0:col1);
     
     % find overlapping non-nan and non-water pixels
-    n_overlap = ~isnan(z1(:)) & ~isnan(zsub.za_med(:)) & zsub.land(:);
+    n_overlap = ~isnan(z1(:)) & ~isnan(zsub.za_med(:)) & logical(zsub.land(:));
     
     % check if overlapping pixels exist to determine if blending is needed
     if any(n_overlap)

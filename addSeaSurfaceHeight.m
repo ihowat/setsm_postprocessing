@@ -11,6 +11,8 @@ function [z,seaSurfaceMask]=addSeaSurfaceHeight(x,y,z,land,varargin)
 %epsg = 3413;
 epsg = [];
 
+land = logical(land);
+
 seaSurfaceMask = false(size(z));
 
 % parse vargins
@@ -34,6 +36,13 @@ if any(n)
     landIsQcMaskFlag = true;
 end
 
+n = find(strcmpi(varargin,'doNotFillBorder'));
+if ~isempty(n)
+    doNotFillBorder = varargin{n+1};
+else
+    doNotFillBorder = [];
+end
+
 if ~any(~land(:))
     fprintf('land mask has no zero (water) values\n')
     return
@@ -42,8 +51,11 @@ end
 if ~landIsQcMaskFlag
     landfraction = nnz(land) / numel(land);
     fprintf('tile land fraction: %g\n', landfraction)
-    if landfraction > 0.99
-        fprintf('skipping sea surface application for tile that is more than 99 percent land\n')
+    if landfraction > 0.9998
+        % This may no longer be needed since the addition of the 'doNotFillBorder' arg,
+        % whose purpose is to avoid filling the gaps on tile borders that come from
+        % horizontal shifts during registration.
+        fprintf('skipping sea surface application for tile that is more than 99.98 percent land\n')
         return
     end
 end
@@ -105,6 +117,13 @@ ellipsoidHeight = interp2(xi,yi(:),ellipsoidHeight,x,y(:),'*bilinear');
 
 % set heights below the sea level height to sea level height
 M = z < ellipsoidHeight;
+if ~isempty(doNotFillBorder)
+    overlap = (M & doNotFillBorder);
+    if any(overlap(:))
+        fprintf('preventing waterfill around border of DEM that is extrapolated NoData from horizontal shifts in registration\n')
+        M(doNotFillBorder) = 0;
+    end
+end
 z(M) = ellipsoidHeight(M);
 seaSurfaceMask = M;
 
@@ -130,7 +149,16 @@ if adaptCoastlineFlag
     land = M;
 end
 
-z(~land) = ellipsoidHeight(~land);
-seaSurfaceMask(~land) = 1;
+fill_ocean = ~land;
+if ~isempty(doNotFillBorder)
+    overlap = (fill_ocean & doNotFillBorder);
+    if any(overlap(:))
+        fprintf('preventing waterfill around border of DEM that is extrapolated NoData from horizontal shifts in registration\n')
+        fill_ocean(doNotFillBorder) = 0;
+    end
+end
+
+z(fill_ocean) = ellipsoidHeight(fill_ocean);
+seaSurfaceMask(fill_ocean) = 1;
 
 fprintf('sea surface height applied\n')

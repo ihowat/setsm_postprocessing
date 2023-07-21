@@ -82,7 +82,7 @@ else
                 
                 % load top buffer of the bottom (nth) subtile of pair
                 % check to make sure buffer is > 10% land
-                l0 = m0.land(2:2*buff,2:end-1);
+                l0 = logical(m0.land(2:2*buff,2:end-1));
                 if sum(l0(:))/numel(l0) > 0.1
                     z0 = m0.za_med(2:2*buff,2:end-1);
                     z0(~l0) = NaN;
@@ -124,7 +124,7 @@ else
         if ismember('za_med',who('-file',subTileFiles{nrt(n)}))
             
             % check to make sure buffer is > 10% land
-            l0 = m0.land(2:end-1,end-(2*buff-1):end-1);
+            l0 = logical(m0.land(2:end-1,end-(2*buff-1):end-1));
             if sum(l0(:))/numel(l0) > 0.1
                 
                 % load right buffer of the left (nth) subtile of pair

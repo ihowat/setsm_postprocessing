@@ -1,7 +1,9 @@
-function register2mTileTo10mTile(tile2m,tile10m)
+function regfail = register2mTileTo10mTile(tile2m,tile10m)
 % register 2m quad tile to 10m full tile w/ translation and dz warp
 %
 % register2to10(2mTileName,10mTileName)
+
+regfail = false;
 
 % set matfile handles
 m2=matfile(tile2m);
@@ -31,12 +33,29 @@ z_interp = interp2(x,y(:),z,xr,yr(:),'*linear');
 
 % coregister 2m downsampled to 10m reference
 [~,reg.p,reg.perr,reg.sd] = coregisterdems(xr,yr,zr,xr,yr,z_interp);
+if any(isnan(reg.p)) || any(isnan(reg.perr)) || isnan(reg.sd)
+    fprintf('Failure in coregisterdems, skipping registration for this tile\n')
+
+    if ~any(strcmp(m2_fields,'land')) && any(strcmp(m10_fields,'land'))
+        m2.Properties.Writable = true;
+        m2_x = m2.x;
+        m2_y = m2.y;
+        m10_x = m10.x;
+        m10_y = m10.y;
+        m2.land = interp2(m10_x,m10_y(:),m10.land,m2_x,m2_y(:),'*nearest',0);
+    end
+
+    regfail = true;
+    return;
+end
 
 clear z_interp
 
 % apply registration (transform) to 2m quad tile
 z_reg = interp2(x - reg.p(2),y(:) - reg.p(3),z - reg.p(1),...
-    x,y(:),'*linear');
+    x,y(:),'*linear',-9998);
+reg_extrap_nodata = (z_reg == -9998);
+z_reg(reg_extrap_nodata) = NaN;
     
 clear z
 
@@ -96,7 +115,8 @@ z = z_reg - dz_smooth_interp;
 z_size = size(z);
   
 % save to out matfile
-save(outName,'reg','x','y','z','dz_smooth_interp','-v7.3');
+save(outName,'reg','x','y','z','dz_smooth_interp','reg_extrap_nodata','-v7.3');
+clear z dz_smooth_interp;
 
 m2reg=matfile(outName);
 m2reg.Properties.Writable = true;
@@ -105,24 +125,38 @@ m2reg.Properties.Writable = true;
 C = true(z_size);
 
 % register z_mad and add to mat file
-m2reg.z_mad =  applyRegistration2Var(reg.p,m2,C,'gridvar','z_mad','subsetSize',5000);
+[m2reg.z_mad,~] =  applyRegistration2Var(reg.p,m2,C,'gridvar','z_mad','subsetSize',5000);
 
 % register N and add to mat file
-m2reg.N =  applyRegistration2Var(reg.p,m2,C,'gridvar','N','subsetSize',5000);
+[m2reg.N,~] =  applyRegistration2Var(reg.p,m2,C,'gridvar','N','subsetSize',5000);
 
 % register Nmt and add to mat file
-m2reg.Nmt =  applyRegistration2Var(reg.p,m2,C,'gridvar','Nmt','subsetSize',5000);
+[m2reg.Nmt,~] =  applyRegistration2Var(reg.p,m2,C,'gridvar','Nmt','subsetSize',5000);
 
 % register tmin and add to mat file
-m2reg.tmin =  applyRegistration2Var(reg.p,m2,C,'gridvar','tmin','subsetSize',5000);
+[m2reg.tmin,~] =  applyRegistration2Var(reg.p,m2,C,'gridvar','tmin','subsetSize',5000);
 
 % register tmax and add to mat file
-m2reg.tmax = applyRegistration2Var(reg.p,m2,C,'gridvar','tmax','subsetSize',5000);
+[m2reg.tmax,~] = applyRegistration2Var(reg.p,m2,C,'gridvar','tmax','subsetSize',5000);
 
 % register land mask to mat file if exists
-if any(strcmp(m_fields,'land'))
-    m2reg.land = applyRegistration2Var(reg.p,m2,C,'gridvar','land','subsetSize',5000);
+land_extrap_nodata = [];
+if any(strcmp(m2_fields,'land'))
+    [m2reg.land,land_extrap_nodata] = applyRegistration2Var(reg.p,m2,C,'gridvar','land','subsetSize',5000);
+elseif any(strcmp(m10_fields,'land'))
+    m2_x = m2reg.x;
+    m2_y = m2reg.y;
+    m10_x = m10.x;
+    m10_y = m10.y;
+    m2reg_land = interp2(m10_x,m10_y(:),m10.land,m2_x,m2_y(:),'*nearest',-9998);
+    land_extrap_nodata = (m2reg_land == -9998);
+    m2reg_land(land_extrap_nodata) = 0;
+    m2reg.land = m2reg_land;
 end
+if ~isempty(land_extrap_nodata)
+    reg_extrap_nodata = reg_extrap_nodata | land_extrap_nodata;
+end
+m2reg.reg_extrap_nodata = reg_extrap_nodata;
 
 % additional fields to transfer over
 add_fields = {'stripList', 'version'};
@@ -134,7 +168,7 @@ for i=1:length(add_fields)
 end
 
 
-function z = applyRegistration2Var(dtrans,m,N,varargin)
+function [z,extrap_nodata] = applyRegistration2Var(dtrans,m,N,varargin)
 % ApplyRegistration2Var applies 3-D transformation to grid. V4 compatible
 %   z = applyRegistration2Var(dtrans,m,z,N) dtrans is [x,y,z] offsets to be
 %   *subtracted* . m is matfile object. N is coregistration mask.
@@ -223,9 +257,12 @@ switch gridVar
         z = nan(sz,'single');
     case {'tmin','tmax'}
         z= zeros(sz,'uint16');
-    case {'N','Nmt','land'}
-        z = zeros(sz,'uint8');  
+    case {'N','Nmt'}
+        z = zeros(sz,'uint8');
+    case {'land'}
+        z = zeros(sz,'logical');
 end
+extrap_nodata = true(sz);
 
 % subset interpolation loop
 for i=1:size(intsRow,1)
@@ -264,32 +301,42 @@ for i=1:size(intsRow,1)
             case 'z'
                 
                 % apply xy,z offsets and interpolate
-                z(intRow,intCol) =interp2(x1,y1, z0-dtrans(1),...
-                    x(intCol),y(intRow),'*linear',NaN);
+                z0 =interp2(x1,y1, z0-dtrans(1),...
+                    x(intCol),y(intRow),'*linear',-9998);
+                extrap_nodata_subset = (z0 == -9998);
+                z0(extrap_nodata_subset) = NaN;
+                z(intRow,intCol) = z0;
 
             case 'z_mad' % error grid
                 
                 % apply only x and y offsets and interpolate
-                z(intRow,intCol) =interp2(x1,y1, z0,...
-                    x(intCol),y(intRow),'*linear',NaN);
+                z0 =interp2(x1,y1, z0,...
+                    x(intCol),y(intRow),'*linear',-9998);
+                extrap_nodata_subset = (z0 == -9998);
+                z0(extrap_nodata_subset) = NaN;
+                z(intRow,intCol) = z0;
                 
             case {'N','Nmt','land'} % stack, matchtag numbers and land mask
                 
                 z0(isnan(z0))=0;
                 
                 % apply horizontal offsets and interpolate
-                z0=interp2(x1,y1, z0, x(intCol),y(intRow),'*nearest',0);
+                z0=interp2(x1,y1, z0, x(intCol),y(intRow),'*nearest',-9998);
+                extrap_nodata_subset = (z0 == -9998);
+                z0(extrap_nodata_subset) = 0;
                 
-                % convert back to uint8 and insert into array
-                z0(isnan(z0)) = 0; 
-                z(intRow,intCol)=uint8(z0);
+                % convert back to uint8/logical and insert into array
+                z0(isnan(z0)) = 0;
+                z(intRow,intCol)=cast(z0,class(z));
                 
                 clear z0
                 
             case 'or'
                 
                 % apply horizontal offsets and interpolate
-                z0=interp2(x1,y1, z0, x(intCol),y(intRow),'*cubic',0);
+                z0=interp2(x1,y1, z0, x(intCol),y(intRow),'*cubic',-9998);
+                extrap_nodata_subset = (z0 == -9998);
+                z0(extrap_nodata_subset) = 0;
                 
                 % convert back to int16 and insert into array
                 z0(isnan(z0)) = 0; 
@@ -298,7 +345,9 @@ for i=1:size(intsRow,1)
             case {'tmin','tmax'}
                 
                 % apply horizontal offsets and interpolate
-                z0=interp2(x1,y1, z0, x(intCol),y(intRow),'*linear',0);
+                z0=interp2(x1,y1, z0, x(intCol),y(intRow),'*linear',-9998);
+                extrap_nodata_subset = (z0 == -9998);
+                z0(extrap_nodata_subset) = 0;
                 
                 z0(isnan(z0)) = 0; % convert back to uint8
                 z(intRow,intCol)=uint16(z0);
@@ -307,6 +356,8 @@ for i=1:size(intsRow,1)
                 error('grid variable input argument not recognized, must be ''z'',''z_mad'',''tmin'',''tmax'',''N'',''land'' or ''Nmt''')
                   
         end
+
+        extrap_nodata(intRow,intCol) = extrap_nodata_subset;
         
         clear z0
         

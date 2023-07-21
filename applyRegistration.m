@@ -124,27 +124,28 @@ else
     m1.Properties.Writable = true;
     
     % register z and add to mat file
-    m1.z = applyRegistration2Var(regData.reg.p,m,C,'gridvar','z','subsetSize',5000);
+    [m1.z,~] = applyRegistration2Var(regData.reg.p,m,C,'gridvar','z','subsetSize',5000);
     
     
     % register z_mad and add to mat file
-    m1.z_mad =  applyRegistration2Var(regData.reg.p,m,C,'gridvar','z_mad','subsetSize',5000);
+    [m1.z_mad,~] =  applyRegistration2Var(regData.reg.p,m,C,'gridvar','z_mad','subsetSize',5000);
     
     % register N and add to mat file
-    m1.N =  applyRegistration2Var(regData.reg.p,m,C,'gridvar','N','subsetSize',5000);
+    [m1.N,~] =  applyRegistration2Var(regData.reg.p,m,C,'gridvar','N','subsetSize',5000);
     
     % register Nmt and add to mat file
-    m1.Nmt =  applyRegistration2Var(regData.reg.p,m,C,'gridvar','Nmt','subsetSize',5000);
+    [m1.Nmt,~] =  applyRegistration2Var(regData.reg.p,m,C,'gridvar','Nmt','subsetSize',5000);
     
     % register tmin and add to mat file
-    m1.tmin =  applyRegistration2Var(regData.reg.p,m,C,'gridvar','tmin','subsetSize',5000);
+    [m1.tmin,~] =  applyRegistration2Var(regData.reg.p,m,C,'gridvar','tmin','subsetSize',5000);
     
     % register tmax and add to mat file
-    m1.tmax = applyRegistration2Var(regData.reg.p,m,C,'gridvar','tmax','subsetSize',5000);
+    [m1.tmax,~] = applyRegistration2Var(regData.reg.p,m,C,'gridvar','tmax','subsetSize',5000);
     
     % register land mask to mat file if exists
     if any(strcmp(m_fields,'land'))
-        m1.land = applyRegistration2Var(regData.reg.p,m,C,'gridvar','land','subsetSize',5000);
+        [m1.land,reg_extrap_nodata] = logical(applyRegistration2Var(regData.reg.p,m,C,'gridvar','land','subsetSize',5000));
+        m1.reg_extrap_nodata = reg_extrap_nodata;
     end
 
     % additional fields to transfer over
@@ -157,7 +158,7 @@ else
     end
 end
 
-function z = applyRegistration2Var(dtrans,m,N,varargin)
+function [z,extrap_nodata] = applyRegistration2Var(dtrans,m,N,varargin)
 % ApplyRegistration2Var applies 3-D transformation to grid. V4 compatible
 %   z = applyRegistration2Var(dtrans,m,z,N) dtrans is [x,y,z] offsets to be
 %   *subtracted* . m is matfile object. N is coregistration mask.
@@ -178,12 +179,12 @@ subsetSize=5000; % dimension of interpoaltion subset(pixels=subsetSize^2)
 
 
 if ~isempty(varargin)
-  
+
     n = find(strcmpi(varargin,'gridvar'));
     if ~isempty(n)
         gridVar=varargin{n+1};
     end
-    
+
     n = find(strcmpi(varargin,'subsetsize'));
     if ~isempty(n)
         subsetSize=varargin{n+1};
@@ -197,29 +198,29 @@ y = y(:);
 res = x(2)-x(1);
 
 % to speed up/converve memory, we'll perform gridded interpolation over
-% 1000x1000 pixel subsets, overlapping by one pixel. 
+% 1000x1000 pixel subsets, overlapping by one pixel.
 % Make a list of min max indices.
 sz = [length(y) length(x)];
 
 if subsetSize < 0.75*sz(2)
-    
+
     intsCol=1:subsetSize:sz(2);
     intsCol=[intsCol(1:end-1)',intsCol(2:end)'];
     intsCol(end)=sz(2);
     intsCol(1:end-1,2)=intsCol(1:end-1,2)-1;
-    
+
 else
     intsCol =[1 sz(2)];
 end
 
 
 if subsetSize < .75*sz(1)
-    
+
     intsRow=1:subsetSize:sz(1);
     intsRow=[intsRow(1:end-1)',intsRow(2:end)'];
     intsRow(end)=sz(1);
     intsRow(1:end-1,2)=intsRow(1:end-1,2)-1;
-    
+
 else
     intsRow =[1 sz(1)];
 end
@@ -246,90 +247,107 @@ switch gridVar
         z = nan(sz,'single');
     case {'tmin','tmax'}
         z= zeros(sz,'uint16');
-    case {'N','Nmt','land'}
-        z = zeros(sz,'uint8');  
+    case {'N','Nmt'}
+        z = zeros(sz,'uint8');
+    case {'land'}
+        z = zeros(sz,'logical');
 end
+extrap_nodata = true(sz);
 
 % subset interpolation loop
 for i=1:size(intsRow,1)
-    
+
     % make subset row vector with buffer
     intRowBuff=intsRow(i,1)+buffsRow(i,1):intsRow(i,2)+buffsRow(i,2);
-    
+
     for j=1:size(intsCol,1)
-        
+
         % make subset column vector with buffer
         intColBuff=intsCol(j,1)+buffsCol(j,1):intsCol(j,2)+buffsCol(j,2);
-        
+
         % extract subset from unregistered tile with buffer and add offset
         eval(['z0 = m.',gridVar,'(intRowBuff,intColBuff);']);
-        
+
         % convert to single for interpolation
         z0 = single(z0);
-        
+
         % apply coregistration cluster mask
         z0(~N(intRowBuff,intColBuff)) = NaN;
-        
+
         % check for empty subset to skip
         if ~any(~isnan(z0(:)) & z0(:) ~= 0); continue; end
-        
+
         % make unbuffered row and column vectors to insert into new
         % array
         intRow=intsRow(i,1):intsRow(i,2);
         intCol=intsCol(j,1):intsCol(j,2);
-        
+
         x1 = x(intColBuff)-dtrans(2);
         y1 = y(intRowBuff)-dtrans(3);
-        
+
         % interpolate depending on variable
         switch gridVar
-            
+
             case 'z'
-                
+
                 % apply xy,z offsets and interpolate
-                z(intRow,intCol) =interp2(x1,y1, z0-dtrans(1),...
-                    x(intCol),y(intRow),'*linear',NaN);
+                z0 =interp2(x1,y1, z0-dtrans(1),...
+                    x(intCol),y(intRow),'*linear',-9998);
+                extrap_nodata_subset = (z0 == -9998);
+                z0(extrap_nodata_subset) = NaN;
+                z(intRow,intCol) = z0;
 
             case 'z_mad' % error grid
-                
+
                 % apply only x and y offsets and interpolate
-                z(intRow,intCol) =interp2(x1,y1, z0,...
-                    x(intCol),y(intRow),'*linear',NaN);
-                
+                z0 =interp2(x1,y1, z0,...
+                    x(intCol),y(intRow),'*linear',-9998);
+                extrap_nodata_subset = (z0 == -9998);
+                z0(extrap_nodata_subset) = NaN;
+                z(intRow,intCol) = z0;
+
             case {'N','Nmt','land'} % stack, matchtag numbers and land mask
-                
+
                 z0(isnan(z0))=0;
-                
+
                 % apply horizontal offsets and interpolate
-                z0=interp2(x1,y1, z0, x(intCol),y(intRow),'*nearest',0);
-                
-                % convert back to uint8 and insert into array
-                z0(isnan(z0)) = 0; 
-                z(intRow,intCol)=uint8(z0);
-                
+                z0=interp2(x1,y1, z0, x(intCol),y(intRow),'*nearest',-9998);
+                extrap_nodata_subset = (z0 == -9998);
+                z0(extrap_nodata_subset) = 0;
+
+                % convert back to uint8/logical and insert into array
+                z0(isnan(z0)) = 0;
+                z(intRow,intCol)=cast(z0,class(z));
+
                 clear z0
-                
+
             case 'or'
-                
+
                 % apply horizontal offsets and interpolate
-                z0=interp2(x1,y1, z0, x(intCol),y(intRow),'*cubic',0);
-                
+                z0=interp2(x1,y1, z0, x(intCol),y(intRow),'*cubic',-9998);
+                extrap_nodata_subset = (z0 == -9998);
+                z0(extrap_nodata_subset) = 0;
+
                 % convert back to int16 and insert into array
-                z0(isnan(z0)) = 0; 
+                z0(isnan(z0)) = 0;
                 z(intRow,intCol)=int16(z0);
-                
+
             case {'tmin','tmax'}
-                
+
                 % apply horizontal offsets and interpolate
-                z0=interp2(x1,y1, z0, x(intCol),y(intRow),'*linear',0);
-                
+                z0=interp2(x1,y1, z0, x(intCol),y(intRow),'*linear',-9998);
+                extrap_nodata_subset = (z0 == -9998);
+                z0(extrap_nodata_subset) = 0;
+
                 z0(isnan(z0)) = 0; % convert back to uint8
                 z(intRow,intCol)=uint16(z0);
-                
+
             otherwise
                 error('grid variable input argument not recognized, must be ''z'',''z_mad'',''tmin'',''tmax'',''N'',''land'' or ''Nmt''')
-                  
+
         end
+
+        extrap_nodata(intRow,intCol) = extrap_nodata_subset;
         
         clear z0
         
