@@ -7,6 +7,9 @@ function register2mTileTo10mTile(tile2m,tile10m)
 m2=matfile(tile2m);
 m10=matfile(tile10m);
 
+m2_fields = fields(m2);
+m10_fields = fields(m10);
+
 % set outname
 outName=strrep(tile2m,'.mat','_reg.mat');
 
@@ -90,6 +93,7 @@ clear dz_smooth
 
 % appy upsampled to map to transformed 2m DEM and add to file
 z = z_reg - dz_smooth_interp;
+z_size = size(z);
   
 % save to out matfile
 save(outName,'reg','x','y','z','dz_smooth_interp','-v7.3');
@@ -98,7 +102,7 @@ m2reg=matfile(outName);
 m2reg.Properties.Writable = true;
 
 % make coregistration cluster mask - not currently used
-C = true(nrows,ncols);
+C = true(z_size);
 
 % register z_mad and add to mat file
 m2reg.z_mad =  applyRegistration2Var(reg.p,m2,C,'gridvar','z_mad','subsetSize',5000);
@@ -124,7 +128,7 @@ end
 add_fields = {'stripList', 'version'};
 for i=1:length(add_fields)
     fld = add_fields{i};
-    if any(strcmp(m_fields,fld))
+    if any(strcmp(m2_fields,fld))
         eval(['m2reg.',fld,' = m2.',fld,';']);
     end
 end
