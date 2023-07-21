@@ -68,6 +68,12 @@ else
     overwriteFlag=false;
 end
 
+m_fields = fields(m);
+m1_fields = fields(m1);
+if contains('waterFillMask', m_fields) ~= contains('waterFillMask', m1_fields)
+    error('One tile file contains waterFillMask array while the other does not')
+end
+
 % load coordintate vectors
 x=m.x;
 y=m.y;
@@ -202,6 +208,15 @@ if overwriteFlag
     I(arr1 == 0) = arr2(arr1 == 0);
     I(arr2 == 0) = arr1(arr2 == 0);
     m.tmin(rows,cols) = I;
+
+    if contains('waterFillMask', m_fields) && contains('waterFillMask', m1_fields)
+        arr1 = m1.waterFillMask(subrows,subcols);
+        arr2 = m.waterFillMask(rows,cols);
+        I = uint8(single(arr1).*A + single(arr2).*(1-A));
+        I_interp = min(arr1, arr2);
+        I(A_interp) = I_interp(A_interp);
+        m.waterFillMask(rows,cols) = logical(round(I));
+    end
 
     clear I;
     
