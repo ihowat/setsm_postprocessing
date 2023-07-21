@@ -478,13 +478,11 @@ if ~isempty(qcMaskFile)
 end
 
 
-flds=fields(m);
-
 if isempty(z)
     z = m.z;
 end
 
-if isempty(water_fill_mask) && contains('waterFillMask',flds)
+if isempty(water_fill_mask) && ismember('waterFillMask', m_varlist)
     water_fill_mask = m.waterFillMask;
 end
 
@@ -564,7 +562,7 @@ end
 
 
 if ~(browse_only || dem_and_browse)
-    if contains('z_mad',flds)
+    if ismember('z_mad', m_varlist)
         fprintf('Writing mad\n')
         outNameTif = strrep(outNameBase,'.mat','_mad.tif');
         if exist(outNameTif,'file') && ~overwrite
@@ -731,7 +729,7 @@ if ~(browse_only || dem_and_browse)
     end
 
     % data count
-    if contains('N',flds)
+    if ismember('N', m_varlist)
         fprintf('Writing N\n')
         outNameTif = strrep(outNameBase,'.mat','_count.tif');
         if exist(outNameTif,'file') && ~overwrite
@@ -757,7 +755,7 @@ if ~(browse_only || dem_and_browse)
     end
 
     % matchtag count
-    if contains('Nmt',flds)
+    if ismember('Nmt', m_varlist)
         fprintf('Writing Nmt\n')
         outNameTif = strrep(outNameBase,'.mat','_countmt.tif');
         if exist(outNameTif,'file') && ~overwrite
@@ -781,7 +779,7 @@ if ~(browse_only || dem_and_browse)
     end
 
     % Maximum date
-    if contains('tmax',flds)
+    if ismember('tmax', m_varlist)
         fprintf('Writing tmax\n')
         outNameTif = strrep(outNameBase,'.mat','_maxdate.tif');
         if exist(outNameTif,'file') && ~overwrite
@@ -805,7 +803,7 @@ if ~(browse_only || dem_and_browse)
     end
 
     % Minimum date
-    if contains('tmin',flds)
+    if ismember('tmin', m_varlist)
         fprintf('Writing tmin\n')
         outNameTif = strrep(outNameBase,'.mat','_mindate.tif');
         if exist(outNameTif,'file') && ~overwrite
