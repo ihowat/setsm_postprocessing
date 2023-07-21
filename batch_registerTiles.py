@@ -28,6 +28,18 @@ domain_choices = [
     'rema',
     'earthdem',
 ]
+
+epsg_projstr_dict = {
+    None: '',
+    3413: 'polar stereo north',
+    3031: 'polar stereo south',
+}
+domain_epsg_dict = {
+    'arcticdem': 3413,
+    'earthdem':  None,
+    'rema':      3031,
+}
+
 domain_regMethod_dict = {
     'arcticdem': 'cop30',
     'earthdem':  'cop30',
@@ -47,6 +59,11 @@ domain_refDemPath_dict = {
 domain_waterMaskPath_dict = {
     'arcticdem': "/mnt/pgc/data/thematic/landcover/esa_worldcover_2020/mosaics/arctic_tiles/<supertile>_10m_cover.tif",
     'earthdem': "/mnt/pgc/data/projects/earthdem/watermasks/global_surface_water/tiled_watermasks/<supertile>_water.tif",
+    'rema': None,
+}
+domain_cop30SkipregShp_dict = {
+    'arcticdem': "/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/arcticdem_v4.1_mosaic_reg-cop30_skip-reg.shp",
+    'earthdem': None,
     'rema': None,
 }
 
@@ -100,12 +117,33 @@ def get_arg_parser():
     ## Optional args
 
     parser.add_argument(
+        '--epsg',
+        type=int,
+        choices=list(epsg_projstr_dict.keys()),
+        default=None,
+        help=wrap_multiline_str(r"""
+            Mosaic tile projection EPSG code.
+            \n(default is {})
+        """.format(
+            supertile_key,
+            ', '.join(["{} if domain={}".format(val, dom) for dom, val in domain_epsg_dict.items()]
+        )))
+    )
+
+    parser.add_argument(
         '--reg-method',
         type=str,
-        choices=['is2', 'cop30', 'fillWater'],
+        choices=['is2', '2to10', 'cop30', 'fillWater', 'seaSurf'],
         default=None,
         help=wrap_multiline_str(r"""
             Registration method to employ.
+            \n'is2': Register tile raster data to ICESat-2 altimetry data.
+            \n'2to10': Register 2m 50x50km quad tile raster data to corresponding 100x100km 10m supertile raster data.
+            \n'cop30': Vertically register contiguous chunks ("blobs") of tile raster data to --ref-dem-path DEM data
+            (Copernicus GLO-30 30m dataset tiles cut to match mosaic tile schema).
+            \n'fillWater': Run fillWater.m to generate output '_fill.mat' files, where the 'z' DEM array has
+            areas marked as water in --water-mask-path (ESA WorldCover dataset tiles) filled with the corresponding
+            surface from --ref-dem-path DEM data.
             \n(default is {})
         """.format(
             supertile_key,
@@ -155,21 +193,39 @@ def get_arg_parser():
     )
 
     parser.add_argument(
-        '--skip-dzfit',
+        '--is2-skip-dzfit',
         action='store_true',
-        help=wrap_multiline_str("""
-            Skip the dzfit step of ICESat-2 registration application.
-            You should skip applying dzfit to tiles over the ice shelves of Antarctica.
+        help=wrap_multiline_str(r"""
+            (Only applicable when --reg-method='is2')
+            \nSkip the dzfit step of ICESat-2 registration application.
+            \nYou should skip applying dzfit to tiles over the ice shelves of Antarctica.
         """)
     )
     parser.add_argument(
-        '--dzfit-minpoints',
+        '--is2-dzfit-minpoints',
         type=int,
         default=1000,
-        help=wrap_multiline_str("""
-            Minimum number of valid ICESat-2 points overalapping tile
+        help=wrap_multiline_str(r"""
+            (Only applicable when --reg-method='is2')
+            \nMinimum number of valid ICESat-2 points overalapping tile
             for dzfit to be applied.
         """)
+    )
+    
+    parser.add_argument(
+        '--cop30-skipreg-shp',
+        type=str,
+        default=None,
+        help=wrap_multiline_str(r"""
+            (Only applicable when --reg-method='cop30')
+            \nPath to shapefile of polygon features with 'skipreg' field value set to 1
+            where, in the COP30 registration process, DEM data blobs should not be
+            vertically adjusted.
+            \n(default is {})
+        """.format(
+            supertile_key,
+            ', '.join(["{} if domain={}".format(val, dom) for dom, val in domain_cop30SkipregShp_dict.items()]
+        )))
     )
 
     parser.add_argument(
@@ -244,6 +300,9 @@ def main():
 
     res_name = '{}m'.format(script_args.resolution)
 
+    if script_args.epsg is None:
+        script_args.epsg = domain_epsg_dict[script_args.domain]
+    projection_string = epsg_projstr_dict[script_args.epsg]
     if script_args.reg_method is None:
         script_args.reg_method = domain_regMethod_dict[script_args.domain]
     if script_args.is2_path is None:
@@ -255,6 +314,8 @@ def main():
 
     jobscript_utils.adjust_args(script_args, arg_parser)
     jobscript_utils.create_dirs(script_args, arg_parser)
+
+    script_args.job_name_prefix = f"{script_args.job_name_prefix}_{script_args.reg_method}"
 
 
     ## Verify arguments
@@ -271,9 +332,10 @@ def main():
             if not os.path.isdir(check_dir):
                 arg_parser.error("--is2-path directory does not exist: {}".format(check_dir))
 
-    elif script_args.reg_method == 'cop30':
+    if script_args.reg_method in ('cop30', 'fillWater'):
         if (not script_args.ref_dem_path) or (not script_args.water_mask_path):
-            arg_parser.error("--ref-dem-path and --water-mask-path cannot be empty when --reg-method='cop30'")
+            arg_parser.error("--ref-dem-path and --water-mask-path cannot be empty"
+                             " when --reg-method is one of ['cop30', 'fillWater']")
         else:
             check_dir, _, _ = script_args.ref_dem_path.partition(supertile_key)
             check_dir = os.path.dirname(check_dir)
@@ -283,6 +345,15 @@ def main():
             check_dir = os.path.dirname(check_dir)
             if not os.path.isdir(check_dir):
                 arg_parser.error("--water-mask-path directory does not exist: {}".format(check_dir))
+
+    if script_args.reg_method == 'cop30':
+        check_file = script_args.cop30_skipreg_shp
+        if check_file and not os.path.isfile(check_file):
+            arg_parser.error("--cop30-skipreg-shp file does not exist: {}".format(check_file))
+
+    if script_args.reg_method == 'seaSurf':
+        if not projection_string:
+            arg_parser.error("Projection reference string is not defined for --epsg='{}'".format(script_args.epsg))
 
     jobscript_utils.verify_args(script_args, arg_parser)
 
@@ -304,8 +375,10 @@ def main():
         supertile_folder = root_tiledir if script_args.tile_org == 'osu' else os.path.join(root_tiledir, supertile)
         tile_basename_pat = '{}{}{}'.format(supertile, '_*_' if script_args.resolution == 2 else '_', res_name)
 
-        if script_args.reg_method == 'fillWater':
+        if script_args.reg_method in ('fillWater', 'seaSurf'):
             matfile_unreg_pattern = os.path.join(supertile_folder, '{}.mat'.format(tile_basename_pat))
+            matfile_unreg_list = glob.glob(matfile_unreg_pattern)
+
             matfile_reg_pattern = os.path.join(supertile_folder, '{}_reg.mat'.format(tile_basename_pat))
             matfile_reg_files = glob.glob(matfile_reg_pattern)
             matfile_unreg_files = glob.glob(matfile_unreg_pattern)
@@ -323,9 +396,15 @@ def main():
                 print("Tile {} {} unreg .mat file does not exist: {}".format(supertile, res_name, matfile_unreg_pattern))
                 run_tile = False
             else:
-                matfile_reg_list = [f.replace('.mat', '_reg.mat') for f in matfile_unreg_list]
-                matfile_reg_exist_list = [f for f in matfile_reg_list if os.path.isfile(f)]
-                if len(matfile_reg_exist_list) == len(matfile_unreg_list):
+                matfile_regcomplete_list = []
+                for f_unreg in matfile_unreg_list:
+                    f_reg = f_unreg.replace('.mat', '_reg.mat')
+                    f_regfail = f_unreg.replace('.mat', '_reg.mat.regfail')
+                    if os.path.isfile(f_reg):
+                        matfile_regcomplete_list.append(f_reg)
+                    elif os.path.isfile(f_regfail):
+                        matfile_regcomplete_list.append(f_regfail)
+                if len(matfile_unreg_list) == len(matfile_regcomplete_list):
                     run_tile = False
 
         finfile_pattern = os.path.join(supertile_folder, '{}.fin'.format(tile_basename_pat))
@@ -342,23 +421,33 @@ def main():
         if script_args.reg_method == 'is2':
             altimetry_file = script_args.is2_path.replace(supertile_key, supertile)
             if not os.path.isfile(altimetry_file):
-                print("WARNING: Tile {} altimetry file does not exist: {}".format(supertile, altimetry_file))
+                print("ERROR: Tile {} altimetry file does not exist: {}".format(supertile, altimetry_file))
                 print("Running this tile anyways in order to produce tile *_unreg.mat.bak backup tile matfile")
                 # run_tile = False
 
-        elif script_args.reg_method == 'cop30':
+        elif script_args.reg_method == '2to10':
+            matfile_10m_unreg = os.path.join(supertile_folder, '{}_10m.mat'.format(supertile))
+            matfile_10m_reg = os.path.join(supertile_folder, '{}_10m_reg.mat'.format(supertile))
+            if not (os.path.isfile(matfile_10m_unreg) or os.path.isfile(matfile_10m_reg)):
+                print("ERROR: Tile {} 10m DEM matfile ('_reg.mat' or unreg) does not exist: {}".format(supertile, matfile_10m_unreg))
+                run_tile = False
+
+        elif script_args.reg_method in ('cop30', 'fillWater'):
             auxfile_dne = False
             ref_dem_file = script_args.ref_dem_path.replace(supertile_key, supertile)
             water_mask_file = script_args.water_mask_path.replace(supertile_key, supertile)
             if not os.path.isfile(ref_dem_file):
-                print("WARNING: Tile {} reference DEM file does not exist: {}".format(supertile, ref_dem_file))
+                print("ERROR: Tile {} reference DEM file does not exist: {}".format(supertile, ref_dem_file))
                 auxfile_dne = True
             if not os.path.isfile(water_mask_file):
-                print("WARNING: Tile {} water mask file does not exist: {}".format(supertile, water_mask_file))
+                print("ERROR: Tile {} water mask file does not exist: {}".format(supertile, water_mask_file))
                 auxfile_dne = True
             if auxfile_dne:
-                print("Running this tile anyways in order to produce tile *_unreg.mat.bak backup tile matfile")
-                # run_tile = False
+                if script_args.reg_method == 'cop30':
+                    print("Running this tile anyways in order to produce tile *_unreg.mat.bak backup tile matfile")
+                    # run_tile = False
+                else:
+                    run_tile = False
             
         if not run_tile:
             continue
@@ -438,14 +527,22 @@ def main():
         if script_args.reg_method == 'is2':
             altimetry_file = script_args.is2_path.replace(supertile_key, supertile)
 
-            if script_args.skip_dzfit:
+            if script_args.is2_skip_dzfit:
                 matscript_args += ", 'skipDzfit'"
-            matscript_args += ", 'dzfitMinPoints',{}".format(script_args.dzfit_minpoints)
+            matscript_args += ", 'dzfitMinPoints',{}".format(script_args.is2_dzfit_minpoints)
 
             task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
                 addpath('{SCRIPT_DIR}');
                 addpath('{script_args.matlib}');
                 batchRegisterTiles('{supertile_dir}', '{altimetry_file}', 'resolution','{res_name}' {matscript_args});
+            """))
+
+        elif script_args.reg_method == '2to10':
+
+            task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
+                addpath('{SCRIPT_DIR}');
+                addpath('{script_args.matlib}');
+                batchRegister2mTileTo10mTile('{supertile_dir}' {matscript_args});
             """))
 
         elif script_args.reg_method in ('cop30', 'fillWater'):
@@ -454,6 +551,10 @@ def main():
 
             if script_args.reg_method == 'cop30':
                 matlab_script = 'batchRegisterTilesToCOP30'
+                matscript_args += ", 'registerBlobs'"
+                if script_args.cop30_skipreg_shp:
+                    matscript_args += ", 'registerBlobsSkipregShp',{}".format(script_args.cop30_skipreg_shp)
+
             elif script_args.reg_method == 'fillWater':
                 matlab_script = 'batchWaterFillTiles'
 
@@ -461,6 +562,14 @@ def main():
                 addpath('{SCRIPT_DIR}');
                 addpath('{script_args.matlib}');
                 {matlab_script}('{supertile_dir}', '{ref_dem_file}', '{water_mask_file}', 'resolution','{res_name}' {matscript_args});
+            """))
+
+        elif script_args.reg_method == 'seaSurf':
+
+            task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
+                addpath('{SCRIPT_DIR}');
+                addpath('{script_args.matlib}');
+                batchAddSeaSurf('{supertile_dir}', '{projection_string}', 'resolution','{res_name}' {matscript_args});
             """))
 
         submit_cmd = job_handler.add_task_cmd(task_cmd, job_id)
