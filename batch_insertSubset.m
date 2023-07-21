@@ -1,8 +1,15 @@
 function batch_insertSubset(tileDir, resolution, annualRootDir, boxShp, pShp, varargin)
 
-tileFiles = dir(sprintf('%s/*_%s.mat', tileDir, resolution));
-tileNames = {tileFiles.name};
-tileFiles = fullfile({tileFiles.folder}, tileNames);
+%tileFiles = dir(sprintf('%s/*_%s.mat', tileDir, resolution));
+%tileNames = {tileFiles.name};
+%tileFiles = fullfile({tileFiles.folder}, tileNames);
+
+regFiles = dir(sprintf('%s/*_%s_reg.mat', tileDir, resolution));
+unregFiles = dir(sprintf('%s/*_%s.mat', tileDir, resolution));
+regFiles = fullfile({regFiles.folder}, {regFiles.name});
+unregFiles = fullfile({unregFiles.folder}, {unregFiles.name});
+unregFiles = setdiff(unregFiles, strrep(regFiles, '_reg.mat', '.mat'));
+tileFiles = [unregFiles regFiles];
 
 ntiles = length(tileFiles);
 for i = 1:ntiles
