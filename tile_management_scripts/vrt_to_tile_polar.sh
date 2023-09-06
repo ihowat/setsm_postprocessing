@@ -84,7 +84,7 @@ ${mem_report_cmd}
 echo -------------------------------------------------------------------------
 echo
 
-#source /home/husby036/installed/build/miniconda3/bin/activate /home/husby036/installed/build/miniconda3/envs/pgc
+#source ~/.bashrc; conda activate pgc
 
 ## Bash settings
 set -uo pipefail
