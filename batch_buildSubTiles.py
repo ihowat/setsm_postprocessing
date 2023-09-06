@@ -15,6 +15,7 @@ SCRIPT_FILE = os.path.abspath(os.path.realpath(__file__))
 SCRIPT_FNAME = os.path.basename(SCRIPT_FILE)
 SCRIPT_NAME, SCRIPT_EXT = os.path.splitext(SCRIPT_FNAME)
 SCRIPT_DIR = os.path.dirname(SCRIPT_FILE)
+HOME_DIR = os.path.expanduser('~/')
 
 
 ## General argument defaults and settings
@@ -48,6 +49,13 @@ elif hostname.startswith('nunatak'):
     sched_specify_outerr_paths = False
     sched_addl_vars = "-l nodes=1:ppn=16,mem=64gb,walltime=200:00:00 -m n -k oe -j oe"
     sched_default_queue = 'old'
+elif hostname.startswith('pgc-comp'):
+    system_name = 'pgc'
+    sched_presubmit_cmd = ''
+    sched_addl_envvars = ''
+    sched_specify_outerr_paths = False
+    sched_addl_vars = f"--nodes=1 --ntasks=1 --cpus-per-task=24 --mem=120G --time=200:00:00 -o {HOME_DIR}/%x.o%j -e {HOME_DIR}/%x.o%j"
+    sched_default_queue = 'batch'
 else:
     warnings.warn("Hostname '{}' not recognized. System-specific settings will not be applied.".format(hostname))
     system_name = ''
@@ -95,7 +103,7 @@ project_databaseFile_dict = {
     'arcticdem': '/mnt/pgc/data/projects/earthdem/strip_databases/ArcticDEMdatabase4_2m_v4.1_20230425_all_plus_reproj.mat',
     # 'arcticdem': '/mnt/pgc/data/projects/earthdem/strip_databases/ArcticDEMdatabase4_2m_v4.1_20230425_clip_iangreenland.mat',  # Apr 25 dbase clipped to Ian's 2021feb09 'arcticdem_strips.shp' for Greenland
     # 'rema':      '/mnt/pgc/data/projects/earthdem/strip_databases/unity_databases/rema_v2/rema_strips_v13e.shp',  # REMA v2 original run tiles, used strips_v4
-    # 'rema':      '/mnt/pgc/data/projects/earthdem/strip_databases/REMAdatabase4_2m_v4.1_20220511_clip_v13e.mat',  # REMA v2 rerun params tiles (247 tiles), used strips_v4.1
+    # 'rema':      '/mnt/pgc/data/projects/earthdem/strip_databases/REMAdatabase4_2m_v4.1_20220511_clip_v13e.mat',  # REMA v2 rerun params tiles (247 tiles), used strips_v4.1 clipped to rema_strips_v13e stripdemids
     'rema':      '/mnt/pgc/data/projects/earthdem/strip_databases/unity_databases/rema_v2.1/rema_strips.shp',  # REMA v2.1 re-QC, used strips_v4.1 (more strips)
     'earthdem':  '/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4.1_20230425_all_plus_reproj.mat',
 }
@@ -121,6 +129,11 @@ project_tileParamList_dict = {
     'arcticdem': '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/tile_params/tileParamList.txt',
     'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_params/tileParamList_v13e.txt',
     'earthdem':  '',
+}
+project_version_dict = {
+    'arcticdem': 'ArcticDEM,4.1',
+    'rema': 'REMA,2.1',
+    'earthdem': 'EarthDEM,1.1',
 }
 project_dateFiltEnd_dict = {
     'arcticdem': '20220614',
@@ -189,10 +202,15 @@ def main():
                         help="tile parameters text file (default is {})".format(
                             ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_tileParamList_dict.items()])
                         ))
+    parser.add_argument("--version", default=None,
+                        help="mosaic version (default is {})".format(
+                            ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_version_dict.items()])
+                        ))
+
     parser.add_argument("--datefilt-start", default=None,
-                        help="filter strip database to (first image) acquisition date on or after this date in 'yyyymmdd' format")
+                        help="filter strip database to (first image) acquisition date on or after this date in 'YYYYMMDD' format")
     parser.add_argument("--datefilt-end", default=None,
-                        help="filter strip database to (first image) acquisition date on or before this date in 'yyyymmdd' format (default is {})".format(
+                        help="filter strip database to (first image) acquisition date on or before this date in 'YYYYMMDD' format (default is {})".format(
                             ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_dateFiltEnd_dict.items()])
                         ))
     
@@ -335,6 +353,8 @@ def main():
         args.tileqc_dir = os.path.abspath(args.tileqc_dir)
     if args.tileparam_list != '':
         args.tileparam_list = os.path.abspath(args.tileparam_list if os.path.isfile(args.tileparam_list) else os.path.join(SCRIPT_DIR, args.tileparam_list))
+    if args.version is None:
+        args.version = project_version_dict[args.project]
     args.libdir = os.path.abspath(args.libdir)
     args.tempdir = os.path.abspath(args.tempdir)
     args.logdir = os.path.abspath(os.path.join(args.dstdir, args.logdir) if args.logdir.startswith('../') else args.logdir)
@@ -470,6 +490,7 @@ def main():
             '--project', args.project,
             '--tile-def', args.tile_def,
             '--tileparam-list', args.tileparam_list,
+            '--version', args.version,
             '--libdir', args.libdir,
             '--tempdir', args.tempdir,
             '--logdir', args.logdir,
@@ -795,22 +816,23 @@ def main():
                         'IN_PARALLEL=true,' if batch_job_submission else '',
                         '@'.join(tile_bundle) if batch_job_submission else tile,
                         ',ARG_WATERTILEDIR="{}"'.format(arg_waterTileDir) if arg_waterTileDir is not None else '',
-                        ','+sched_addl_envvars if sched_addl_envvars != '' else '',
-                        '-q {}'.format(args.queue) if args.queue is not None else '',
+                        ','+sched_addl_envvars if sched_addl_envvars else '',
+                        '-q {}'.format(args.queue) if args.queue else '',
                         '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
                         sched_addl_vars_inst,
                         batch_jobscript if batch_job_submission else tilerun_jobscript,
                     )
 
                 elif args.slurm:
-                    cmd = r""" {}sbatch -J {} -v {}{}ARG_TILENAME={}{}{} {} {} "{}" """.format(
+                    cmd = r""" {}sbatch -J {} --export {}{}ARG_TILENAME={}{}{} {} {} {} "{}" """.format(
                         sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
                         job_name,
                         'TILERUN_JOBSCRIPT="{}",'.format(tilerun_jobscript) if batch_job_submission else '',
                         'IN_PARALLEL=true,' if batch_job_submission else '',
                         '@'.join(tile_bundle) if batch_job_submission else tile,
                         ',ARG_WATERTILEDIR="{}"'.format(arg_waterTileDir) if arg_waterTileDir is not None else '',
-                        ','+sched_addl_envvars if sched_addl_envvars != '' else '',
+                        ','+sched_addl_envvars if sched_addl_envvars else '',
+                        '--partition {}'.format(args.queue) if args.queue else '',
                         '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
                         sched_addl_vars_inst,
                         batch_jobscript if batch_job_submission else tilerun_jobscript,

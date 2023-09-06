@@ -16,6 +16,7 @@ SCRIPT_FILE = os.path.abspath(os.path.realpath(__file__))
 SCRIPT_FNAME = os.path.basename(SCRIPT_FILE)
 SCRIPT_NAME, SCRIPT_EXT = os.path.splitext(SCRIPT_FNAME)
 SCRIPT_DIR = os.path.dirname(SCRIPT_FILE)
+HOME_DIR = os.path.expanduser('~/')
 
 
 ## General argument defaults and settings
@@ -47,6 +48,13 @@ elif hostname.startswith('nunatak'):
     sched_specify_outerr_paths = False
     sched_addl_vars = "-l walltime=100:00:00,nodes=1:ppn=8,mem=48gb -m n -k oe -j oe"
     sched_default_queue = 'old'
+elif hostname.startswith('pgc-comp'):
+    system_name = 'pgc'
+    sched_presubmit_cmd = ''
+    sched_addl_envvars = ''
+    sched_specify_outerr_paths = False
+    sched_addl_vars = f"--nodes=1 --ntasks=1 --cpus-per-task=12 --mem=60G --time=100:00:00 -o {HOME_DIR}/%x.o%j -e {HOME_DIR}/%x.o%j"
+    sched_default_queue = 'batch'
 else:
     warnings.warn("Hostname '{}' not recognized. System-specific settings will not be applied.".format(hostname))
     system_name = ''
@@ -83,7 +91,7 @@ project_tileDefFile_dict = {
     'earthdem':  '/mnt/pgc/data/projects/earthdem/tiledef_files/PGC_UTM_Mosaic_Tiles_{}.mat'.format(earthdem_hemisphere_key),
 }
 project_tileParamList_dict = {
-    'arcticdem': '',
+    'arcticdem': '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/tile_params/tileParamList.txt',
     'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_params/tileParamList_v13e.txt',
     'earthdem':  '',
 }
@@ -572,14 +580,14 @@ def main():
                 job_errfile = os.path.join(pbs_logdir, task_name+'.err')
 
                 if args.pbs:
-                    cmd = r""" {}qsub -N {} -v {}{}ARG_TILENAME={}{} {} {} {} "{}" """.format(
+                    cmd = r""" {}qsub -N {} --export {}{}ARG_TILENAME={}{} {} {} {} "{}" """.format(
                         sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
                         job_name,
                         'TILERUN_JOBSCRIPT="{}",'.format(tilerun_jobscript) if batch_job_submission else '',
                         'IN_PARALLEL=false,' if batch_job_submission else '',
                         '@'.join(tile_bundle) if batch_job_submission else tile,
-                        ','+sched_addl_envvars if sched_addl_envvars != '' else '',
-                        '-q {}'.format(args.queue) if args.queue is not None else '',
+                        ','+sched_addl_envvars if sched_addl_envvars else '',
+                        '-q {}'.format(args.queue) if args.queue else '',
                         '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
                         sched_addl_vars,
                         batch_jobscript if batch_job_submission else tilerun_jobscript,
@@ -588,13 +596,14 @@ def main():
                 elif args.slurm:
                     job_outfile = job_outfile.replace('pbs', 'slurm')
                     job_errfile = job_errfile.replace('pbs', 'slurm')
-                    cmd = r""" {}sbatch -J {} -v {}{}ARG_TILENAME={} {} {} "{}" """.format(
+                    cmd = r""" {}sbatch -J {} --export {}{}ARG_TILENAME={}{} {} {} {} "{}" """.format(
                         sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
                         job_name,
                         'TILERUN_JOBSCRIPT="{}",'.format(tilerun_jobscript) if batch_job_submission else '',
                         'IN_PARALLEL=false,' if batch_job_submission else '',
                         '@'.join(tile_bundle) if batch_job_submission else tile,
-                        ','+sched_addl_envvars if sched_addl_envvars != '' else '',
+                        ','+sched_addl_envvars if sched_addl_envvars else '',
+                        '--partition {}'.format(args.queue) if args.queue else '',
                         '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
                         sched_addl_vars,
                         batch_jobscript if batch_job_submission else tilerun_jobscript,

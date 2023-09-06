@@ -32,4 +32,4 @@ catch e
     disp(getReport(e)); exit(1)
 end
 
-exit(0)
+disp("End of run_buildSubTiles.m");

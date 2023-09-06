@@ -1,11 +1,19 @@
 #!/bin/bash
 
-## PGC settings
+## PGC Nunatak settings
 ##PBS -l walltime=200:00:00,nodes=1:ppn=16,mem=64gb
 ##PBS -m n
 ##PBS -k oe
 ##PBS -j oe
 ##PBS -q old
+
+## PGC Rookery settings
+##SBATCH --time 200:00:00
+##SBATCH --nodes 1
+##SBATCH --ntasks 1
+##SBATCH --cpus-per-task 24
+##SBATCH --mem=120G
+##SBATCH -o %x.o%j
 
 ## BW settings
 ##PBS -l nodes=1:ppn=16:xe,gres=shifter
@@ -20,66 +28,66 @@
 set -uo pipefail
 
 set +u
-echo ________________________________________________________
-echo
-echo PBS Job Log
-echo Start time: $(date)
-echo
-echo Job name: $PBS_JOBNAME
-echo Job ID: $PBS_JOBID
-echo Submitted by user: $USER
-echo User effective group ID: $(id -ng)
-echo
-echo Hostname of submission: $PBS_O_HOST
-echo Submitted to cluster: $PBS_SERVER
-echo Submitted to queue: $PBS_QUEUE
-echo Requested nodes per job: $PBS_NUM_NODES
-echo Requested cores per node: $PBS_NUM_PPN
-echo Requested cores per job: $PBS_NP
-#echo Node list file: $PBS_NODEFILE
-#echo Nodes assigned to job: $(cat $PBS_NODEFILE)
-#echo Running node index: $PBS_O_NODENUM
-echo
-echo Running on hostname: $HOSTNAME
-echo Parent PID: $PPID
-echo Process PID: $$
-echo
-echo Working directory: $PBS_O_WORKDIR
-echo ________________________________________________________
-echo
-JOB_ID=$PBS_JOBID
-CORES_PER_NODE=$PBS_NUM_PPN
-
-#echo ________________________________________
+#echo ________________________________________________________
 #echo
-#echo SLURM Job Log
+#echo PBS Job Log
 #echo Start time: $(date)
 #echo
-#echo Job name: $SLURM_JOB_NAME
-#echo Job ID: $SLURM_JOBID
+#echo Job name: $PBS_JOBNAME
+#echo Job ID: $PBS_JOBID
 #echo Submitted by user: $USER
 #echo User effective group ID: $(id -ng)
 #echo
-#echo SLURM account used: $SLURM_ACCOUNT
-#echo Hostname of submission: $SLURM_SUBMIT_HOST
-#echo Submitted to cluster: $SLURM_CLUSTER_NAME
-#echo Submitted to node: $SLURMD_NODENAME
-#echo Cores on node: $SLURM_CPUS_ON_NODE
-#echo Requested cores per task: $SLURM_CPUS_PER_TASK
-#echo Requested cores per job: $SLURM_NTASKS
-#echo Requested walltime: $SBATCH_TIMELIMIT
-##echo Nodes assigned to job: $SLURM_JOB_NODELIST
-##echo Running node index: $SLURM_NODEID
+#echo Hostname of submission: $PBS_O_HOST
+#echo Submitted to cluster: $PBS_SERVER
+#echo Submitted to queue: $PBS_QUEUE
+#echo Requested nodes per job: $PBS_NUM_NODES
+#echo Requested cores per node: $PBS_NUM_PPN
+#echo Requested cores per job: $PBS_NP
+##echo Node list file: $PBS_NODEFILE
+##echo Nodes assigned to job: $(cat $PBS_NODEFILE)
+##echo Running node index: $PBS_O_NODENUM
 #echo
 #echo Running on hostname: $HOSTNAME
 #echo Parent PID: $PPID
 #echo Process PID: $$
 #echo
-#echo Working directory: $SLURM_SUBMIT_DIR
+#echo Working directory: $PBS_O_WORKDIR
 #echo ________________________________________________________
 #echo
-#JOB_ID=$SLURM_JOBID
-#CORES_PER_NODE=$SLURM_CPUS_ON_NODE
+#JOB_ID=$PBS_JOBID
+#CORES_PER_NODE=$PBS_NUM_PPN
+
+echo ________________________________________
+echo
+echo SLURM Job Log
+echo Start time: $(date)
+echo
+echo Job name: $SLURM_JOB_NAME
+echo Job ID: $SLURM_JOBID
+echo Submitted by user: $USER
+echo User effective group ID: $(id -ng)
+echo
+echo SLURM account used: $SLURM_ACCOUNT
+echo Hostname of submission: $SLURM_SUBMIT_HOST
+echo Submitted to cluster: $SLURM_CLUSTER_NAME
+echo Submitted to node: $SLURMD_NODENAME
+echo Cores on node: $SLURM_CPUS_ON_NODE
+echo Requested cores per task: $SLURM_CPUS_PER_TASK
+echo Requested cores per job: $SLURM_NTASKS
+echo Requested walltime: $SBATCH_TIMELIMIT
+#echo Nodes assigned to job: $SLURM_JOB_NODELIST
+#echo Running node index: $SLURM_NODEID
+echo
+echo Running on hostname: $HOSTNAME
+echo Parent PID: $PPID
+echo Process PID: $$
+echo
+echo Working directory: $SLURM_SUBMIT_DIR
+echo ________________________________________________________
+echo
+JOB_ID=$SLURM_JOBID
+CORES_PER_NODE=$SLURM_CPUS_ON_NODE
 set -u
 
 set +u; tileName="$ARG_TILENAME"; set -u
@@ -162,7 +170,7 @@ if [ "$system" = 'pgc' ]; then
     # Matlab settings
     MATLAB_WORKING_DIR="${HOME}/matlab_working_dir"
     MATLAB_TEMP_DIR="${HOME}/matlab_temp_dir"
-    module load matlab/2019a
+#    module load matlab/2019a
     MATLAB_PROGRAM="matlab"
     MATLAB_SETTINGS="-nodisplay -nodesktop -nosplash"
     MATLAB_USE_PARPOOL=true
@@ -238,7 +246,20 @@ run_buildSubTiles(\
 '${waterTileDir}','${refDemFile}',\
 '${tileqcDir}','${tileParamListFile}',\
 '${dateFiltStart}','${dateFiltEnd}',\
-${make2m})"
+${make2m}); \
+warning('off'); \
+disp('End of matlab command run from qsub_buildSubTiles.sh');"
+# Turning off all warnings at the end of the Matlab command is to avoid this error on Rookery:
+#
+#Warning: Error occurred while executing the listener callback for event
+#ObjectBeingDestroyed defined for class parallel.settings.Profile:
+#Invalid or deleted object.
+#
+#Error in parallel.Cluster/handleProfileDeleted (line 439)
+#            obj.ProfileObject = parallel.settings.Profile.empty();
+#
+#Error in parallel.Cluster>@(~,~)obj.handleProfileDeleted() (line 434)
+#                    @(~, ~) obj.handleProfileDeleted() );
 
 
 task_cmd="${MATLAB_PROGRAM} ${MATLAB_SETTINGS} -r \"${matlab_cmd}\""
