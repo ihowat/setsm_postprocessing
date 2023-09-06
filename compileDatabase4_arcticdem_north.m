@@ -101,7 +101,7 @@ if exist('dbase_in', 'var') && ~isempty(dbase_in)
     fprintf('Output database will be: %s\n', dbase_out);
     out0=matfile(dbase_in);
     [stripDirs0,~,~] = cellfun(@fileparts, out0.fileName, 'UniformOutput',false);
-    stripDirs0_nover = cellfun(@(x) regexprep(x,'_v\d{6}$',''), stripDirs0, 'UniformOutput',false);
+    stripDirs0_nover = cellfun(@(x) regexprep(x,'(?:_lsf)?_v\d{6}$',''), stripDirs0, 'UniformOutput',false);
 else
     fprintf('Creating new database: %s\n', dbase_out);
 end
@@ -131,7 +131,7 @@ for i=1:length(regionDirs)
 %            end
 %        end
 %
-%        metaFiles=dir([regionDir,'/*_2m_lsf*/*meta.txt']);
+%        metaFiles=dir([regionDir,'/*_2m*/*meta.txt']);
 %        metaFiles = strcat({metaFiles.folder}',repmat({'/'},length(metaFiles),1),{metaFiles.name}');
 %
 %        j=1;
@@ -145,7 +145,7 @@ for i=1:length(regionDirs)
 %            end
 %        end
 
-        stripDir_pattern=[regionDir,'/*_2m_lsf*'];
+        stripDir_pattern=[regionDir,'/*_2m*'];
         fprintf('Gathering strips with pattern: %s ... ', stripDir_pattern)
 
         stripDirs=dir(stripDir_pattern);
@@ -184,14 +184,14 @@ for i=1:length(regionDirs)
         [~,stripDnames,~] = cellfun(@fileparts, stripDirs, 'UniformOutput', false);
         [stripDnames, I] = sort(stripDnames);
         stripDirs = stripDirs(I);
-        stripDnames_nover = cellfun(@(x) regexprep(x,'_v\d{6}$',''), stripDnames, 'UniformOutput',false);
+        stripDnames_nover = cellfun(@(x) regexprep(x,'(?:_lsf)?_v\d{6}$',''), stripDnames, 'UniformOutput',false);
         [~,IA] = unique(stripDnames_nover, 'last');
         stripDirs = stripDirs(IA);
 
 
         % difference strips with database to be appended to
         if exist('out0','var')
-            stripDirs_nover = cellfun(@(x) regexprep(x,'_v\d{6}$',''), stripDirs, 'UniformOutput',false);
+            stripDirs_nover = cellfun(@(x) regexprep(x,'(?:_lsf)?_v\d{6}$',''), stripDirs, 'UniformOutput',false);
             Lia = ismember(stripDirs_nover, stripDirs0_nover);
             stripDirs(Lia) = [];
             if isempty(stripDirs)
