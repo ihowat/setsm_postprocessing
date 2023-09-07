@@ -135,8 +135,8 @@ if [ ! -d "$tiledir" ]; then
     exit 1
 fi
 
-#matlab_cmd="try; addpath('/mnt/pgc/data/common/repos/setsm_postprocessing_pgc'); batch_insertSubset('${tiledir}', '${resolution}', '${annualRootDir}', '${boxShp}', '${pShp}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
-matlab_cmd="try; addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing_pgc'); addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4'); batch_insertSubset('${tiledir}', '${resolution}', '${annualRootDir}', '${boxShp}', '${pShp}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+matlab_cmd="try; addpath('/mnt/pgc/data/common/repos/setsm_postprocessing_pgc'); batch_insertSubset('${tiledir}', '${resolution}', '${annualRootDir}', '${boxShp}', '${pShp}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+#matlab_cmd="try; addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing_pgc'); addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4'); batch_insertSubset('${tiledir}', '${resolution}', '${annualRootDir}', '${boxShp}', '${pShp}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 
 echo "Argument tile directory: ${tiledir}"
 echo "Matlab command: \"${matlab_cmd}\""

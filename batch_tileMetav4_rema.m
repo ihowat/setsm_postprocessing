@@ -1,6 +1,6 @@
 %batch_tileMeta
 
-addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4');
+addpath('/mnt/pgc/data/common/repos/setsm_postprocessing4');
 
 tiledir='/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/results/output_tiles';
 project='REMA';

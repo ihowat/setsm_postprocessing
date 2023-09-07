@@ -103,8 +103,8 @@ if [ ! -d "$tiledir" ]; then
 fiit 1
 fi
 
-#matlab_cmd="try; addpath('/mnt/pgc/data/common/repos/setsm_postprocessing4'); checkLandPercent('${tiledir}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
-matlab_cmd="try; addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4'); checkLandPercent('${tiledir}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+matlab_cmd="try; addpath('/mnt/pgc/data/common/repos/setsm_postprocessing4'); checkLandPercent('${tiledir}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+#matlab_cmd="try; addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4'); checkLandPercent('${tiledir}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 
 echo "Argument tile directory: ${tiledir}"
 echo "Matlab command: \"${matlab_cmd}\""
