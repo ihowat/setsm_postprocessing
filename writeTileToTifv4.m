@@ -100,6 +100,13 @@ else
     registerToRefDebug = false;
 end
 
+n = find(strcmpi('registerBlobsSkipregShp',varargin));
+if ~isempty(n)
+    registerBlobsSkipregShp = varargin{n+1};
+else
+    registerBlobsSkipregShp = [];
+end
+
 n = find(strcmpi('filterFillDebug',varargin));
 if ~isempty(n)
     filterFillDebug = true;
@@ -321,7 +328,7 @@ if calcSlopeDiffFilt || ~strcmp(registerToRef, 'none')
         elseif strcmp(registerToRef, 'reportOffsetOnly')
             register_opt = 'reportOffsetOnly';
         end
-        [z,z_at_zr_res,I_ref,C] = registerTileToCOP30(z,x,y,refDemFile,waterMaskFile,register_opt);
+        [z,z_at_zr_res,I_ref,C] = registerTileToCOP30(z,x,y,refDemFile,waterMaskFile,register_opt,'registerBlobsSkipregShp',registerBlobsSkipregShp);
     end
 end
 
