@@ -56,9 +56,9 @@ domain_refDemPath_dict = {
     'earthdem': None,
     'rema': "/mnt/pgc/data/elev/dem/copernicus-dem-30m/mosaic/rema_tiles_wgs84/<supertile>_10m_cop30_wgs84.tif",
 }
-domain_waterMaskPath_dict = {
+domain_coverTifPath_dict = {
     'arcticdem': "/mnt/pgc/data/thematic/landcover/esa_worldcover_2020/mosaics/arctic_tiles/<supertile>_10m_cover.tif",
-    'earthdem': "/mnt/pgc/data/projects/earthdem/watermasks/global_surface_water/tiled_watermasks/<supertile>_water.tif",
+    'earthdem': None,
     'rema': None,
 }
 domain_cop30SkipregShp_dict = {
@@ -141,9 +141,14 @@ def get_arg_parser():
             \n'2to10': Register 2m 50x50km quad tile raster data to corresponding 100x100km 10m supertile raster data.
             \n'cop30': Vertically register contiguous chunks ("blobs") of tile raster data to --ref-dem-path DEM data
             (Copernicus GLO-30 30m dataset tiles cut to match mosaic tile schema).
-            \n'fillWater': Run fillWater.m to generate output '_fill.mat' files, where the 'z' DEM array has
-            areas marked as water in --water-mask-path (ESA WorldCover dataset tiles) filled with the corresponding
+            \n'fillWater': Run 'fillWater.m' to generate output '_fill.mat' files, where the 'z' DEM array has
+            areas marked as water in --cover-tif-path (ESA WorldCover dataset tiles) filled with the corresponding
             surface from --ref-dem-path DEM data.
+            \n'seaSurf': Run 'addSeaSurfaceHeight.m' to to generated output '_fill.mat' files, where the 'z' DEM array
+            has pixels over ocean (indicated by the tile matfile internal 'land' array) filled with the EGM2008
+            geoid height. That tile matfile 'land' array can be set through a script like 'addLandMask2REMATiles.m'
+            or through the '2to10' 2m to 10m tile registration process, which copies+subsets an existing 'land' array
+            from the 10m tile matfile to the output 2m '_reg.mat' file.
             \n(default is {})
         """.format(
             supertile_key,
@@ -165,16 +170,16 @@ def get_arg_parser():
         )))
     )
     parser.add_argument(
-        '--water-mask-path',
+        '--cover-tif-path',
         type=str,
         default=None,
         help=wrap_multiline_str(r"""
-            Path to watermask raster used for 'cop30' registration method or 'fillWater'.
+            Path to landcover raster used for 'cop30' registration method or 'fillWater'.
             The path should include the '{}' substring to be replaced with supertile name.
             \n(default is {})
         """.format(
             supertile_key,
-            ', '.join(["{} if domain={}".format(val, dom) for dom, val in domain_waterMaskPath_dict.items()]
+            ', '.join(["{} if domain={}".format(val, dom) for dom, val in domain_coverTifPath_dict.items()]
         )))
     )
 
@@ -309,8 +314,8 @@ def main():
         script_args.is2_path = domain_is2path_dict[script_args.domain]
     if script_args.ref_dem_path is None:
         script_args.ref_dem_path = domain_refDemPath_dict[script_args.domain]
-    if script_args.water_mask_path is None:
-        script_args.water_mask_path = domain_waterMaskPath_dict[script_args.domain]
+    if script_args.cover_tif_path is None:
+        script_args.cover_tif_path = domain_coverTifPath_dict[script_args.domain]
 
     jobscript_utils.adjust_args(script_args, arg_parser)
     jobscript_utils.create_dirs(script_args, arg_parser)
@@ -333,18 +338,18 @@ def main():
                 arg_parser.error("--is2-path directory does not exist: {}".format(check_dir))
 
     if script_args.reg_method in ('cop30', 'fillWater'):
-        if (not script_args.ref_dem_path) or (not script_args.water_mask_path):
-            arg_parser.error("--ref-dem-path and --water-mask-path cannot be empty"
+        if (not script_args.ref_dem_path) or (not script_args.cover_tif_path):
+            arg_parser.error("--ref-dem-path and --cover-tif-path cannot be empty"
                              " when --reg-method is one of ['cop30', 'fillWater']")
         else:
             check_dir, _, _ = script_args.ref_dem_path.partition(supertile_key)
             check_dir = os.path.dirname(check_dir)
             if not os.path.isdir(check_dir):
                 arg_parser.error("--ref-dem-path directory does not exist: {}".format(check_dir))
-            check_dir, _, _ = script_args.water_mask_path.partition(supertile_key)
+            check_dir, _, _ = script_args.cover_tif_path.partition(supertile_key)
             check_dir = os.path.dirname(check_dir)
             if not os.path.isdir(check_dir):
-                arg_parser.error("--water-mask-path directory does not exist: {}".format(check_dir))
+                arg_parser.error("--cover-tif-path directory does not exist: {}".format(check_dir))
 
     if script_args.reg_method == 'cop30':
         check_file = script_args.cop30_skipreg_shp
@@ -435,12 +440,12 @@ def main():
         elif script_args.reg_method in ('cop30', 'fillWater'):
             auxfile_dne = False
             ref_dem_file = script_args.ref_dem_path.replace(supertile_key, supertile)
-            water_mask_file = script_args.water_mask_path.replace(supertile_key, supertile)
+            cover_tif_file = script_args.cover_tif_path.replace(supertile_key, supertile)
             if not os.path.isfile(ref_dem_file):
                 print("ERROR: Tile {} reference DEM file does not exist: {}".format(supertile, ref_dem_file))
                 auxfile_dne = True
-            if not os.path.isfile(water_mask_file):
-                print("ERROR: Tile {} water mask file does not exist: {}".format(supertile, water_mask_file))
+            if not os.path.isfile(cover_tif_file):
+                print("ERROR: Tile {} water mask file does not exist: {}".format(supertile, cover_tif_file))
                 auxfile_dne = True
             if auxfile_dne:
                 if script_args.reg_method == 'cop30':
@@ -547,7 +552,7 @@ def main():
 
         elif script_args.reg_method in ('cop30', 'fillWater'):
             ref_dem_file = script_args.ref_dem_path.replace(supertile_key, supertile)
-            water_mask_file = script_args.water_mask_path.replace(supertile_key, supertile)
+            cover_tif_file = script_args.cover_tif_path.replace(supertile_key, supertile)
 
             if script_args.reg_method == 'cop30':
                 matlab_script = 'batchRegisterTilesToCOP30'
@@ -561,7 +566,7 @@ def main():
             task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
                 addpath('{SCRIPT_DIR}');
                 addpath('{script_args.matlib}');
-                {matlab_script}('{supertile_dir}', '{ref_dem_file}', '{water_mask_file}', 'resolution','{res_name}' {matscript_args});
+                {matlab_script}('{supertile_dir}', '{ref_dem_file}', '{cover_tif_file}', 'resolution','{res_name}' {matscript_args});
             """))
 
         elif script_args.reg_method == 'seaSurf':

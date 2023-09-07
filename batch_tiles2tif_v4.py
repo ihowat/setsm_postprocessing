@@ -26,7 +26,7 @@ domain_finalQcMask_dict = {
     'arcticdem': None,
     'earthdem': None,
     # 'rema': "/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/final_qc_mask/rema_v2/rema_final_mask.mat",
-    'rema': "/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/final_qc_mask/rema_v2.1/rema_final_mask_rev1.mat",
+    'rema': "/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/final_qc_mask/rema_v2.1/rema_final_mask_v2_1.mat",
 }
 supertile_key = '<supertile>'
 domain_refDemPath_dict = {
@@ -34,9 +34,14 @@ domain_refDemPath_dict = {
     'earthdem': None,
     'rema': "/mnt/pgc/data/elev/dem/copernicus-dem-30m/mosaic/rema_tiles_wgs84/<supertile>_10m_cop30_wgs84.tif",
 }
-domain_waterMaskPath_dict = {
+domain_coverTifPath_dict = {
     'arcticdem': "/mnt/pgc/data/thematic/landcover/esa_worldcover_2020/mosaics/arctic_tiles/<supertile>_10m_cover.tif",
-    'earthdem': "/mnt/pgc/data/projects/earthdem/watermasks/global_surface_water/tiled_watermasks/<supertile>_water.tif",
+    'earthdem': None,
+    'rema': None,
+}
+domain_cop30SkipregShp_dict = {
+    'arcticdem': "/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/arcticdem_v4.1_mosaic_reg-cop30_skip-reg.shp",
+    'earthdem': None,
     'rema': None,
 }
 
@@ -141,17 +146,17 @@ def get_arg_parser():
         )))
     )
     parser.add_argument(
-        '--water-mask-path',
+        '--cover-tif-path',
         type=str,
         default=None,
         help=wrap_multiline_str(r"""
-            Path to watermask raster used for filling water bodies with the reference DEM
+            Path to ESA WorldCover landcover raster used for filling water bodies with the reference DEM
             if the --apply-water-fill option is provided. The path should include the '{}'
             substring to be replaced with supertile name.
             \n(default is {})
         """.format(
             supertile_key,
-            ', '.join(["{} if domain={}".format(val, dom) for dom, val in domain_refDemPath_dict.items()]
+            ', '.join(["{} if domain={}".format(val, dom) for dom, val in domain_coverTifPath_dict.items()]
         )))
     )
     parser.add_argument(
@@ -161,7 +166,8 @@ def get_arg_parser():
         default='false',
         help=wrap_multiline_str("""
             Apply Ian's slopeDifferenceFilter to tile DEM data in memory before tif export,
-            using the reference DEM from the --ref-dem-path argument.
+            using the reference DEM and landcover raster from the --ref-dem-path
+            and --cover-tif-path arguments.
         """)
     )
     parser.add_argument(
@@ -171,10 +177,55 @@ def get_arg_parser():
         default='false',
         help=wrap_multiline_str("""
             Apply Ian's fillWater to tile DEM data in memory before tif export,
-            using the reference DEM and watermask raster from the --ref-dem-path
-            and --water-mask-path arguments.
+            using the reference DEM and landcover raster from the --ref-dem-path
+            and --cover-tif-path arguments.
         """)
     )
+    parser.add_argument(
+        '--fill-water-interp-method',
+        type=int,
+        choices=list(range(6)),
+        default=2,
+        help=wrap_multiline_str("""
+            Interpolation method to use for fillWater's inpaint_nans call.
+        """)
+    )
+
+    parser.add_argument(
+        '--register-to-ref',
+        type=str,
+        choices=['none', 'tiles', 'blobs', 'reportOffsetOnly'],
+        default='none',
+        help=wrap_multiline_str("""
+            Register DEM to reference DEM. Requires both reference DEM and
+            landcover raster from the --ref-dem-path and --cover-tif-path arguments.
+        """)
+    )
+    parser.add_argument(
+        '--register-to-ref-debug',
+        action='store_true',
+        help=wrap_multiline_str("""
+            (Only applicable when --register-to-ref value other than 'none' is provided)
+            Only write out a debug version of the registered DEM at 32m resolution,
+            with no filter or fill applied, and then exit.
+        """)
+    )
+    parser.add_argument(
+        '--register-cop30-skipreg-shp',
+        type=str,
+        default=None,
+        help=wrap_multiline_str(r"""
+            (Only applicable when --register-to-ref value other than 'none' is provided)
+            \nPath to shapefile of polygon features with 'skipreg' field value set to 1
+            where, in the COP30 registration process, DEM data blobs should not be
+            vertically adjusted.
+            \n(default is {})
+        """.format(
+            supertile_key,
+            ', '.join(["{} if domain={}".format(val, dom) for dom, val in domain_cop30SkipregShp_dict.items()]
+        )))
+    )
+    
     parser.add_argument(
         '--add-sea-surface-height',
         type=str,
@@ -207,33 +258,6 @@ def get_arg_parser():
         help=wrap_multiline_str("""
             Whether or not to do the final QC mask application step, using the
             QC mask matfile provided through argument `--final-qc-mask`.
-        """)
-    )
-    parser.add_argument(
-        '--register-to-ref',
-        type=str,
-        choices=['none', 'tiles', 'blobs', 'reportOffsetOnly'],
-        default='none',
-        help=wrap_multiline_str("""
-            Register DEM to reference DEM. Requires both reference DEM and
-            water mask paths to be provided.
-        """)
-    )
-    parser.add_argument(
-        '--register-to-ref-debug',
-        action='store_true',
-        help=wrap_multiline_str("""
-            Only write out a debug version of the DEM at the resolution of
-            the reference DEM, with no filter or fill applied, and then exit.
-        """)
-    )
-    parser.add_argument(
-        '--fill-water-interp-method',
-        type=int,
-        choices=list(range(6)),
-        default=2,
-        help=wrap_multiline_str("""
-            Interpolation method to use for fillWater's inpaint_nans call.
         """)
     )
     
@@ -339,10 +363,12 @@ def main():
 
     if script_args.ref_dem_path is None:
         script_args.ref_dem_path = domain_refDemPath_dict[script_args.domain]
-    if script_args.water_mask_path is None:
-        script_args.water_mask_path = domain_waterMaskPath_dict[script_args.domain]
+    if script_args.cover_tif_path is None:
+        script_args.cover_tif_path = domain_coverTifPath_dict[script_args.domain]
     if script_args.final_qc_mask is None:
         script_args.final_qc_mask = domain_finalQcMask_dict[script_args.domain]
+    if script_args.register_cop30_skipreg_shp is None:
+        script_args.register_cop30_skipreg_shp = domain_cop30SkipregShp_dict[script_args.domain]
 
     if script_args.output_set in ('browse', 'meta') and not script_args.keep_old_results:
         script_args.keep_old_results = ['other']
@@ -377,6 +403,8 @@ def main():
         single_t2t_args += ", 'qcMaskFile','{}'".format(script_args.final_qc_mask)
     if script_args.register_to_ref_debug:
         single_t2t_args += ", 'registerToRefDebug'"
+    if script_args.register_cop30_skipreg_shp:
+        single_t2t_args += ", 'registerBlobsSkipregShp','{}'".format(script_args.register_cop30_skipreg_shp)
     single_t2t_args += ", 'fillWaterInterpMethod',{}".format(script_args.fill_water_interp_method)
 
     batch_t2t_args = single_t2t_args
@@ -393,8 +421,10 @@ def main():
         arg_parser.error("Argument 'tiledir' is not an existing directory: {}".format(root_tiledir))
     if script_args.apply_ref_filter == 'true' and not script_args.ref_dem_path:
         arg_parser.error("--ref-dem-path cannot be empty when --apply-ref-filter=true")
-    if script_args.apply_water_fill == 'true' and (not script_args.ref_dem_path or not script_args.water_mask_path):
-        arg_parser.error("--ref-dem-path and --water-mask-path cannot be empty when --fill-water=true")
+    if script_args.apply_water_fill == 'true' and (not script_args.ref_dem_path or not script_args.cover_tif_path):
+        arg_parser.error("--ref-dem-path and --cover-tif-path cannot be empty when --apply-water-fill=true")
+    if script_args.register_to_ref == 'none' and script_args.register_to_ref_debug:
+        arg_parser.error("--register-to-ref-debug cannot be provided when --register-to-ref='none'")
     if script_args.tile_org == 'osu' and script_args.process_by == 'supertile-dir':
         arg_parser.error("--process-by must be set to to 'tile-file' when --tile-org='osu'")
 
@@ -404,10 +434,10 @@ def main():
         if not os.path.isdir(check_dir):
             arg_parser.error("--ref-dem-path directory does not exist: {}".format(check_dir))
         if script_args.apply_water_fill:
-            check_dir, _, _ = script_args.water_mask_path.partition(supertile_key)
+            check_dir, _, _ = script_args.cover_tif_path.partition(supertile_key)
             check_dir = os.path.dirname(check_dir)
             if not os.path.isdir(check_dir):
-                arg_parser.error("--water-mask-path directory does not exist: {}".format(check_dir))
+                arg_parser.error("--cover-tif-path directory does not exist: {}".format(check_dir))
 
     jobscript_utils.verify_args(script_args, arg_parser)
 
@@ -453,9 +483,9 @@ def main():
         if script_args.ref_dem_path:
             ref_dem_file = script_args.ref_dem_path.replace(supertile_key, supertile)
             supertile_args += ", 'refDemFile','{}'".format(ref_dem_file)
-        if script_args.water_mask_path:
-            water_mask_file = script_args.water_mask_path.replace(supertile_key, supertile)
-            supertile_args += ", 'waterMaskFile','{}'".format(water_mask_file)
+        if script_args.cover_tif_path:
+            cover_tif_file = script_args.cover_tif_path.replace(supertile_key, supertile)
+            supertile_args += ", 'waterMaskFile','{}'".format(cover_tif_file)
         if script_args.apply_ref_filter == 'true':
             supertile_args += ", 'applySlopeDiffFilt'"
         if script_args.apply_water_fill == 'true':
