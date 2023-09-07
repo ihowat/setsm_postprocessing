@@ -108,6 +108,7 @@ project_databaseFile_dict = {
     'earthdem':  '/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4.1_20230425_all_plus_reproj.mat',
 }
 project_waterTileDir_dict = {
+    # In the water tile/mask rasters: 0=land and (1|NoData)=water
     'arcticdem': '/mnt/pgc/data/projects/arcticdem/watermasks/',
     'rema':      '',
     'earthdem':  '/mnt/pgc/data/projects/earthdem/watermasks/global_surface_water/tiled_watermasks/',
@@ -136,8 +137,10 @@ project_version_dict = {
     'earthdem': 'EarthDEM,1.1',
 }
 project_dateFiltEnd_dict = {
-    'arcticdem': '20220614',
-    'rema':      '20220614',
+    # 'arcticdem': '20220614', # End of NextView license date
+    'arcticdem': '',
+    # 'rema':      '20220614', # End of NextView license date
+    'rema':      '',
     'earthdem':  '',
 }
 
