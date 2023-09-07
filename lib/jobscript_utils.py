@@ -18,6 +18,7 @@ SCRIPT_FILE = os.path.abspath(os.path.realpath(__file__))
 SCRIPT_FNAME = os.path.basename(SCRIPT_FILE)
 SCRIPT_NAME, SCRIPT_EXT = os.path.splitext(SCRIPT_FNAME)
 SCRIPT_DIR = os.path.dirname(SCRIPT_FILE)
+HOME_DIR = os.path.expanduser('~/')
 
 # Paths relative to this script
 JOBSCRIPT_INIT_ENV_SCRIPT = os.path.join(SCRIPT_DIR, 'jobscript_init_env.sh')
@@ -411,11 +412,21 @@ def verify_args(script_args, arg_parser):
                 arg_parser.error(f"--task-bundle-dir directory does not exist: {script_args.task_bundle_dir}")
 
 
-def escape_problem_jobsubmit_chars(str_item):
-    str_item = str_item.replace("'", "\\'")
-    str_item = str_item.replace('"', '\\"')
-    str_item = str_item.replace(',', '@COMMA@')
-    str_item = str_item.replace(' ', '@SPACE@')
+def escape_problem_jobsubmit_chars(
+        str_item,
+        escape_single_quotes=True,
+        escape_double_quotes=True,
+        escape_comma=True,
+        escape_space=True,
+):
+    if escape_single_quotes:
+        str_item = str_item.replace("'", "\\'")
+    if escape_double_quotes:
+        str_item = str_item.replace('"', '\\"')
+    if escape_comma:
+        str_item = str_item.replace(',', '@COMMA@')
+    if escape_space:
+        str_item = str_item.replace(' ', '@SPACE@')
     return str_item
 
 
@@ -474,6 +485,8 @@ def get_jobsubmit_cmd(
             '--mem {}G'.format(script_args.job_mem) if script_args.job_mem is not None else '',
             '--time {}'.format(script_args.job_walltime) if script_args.job_walltime is not None else '',
             '--export "{}"'.format(envvar_list_str) if envvar_list_str is not None else '',
+            '-o {}%x.o%j'.format(HOME_DIR),
+            '-e {}%x.o%j'.format(HOME_DIR),
             script_args.job_script
         ])
 
@@ -617,9 +630,14 @@ class JobHandler(object):
             envvar_dict['JOBSCRIPT_TASK_BUNDLE_MODE'] = self.script_args.tasks_per_job_mode
         else:
             envvar_dict['JOBSCRIPT_TASK_CMD'] = task_cmd
-            
+
+        escape_kwargs = dict()
+        if self.script_args.job_scheduler == SCHEDULER_SLURM:
+            escape_kwargs['escape_single_quotes'] = False
+            # escape_kwargs['escape_double_quotes'] = False
+
         envvar_list_str = ','.join(
-            ['{}={}'.format(key, escape_problem_jobsubmit_chars(val))
+            ['{}={}'.format(key, escape_problem_jobsubmit_chars(val, **escape_kwargs))
              for key, val in envvar_dict.items()]
         )
 

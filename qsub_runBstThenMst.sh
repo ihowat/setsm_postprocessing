@@ -7,6 +7,14 @@
 ##PBS -j oe
 ##PBS -q old
 
+## PGC Rookery settings
+##SBATCH --time 200:00:00
+##SBATCH --nodes 1
+##SBATCH --ntasks 1
+##SBATCH --cpus-per-task 24
+##SBATCH --mem=120G
+##SBATCH -o %x.o%j
+
 ## BW settings
 ##PBS -l nodes=1:ppn=16:xe,gres=shifter
 ##PBS -l walltime=96:00:00

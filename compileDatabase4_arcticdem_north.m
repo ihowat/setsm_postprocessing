@@ -9,8 +9,8 @@ end
 
 res=2;
 %dbase_in =[homeDir,'/data4/REMA/polarDEMdatabase_',num2str(res),'m.mat'];
-dbase_in='';
-dbase_out='/mnt/pgc/data/projects/earthdem/strip_databases/ArcticDEMdatabase4_2m_v4.1_20220511_north.mat';
+dbase_in ='';
+dbase_out='/mnt/pgc/data/projects/earthdem/strip_databases/ArcticDEMdatabase4_2m_v4.1_20230425_north.mat';
 
 stripFilePrefix='SETSM_s2s041_';
 %stripOrg='strips_v4';
@@ -27,8 +27,8 @@ if isfile(reproject_list) && ~isfile([reproject_list,'.bak'])
 end
 reproject_list_fp = fopen(reproject_list, 'wt');
 
-%mosaic_zones_shp = '/mnt/pgc/data/projects/earthdem/EarthDEM_mosaic_zones_v2.shp';
-mosaic_zones_shp = 'EarthDEM_mosaic_zones_v2.shp';
+%mosaic_zones_shp = '/mnt/pgc/data/projects/earthdem/EarthDEM_mosaic_zones_v3.shp';
+mosaic_zones_shp = 'EarthDEM_mosaic_zones_v3.shp';
 mosaic_zones_mapstruct = shaperead(mosaic_zones_shp);
 %mosaic_zones_mapstruct = shaperead(mosaic_zones_shp, 'UseGeoCoords',true);
 mosaic_zones_polyshape_arr = arrayfun(@(feat) polyshape(feat.X, feat.Y), mosaic_zones_mapstruct);
@@ -101,7 +101,7 @@ if exist('dbase_in', 'var') && ~isempty(dbase_in)
     fprintf('Output database will be: %s\n', dbase_out);
     out0=matfile(dbase_in);
     [stripDirs0,~,~] = cellfun(@fileparts, out0.fileName, 'UniformOutput',false);
-    stripDirs0_nover = cellfun(@(x) regexprep(x,'_v\d{6}$',''), stripDirs0, 'UniformOutput',false);
+    stripDirs0_nover = cellfun(@(x) regexprep(x,'(?:_lsf)?_v\d{6}$',''), stripDirs0, 'UniformOutput',false);
 else
     fprintf('Creating new database: %s\n', dbase_out);
 end
@@ -121,7 +121,7 @@ for i=1:length(regionDirs)
         is_reprojected = true;
     end
 
-    if exist(regionDir,'dir')
+    if exist(regionDir,'dir') == 7
 
 %        if exist('out0','var')
 %            [~,IA] = intersect(metaFiles, out0.fileName);
@@ -131,7 +131,7 @@ for i=1:length(regionDirs)
 %            end
 %        end
 %
-%        metaFiles=dir([regionDir,'/*_2m_lsf*/*meta.txt']);
+%        metaFiles=dir([regionDir,'/*_2m*/*meta.txt']);
 %        metaFiles = strcat({metaFiles.folder}',repmat({'/'},length(metaFiles),1),{metaFiles.name}');
 %
 %        j=1;
@@ -145,7 +145,7 @@ for i=1:length(regionDirs)
 %            end
 %        end
 
-        stripDir_pattern=[regionDir,'/*_2m_lsf*'];
+        stripDir_pattern=[regionDir,'/*_2m*'];
         fprintf('Gathering strips with pattern: %s ... ', stripDir_pattern)
 
         stripDirs=dir(stripDir_pattern);
@@ -184,14 +184,14 @@ for i=1:length(regionDirs)
         [~,stripDnames,~] = cellfun(@fileparts, stripDirs, 'UniformOutput', false);
         [stripDnames, I] = sort(stripDnames);
         stripDirs = stripDirs(I);
-        stripDnames_nover = cellfun(@(x) regexprep(x,'_v\d{6}$',''), stripDnames, 'UniformOutput',false);
+        stripDnames_nover = cellfun(@(x) regexprep(x,'(?:_lsf)?_v\d{6}$',''), stripDnames, 'UniformOutput',false);
         [~,IA] = unique(stripDnames_nover, 'last');
         stripDirs = stripDirs(IA);
 
 
         % difference strips with database to be appended to
         if exist('out0','var')
-            stripDirs_nover = cellfun(@(x) regexprep(x,'_v\d{6}$',''), stripDirs, 'UniformOutput',false);
+            stripDirs_nover = cellfun(@(x) regexprep(x,'(?:_lsf)?_v\d{6}$',''), stripDirs, 'UniformOutput',false);
             Lia = ismember(stripDirs_nover, stripDirs0_nover);
             stripDirs(Lia) = [];
             if isempty(stripDirs)
@@ -379,14 +379,18 @@ out.stripName=strrep(out.stripName,'_meta','');
 
 stripNameChar=char(out.stripName{:});
 
-out.stripDate=datenum(stripNameChar(:,6:13),'yyyymmdd');
-out.stripDate=out.stripDate(:)';
+out.stripDate=cellfun(@(x) datenum(parsePairnameDatestring(x),'yyyymmdd'), out.stripName, 'uniformoutput',0);
+out.stripDate=cell2mat(out.stripDate);
 
 out.satID=cellstr(stripNameChar(:,1:4))';
 
 out.creation_date = [out.creation_date{:}];
 out.strip_creation_date = [out.strip_creation_date{:}];
 out.A = [out.A{:}];
+
+%% Remove DEMs created after license change (use strip creation date of June 15 2022 as cutoff)
+%n = out.creation_date < 738687;
+%out = structfun(@(x) x(n), out, 'uniformoutput',0);
 
 fprintf('Writing %d new records to database file\n',length(out.fileName));
 if exist('out0','var')

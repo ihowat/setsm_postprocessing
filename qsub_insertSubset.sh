@@ -1,14 +1,15 @@
 #!/bin/bash
 
-##PBS -l walltime=40:00:00,nodes=1:ppn=2,mem=8gb
+##PBS -l walltime=100:00:00,nodes=1:ppn=2,mem=15gb
 ##PBS -m n
 ##PBS -k oe
 ##PBS -j oe
+##PBS -q batch
 
-#SBATCH --time 40:00:00
+#SBATCH --time 100:00:00
 #SBATCH --nodes 1
-#SBATCH --ntasks 2
-#SBATCH --mem=10G
+#SBATCH --ntasks 4
+#SBATCH --mem=20G
 #SBATCH --partition=batch
 #SBATCH -o %x.o%j
 
@@ -87,14 +88,57 @@ echo "Changing to working directory: ${working_dir}"
 cd "$working_dir" || exit 1
 echo
 
-module load gdal/2.1.3
+set -uo pipefail
+
+#module load gdal/2.1.3
 module load matlab/2019a
 
-echo $p1
-echo $p2
+## Arguments/Options
+tiledir="$ARG_TILEDIR"
+resolution="$ARG_RESOLUTION"
+annualRootDir="$ARG_ANNUALROOTDIR"
+boxShp="$ARG_BOXSHP"
+pShp="$ARG_PSHP"
 
-cmd="try; addpath('~/scratch/repos/setsm_postprocessing4'); batch_applyRegistration('/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/results/output_tiles_symlink_by_region','${p1}','${p2}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+set -uo pipefail
 
-echo $cmd
-time matlab -nojvm -nodisplay -nosplash -r "${cmd}"
+if [ -n "$tiledir" ]; then
+    # Make sure this is an absolute path
+    tiledir=$(readlink -f "$tiledir")
+else
+    tiledir=""
+fi
+if [ -z "$resolution" ]; then
+#    resolution='10m';
+    resolution='2m';
+fi
+if [ -z "$annualRootDir" ]; then
+#    annualRootDir="/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/results/output_tiles_annual"
+#    annualRootDir="/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/results/output_tiles_annual_greenland_ian"
+#    annualRootDir="/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/results/output_tiles_patch_greenland_canada_border"
+    annualRootDir=""
+fi
+if [ -z "$boxShp" ]; then
+#    boxShp="/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/glacier_patching/arcticdem_v41_patches_box.shp"
+#    boxShp="/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/glacier_patching/lets_call_canada_one_giant_patch_and_patch_greenland_border_tiles.shp"
+    boxShp=""
+fi
+if [ -z "$pShp" ]; then
+#    pShp="/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/glacier_patching/arcticdem_v41_patches_p.shp"
+    pShp=""
+fi
 
+
+## Validate arguments
+if [ ! -d "$tiledir" ]; then
+    echo "Tiledir does not exist: ${tiledir}"
+    exit 1
+fi
+
+matlab_cmd="try; addpath('/mnt/pgc/data/common/repos/setsm_postprocessing_pgc'); batch_insertSubset('${tiledir}', '${resolution}', '${annualRootDir}', '${boxShp}', '${pShp}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+#matlab_cmd="try; addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing_pgc'); addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4'); batch_insertSubset('${tiledir}', '${resolution}', '${annualRootDir}', '${boxShp}', '${pShp}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+
+echo "Argument tile directory: ${tiledir}"
+echo "Matlab command: \"${matlab_cmd}\""
+
+time matlab -nojvm -nodisplay -nosplash -r "$matlab_cmd"

@@ -9,8 +9,14 @@ end
 
 res=2;
 %dbase_in =[homeDir,'/data4/REMA/polarDEMdatabase_',num2str(res),'m.mat'];
-dbase_in='';
-dbase_out='/mnt/pgc/data/projects/earthdem/strip_databases/BorderDEMdatabase4_2m_v4_20201105.mat';
+dbase_in ='/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4.1_20230425_east1.mat';
+dbase_out='/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4.1_20230425_east1_plus_reproj.mat';
+
+stripFilePrefix='SETSM_s2s041_';
+%stripOrg='strips_v4';
+stripOrg='strips_v4.1';
+
+bwpy_prefix='';
 
 reproject_list = strrep(dbase_out, '.mat', '_reproject_list.txt');
 if isfile(reproject_list) && ~isfile([reproject_list,'.bak'])
@@ -21,8 +27,8 @@ if isfile(reproject_list) && ~isfile([reproject_list,'.bak'])
 end
 reproject_list_fp = fopen(reproject_list, 'wt');
 
-%mosaic_zones_shp = '/mnt/pgc/data/projects/earthdem/EarthDEM_mosaic_zones_v2.shp';
-mosaic_zones_shp = 'EarthDEM_mosaic_zones_v2.shp';
+%mosaic_zones_shp = '/mnt/pgc/data/projects/earthdem/EarthDEM_mosaic_zones_v3.shp';
+mosaic_zones_shp = 'EarthDEM_mosaic_zones_v3.shp';
 mosaic_zones_mapstruct = shaperead(mosaic_zones_shp);
 %mosaic_zones_mapstruct = shaperead(mosaic_zones_shp, 'UseGeoCoords',true);
 mosaic_zones_polyshape_arr = arrayfun(@(feat) polyshape(feat.X, feat.Y), mosaic_zones_mapstruct);
@@ -36,38 +42,43 @@ report_number_of_strips_to_append_but_dont_actually_append = false;
 %%% CHECK THIS SETTING %%%
 
 regionDirs=[
-%    dir('/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_*/strips_v4/2m*'),
-%    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_*/strips_v4/2m*'),
-%    dir('/mnt/pgc/data/elev/dem/setsm/REMA/region/rema_*/strips_v4/2m*'),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_*/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_*/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/REMA/region/rema_*/',stripOrg,'/2m*']),
 
-    dir('/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_01_iceland/strips_v4/2m*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_02_greenland_southeast/strips_v4/2m*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_03_greenland_southwest/strips_v4/2m*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_08_canada_baffin/strips_v4/2m*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_11_canada_north_hudson/strips_v4/2m*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_12_canada_south_nwt/strips_v4/2m*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_19_russia_magadanskaya/strips_v4/2m*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_20_russia_kamchatka/strips_v4/2m*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_22_russia_central_east/strips_v4/2m*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_24_russia_central_west/strips_v4/2m*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_26_russia_petersburg/strips_v4/2m*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_28_scandinavia/strips_v4/2m*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_31_alaska_south/strips_v4/2m*'),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/ArcticDEM/region/arcticdem_*/',stripOrg,'/2m_utm*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_01_southwest_canada/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_02_southeast_canada/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_09_europe/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_14_southern_russia/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_18_korea_and_japan/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_23_pacific/',stripOrg,'/2m*']),
 
-    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_01_southwest_canada/strips_v4/2m*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_02_southeast_canada/strips_v4/2m*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_09_europe/strips_v4/2m*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_14_southern_russia/strips_v4/2m*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_18_korea_and_japan/strips_v4/2m*'),
-    dir('/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_23_pacific/strips_v4/2m*'),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_03_conus/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_04_great_lakes/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_05_mexico_and_caribbean/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_06_andes/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_07_northern_south_america/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_08_southern_south_america/',stripOrg,'/2m*']),
+
+    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_10_west_africa/',stripOrg,'/2m*']),
+    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_11_east_africa/',stripOrg,'/2m*']),
+    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_12_southern_africa/',stripOrg,'/2m*']),
+    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_13_middle_east/',stripOrg,'/2m*']),
+    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_15_belarus/',stripOrg,'/2m*']),
+    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_16_hma/',stripOrg,'/2m*']),
+
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_17_china/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_19_india/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_20_se_asia/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_21_madagascar/',stripOrg,'/2m*']),
+%    dir(['/mnt/pgc/data/elev/dem/setsm/EarthDEM/region/earthdem_22_australia/',stripOrg,'/2m*']),
 ];
 regionDirs=regionDirs([regionDirs.isdir]);
 regionDirs=cellfun(@(regionDir, regionName) [regionDir,'/',regionName], {regionDirs.folder}, {regionDirs.name},...
     'UniformOutput',false);
 
-%matches = regexp(regionDirs, '.*/2m_utm\d{2}[ns]$');
-%matches = regexp(regionDirs, '.*/2m_psn$');
-%regionDirs = regionDirs(cellfun('isempty', matches));
+regionDirs = regionDirs((~cellfun('isempty', regexp(regionDirs, '.*/2m$')) | (~cellfun('isempty', regexp(regionDirs, '.*/2m_utm\d{2}[ns]$')))));
 
 
 if exist('dbase_in', 'var') && ~isempty(dbase_in)
@@ -86,7 +97,7 @@ if exist('dbase_in', 'var') && ~isempty(dbase_in)
     fprintf('Output database will be: %s\n', dbase_out);
     out0=matfile(dbase_in);
     [stripDirs0,~,~] = cellfun(@fileparts, out0.fileName, 'UniformOutput',false);
-    stripDirs0_nover = cellfun(@(x) regexprep(x,'_v\d{6}$',''), stripDirs0, 'UniformOutput',false);
+    stripDirs0_nover = cellfun(@(x) regexprep(x,'(?:_lsf)?_v\d{6}$',''), stripDirs0, 'UniformOutput',false);
 else
     fprintf('Creating new database: %s\n', dbase_out);
 end
@@ -106,7 +117,7 @@ for i=1:length(regionDirs)
         is_reprojected = true;
     end
 
-    if exist(regionDir,'dir')
+    if exist(regionDir,'dir') == 7
 
 %        if exist('out0','var')
 %            [~,IA] = intersect(metaFiles, out0.fileName);
@@ -116,7 +127,7 @@ for i=1:length(regionDirs)
 %            end
 %        end
 %
-%        metaFiles=dir([regionDir,'/*_2m_lsf*/*meta.txt']);
+%        metaFiles=dir([regionDir,'/*_2m*/*meta.txt']);
 %        metaFiles = strcat({metaFiles.folder}',repmat({'/'},length(metaFiles),1),{metaFiles.name}');
 %
 %        j=1;
@@ -130,10 +141,15 @@ for i=1:length(regionDirs)
 %            end
 %        end
 
-        stripDir_pattern=[regionDir,'/*_2m_lsf*'];
+        stripDir_pattern=[regionDir,'/*_2m*'];
         fprintf('Gathering strips with pattern: %s ... ', stripDir_pattern)
 
         stripDirs=dir(stripDir_pattern);
+        if isempty(stripDirs)
+            fprintf('None found\n')
+            continue
+        end
+        stripDirs=stripDirs([stripDirs.isdir]);
         stripDirs = strcat({stripDirs.folder}',repmat({'/'},length(stripDirs),1),{stripDirs.name}');
         if length(stripDirs) == 0
             fprintf('None found\n')
@@ -168,14 +184,14 @@ for i=1:length(regionDirs)
         [~,stripDnames,~] = cellfun(@fileparts, stripDirs, 'UniformOutput', false);
         [stripDnames, I] = sort(stripDnames);
         stripDirs = stripDirs(I);
-        stripDnames_nover = cellfun(@(x) regexprep(x,'_v\d{6}$',''), stripDnames, 'UniformOutput',false);
+        stripDnames_nover = cellfun(@(x) regexprep(x,'(?:_lsf)?_v\d{6}$',''), stripDnames, 'UniformOutput',false);
         [~,IA] = unique(stripDnames_nover, 'last');
         stripDirs = stripDirs(IA);
 
 
         % difference strips with database to be appended to
         if exist('out0','var')
-            stripDirs_nover = cellfun(@(x) regexprep(x,'_v\d{6}$',''), stripDirs, 'UniformOutput',false);
+            stripDirs_nover = cellfun(@(x) regexprep(x,'(?:_lsf)?_v\d{6}$',''), stripDirs, 'UniformOutput',false);
             Lia = ismember(stripDirs_nover, stripDirs0_nover);
             stripDirs(Lia) = [];
             if isempty(stripDirs)
@@ -190,7 +206,7 @@ for i=1:length(regionDirs)
             [~,stripDnames,~] = cellfun(@fileparts, stripDirs, 'UniformOutput', false);
 
             stripDirs_miss_fin_ind = cellfun(@(x, y) ~isfile([x,'/',y,'.fin']), stripDirs, stripDnames);
-            stripDirs_miss_data_ind = cellfun(@(x, y) ~isfile([x,'/',regexprep(y,'_v\d{6}',''),'_seg1_dem.tif']), stripDirs, stripDnames);
+            stripDirs_miss_data_ind = cellfun(@(x, y) ~isfile([x,'/',stripFilePrefix,regexprep(y,'_v\d{6}',''),'_seg1_dem.tif']), stripDirs, stripDnames);
 
             missing_fin_count = nnz(stripDirs_miss_fin_ind);
             if missing_fin_count > 0
@@ -243,12 +259,14 @@ for i=1:length(regionDirs)
                     for mosaic_zone_ms_i = 1:length(mosaic_zones_mapstruct)
                         mosaic_zone_feat = mosaic_zones_mapstruct(mosaic_zone_ms_i);
 
-                        cmd = sprintf('python proj_issame.py "%s" "EPSG:%d" ', strip_proj4, mosaic_zone_feat.epsg);
+                        cmd = sprintf('%s python proj_issame.py "%s" "EPSG:%d" ', bwpy_prefix, strip_proj4, mosaic_zone_feat.epsg);
                         [status, cmdout] = system(cmd);
                         if ~isempty(cmdout)
                             fprintf(['\n',cmdout,'\n']);
                         end
-                        if status == 0
+                        if status == 2
+                            error('\nCaught exit status 2 from proj_issame.py indicating error\n');
+                        elseif status == 0
                             strip_projname = mosaic_zone_feat.name;
                             break;
                         end
@@ -270,12 +288,14 @@ for i=1:length(regionDirs)
                         strip_gtinfo = proj4_geotiffinfo_dict(strip_proj4);
                     else
                         demFile = strrep(metaFile, 'meta.txt', 'dem.tif');
-                        cmd = sprintf('python proj_issame.py "%s" "%s" ', demFile, strip_proj4);
+                        cmd = sprintf('%s python proj_issame.py "%s" "%s" ', bwpy_prefix, demFile, strip_proj4);
                         [status, cmdout] = system(cmd);
                         if ~isempty(cmdout)
                             fprintf(['\n',cmdout,'\n']);
                         end
-                        if status ~= 0
+                        if status == 2
+                            error('\nCaught exit status 2 from proj_issame.py indicating error\n');
+                        elseif status == 1
                             fprintf('\nProjection of strip DEM raster and PROJ.4 string in strip meta.txt file are not equal: %s, %s\n', demFile, strip_proj4);
                         end
                         strip_gtinfo = geotiffinfo(demFile);
@@ -297,19 +317,21 @@ for i=1:length(regionDirs)
                                 reproject_strip = false;
                             end
                         else
-                            cmd = sprintf('python proj_issame.py "%s" "EPSG:%d" ', strip_proj4, mosaic_zone_ms.epsg);
+                            cmd = sprintf('%s python proj_issame.py "%s" "EPSG:%d" ', bwpy_prefix, strip_proj4, mosaic_zone_ms.epsg);
                             [status, cmdout] = system(cmd);
                             if ~isempty(cmdout)
                                 fprintf(['\n',cmdout,'\n']);
                             end
-                            if status == 0
+                            if status == 2
+                                error('\nCaught exit status 2 from proj_issame.py indicating error\n');
+                            elseif status == 0
                                 proj4_epsg_dict(strip_proj4) = mosaic_zone_ms.epsg;
                                 reproject_strip = false;
                             end
                         end
 
                         if reproject_strip
-                            metaFile_reproj = strrep(metaFile, 'strips_v4/2m', ['strips_v4/2m_',mosaic_zone_ms.name]);
+                            metaFile_reproj = strrep(metaFile, [stripOrg,'/2m'], [stripOrg,'/2m_',mosaic_zone_ms.name]);
                             if ~isfile(metaFile_reproj)
                                 fprintf(reproject_list_fp, "%s %s %d\n", metaFile, mosaic_zone_ms.name, mosaic_zone_ms.epsg);
                             end
@@ -318,10 +340,16 @@ for i=1:length(regionDirs)
                 end
 
 
-                if isempty(meta)
-                    meta=strip_meta;
-                else
-                    meta(length(meta)+1)=strip_meta;
+                try
+                    if isempty(meta)
+                        meta=strip_meta;
+                    else
+                        meta(length(meta)+1)=strip_meta;
+                    end
+                catch ME
+                    meta
+                    strip_meta
+                    rethrow(ME)
                 end
 
             end
@@ -351,14 +379,18 @@ out.stripName=strrep(out.stripName,'_meta','');
 
 stripNameChar=char(out.stripName{:});
 
-out.stripDate=datenum(stripNameChar(:,6:13),'yyyymmdd');
-out.stripDate=out.stripDate(:)';
+out.stripDate=cellfun(@(x) datenum(parsePairnameDatestring(x),'yyyymmdd'), out.stripName, 'uniformoutput',0);
+out.stripDate=cell2mat(out.stripDate);
 
 out.satID=cellstr(stripNameChar(:,1:4))';
 
 out.creation_date = [out.creation_date{:}];
 out.strip_creation_date = [out.strip_creation_date{:}];
 out.A = [out.A{:}];
+
+%% Remove DEMs created after license change (use strip creation date of June 15 2022 as cutoff)
+%n = out.creation_date < 738687;
+%out = structfun(@(x) x(n), out, 'uniformoutput',0);
 
 fprintf('Writing %d new records to database file\n',length(out.fileName));
 if exist('out0','var')

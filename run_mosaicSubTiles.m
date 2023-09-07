@@ -7,7 +7,7 @@ function run_mosaicSubTiles(...
 if exportTif
     outRasterType = 'full-COG';
 else
-    outRasterType = 'browse-LZW';
+    outRasterType = 'browse-COG';
 end
 
 try
@@ -36,4 +36,4 @@ catch e
     disp(getReport(e)); exit(1)
 end
 
-exit(0)
+disp("End of run_mosaicSubTiles.m");

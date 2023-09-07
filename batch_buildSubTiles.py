@@ -15,6 +15,7 @@ SCRIPT_FILE = os.path.abspath(os.path.realpath(__file__))
 SCRIPT_FNAME = os.path.basename(SCRIPT_FILE)
 SCRIPT_NAME, SCRIPT_EXT = os.path.splitext(SCRIPT_FNAME)
 SCRIPT_DIR = os.path.dirname(SCRIPT_FILE)
+HOME_DIR = os.path.expanduser('~/')
 
 
 ## General argument defaults and settings
@@ -48,6 +49,13 @@ elif hostname.startswith('nunatak'):
     sched_specify_outerr_paths = False
     sched_addl_vars = "-l nodes=1:ppn=16,mem=64gb,walltime=200:00:00 -m n -k oe -j oe"
     sched_default_queue = 'old'
+elif hostname.startswith('pgc-comp'):
+    system_name = 'pgc'
+    sched_presubmit_cmd = ''
+    sched_addl_envvars = ''
+    sched_specify_outerr_paths = False
+    sched_addl_vars = f"--nodes=1 --ntasks=1 --cpus-per-task=24 --mem=120G --time=200:00:00 -o {HOME_DIR}/%x.o%j -e {HOME_DIR}/%x.o%j"
+    sched_default_queue = 'batch'
 else:
     warnings.warn("Hostname '{}' not recognized. System-specific settings will not be applied.".format(hostname))
     system_name = ''
@@ -92,11 +100,15 @@ project_tileDefFile_dict = {
 }
 
 project_databaseFile_dict = {
-    'arcticdem': '/scratch/sciteam/GS_bazu/mosaic_data/strip_databases/ArcticDEMdatabase4_2m_v4_20210817.mat',
-    'rema':      '/mnt/pgc/data/projects/earthdem/strip_databases/REMAdatabase4_2m_v4.1_20220511_clip_v13e.mat',
-    'earthdem':  '/scratch/sciteam/GS_bazu/mosaic_data/strip_databases/EarthDEMdatabase4_2m_v4_20211014.mat',
+    'arcticdem': '/mnt/pgc/data/projects/earthdem/strip_databases/ArcticDEMdatabase4_2m_v4.1_20230425_all_plus_reproj.mat',
+    # 'arcticdem': '/mnt/pgc/data/projects/earthdem/strip_databases/ArcticDEMdatabase4_2m_v4.1_20230425_clip_iangreenland.mat',  # Apr 25 dbase clipped to Ian's 2021feb09 'arcticdem_strips.shp' for Greenland
+    # 'rema':      '/mnt/pgc/data/projects/earthdem/strip_databases/unity_databases/rema_v2/rema_strips_v13e.shp',  # REMA v2 original run tiles, used strips_v4
+    # 'rema':      '/mnt/pgc/data/projects/earthdem/strip_databases/REMAdatabase4_2m_v4.1_20220511_clip_v13e.mat',  # REMA v2 rerun params tiles (247 tiles), used strips_v4.1 clipped to rema_strips_v13e stripdemids
+    'rema':      '/mnt/pgc/data/projects/earthdem/strip_databases/unity_databases/rema_v2.1/rema_strips.shp',  # REMA v2.1 re-QC, used strips_v4.1 (more strips)
+    'earthdem':  '/mnt/pgc/data/projects/earthdem/strip_databases/EarthDEMdatabase4_2m_v4.1_20230425_all_plus_reproj.mat',
 }
 project_waterTileDir_dict = {
+    # In the water tile/mask rasters: 0=land and (1|NoData)=water
     'arcticdem': '/mnt/pgc/data/projects/arcticdem/watermasks/',
     'rema':      '',
     'earthdem':  '/mnt/pgc/data/projects/earthdem/watermasks/global_surface_water/tiled_watermasks/',
@@ -107,13 +119,28 @@ project_stripsDirectory_dict = {
     'earthdem':  '/mnt/pgc/data/elev/dem/setsm/EarthDEM/region',
 }
 project_tileqcDir_dict = {
-    'arcticdem': '',
-    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_qc/tile_qc_v13e_strips_v4.1',
+    # 'arcticdem': '',
+    'arcticdem': '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/tile_qc/greenland_automosaic_qc_strips_v4.1',
+    # 'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_qc/tile_qc_v13e',  # REMA v2 original run tiles, used strips_v4
+    # 'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_qc/tile_qc_v13e_strips_v4.1',  # REMA v2 rerun params tiles (247 tiles), used strips_v4.1
+    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_qc/rema_v2.1_rema_strip_automosaic_qc_tile_v4_1',  # REMA v2.1 re-QC, used strips_v4.1 (more strips)
     'earthdem':  '',
 }
 project_tileParamList_dict = {
-    'arcticdem': '',
+    'arcticdem': '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/tile_params/tileParamList.txt',
     'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_params/tileParamList_v13e.txt',
+    'earthdem':  '',
+}
+project_version_dict = {
+    'arcticdem': 'ArcticDEM,4.1',
+    'rema': 'REMA,2.1',
+    'earthdem': 'EarthDEM,1.1',
+}
+project_dateFiltEnd_dict = {
+    # 'arcticdem': '20220614', # End of NextView license date
+    'arcticdem': '',
+    # 'rema':      '20220614', # End of NextView license date
+    'rema':      '',
     'earthdem':  '',
 }
 
@@ -177,6 +204,17 @@ def main():
     parser.add_argument("--tileparam-list", default=None,
                         help="tile parameters text file (default is {})".format(
                             ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_tileParamList_dict.items()])
+                        ))
+    parser.add_argument("--version", default=None,
+                        help="mosaic version (default is {})".format(
+                            ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_version_dict.items()])
+                        ))
+
+    parser.add_argument("--datefilt-start", default=None,
+                        help="filter strip database to (first image) acquisition date on or after this date in 'YYYYMMDD' format")
+    parser.add_argument("--datefilt-end", default=None,
+                        help="filter strip database to (first image) acquisition date on or before this date in 'YYYYMMDD' format (default is {})".format(
+                            ', '.join(["{} if --project={}".format(val, dom) for dom, val in project_dateFiltEnd_dict.items()])
                         ))
     
     parser.add_argument("--libdir", default=default_matlab_scriptdir,
@@ -295,6 +333,14 @@ def main():
         args.tileqc_dir = project_tileqcDir_dict[args.project]
     if args.tileparam_list is None:
         args.tileparam_list = project_tileParamList_dict[args.project]
+    if args.datefilt_start is None:
+        args.datefilt_start = ''
+    if args.datefilt_end is None:
+        args.datefilt_end = project_dateFiltEnd_dict[args.project]
+        if args.datefilt_end:
+            print(">>> WARNING: {} project default --datefilt-end '{}' is applied! <<<"
+                  "\n>>> To disable this for non-public release production, provide --datefilt-end '' <<<".format(args.project, args.datefilt_end))
+            time.sleep(8)
 
     ## Convert argument paths to absolute paths
     args.dstdir = os.path.abspath(args.dstdir)
@@ -309,7 +355,9 @@ def main():
     if args.tileqc_dir != '':
         args.tileqc_dir = os.path.abspath(args.tileqc_dir)
     if args.tileparam_list != '':
-        args.tileparam_list = os.path.abspath(args.tileparam_list)
+        args.tileparam_list = os.path.abspath(args.tileparam_list if os.path.isfile(args.tileparam_list) else os.path.join(SCRIPT_DIR, args.tileparam_list))
+    if args.version is None:
+        args.version = project_version_dict[args.project]
     args.libdir = os.path.abspath(args.libdir)
     args.tempdir = os.path.abspath(args.tempdir)
     args.logdir = os.path.abspath(os.path.join(args.dstdir, args.logdir) if args.logdir.startswith('../') else args.logdir)
@@ -333,13 +381,16 @@ def main():
     if args.tileqc_dir != '' and not os.path.isdir(args.tileqc_dir):
         parser.error("--tileqc-dir does not exist: {}".format(args.tileqc_dir))
     if args.tileparam_list != '' and not os.path.isfile(args.tileparam_list):
-        parser.error("--tileqc-file does not exist: {}".format(args.tileparam_list))
+        parser.error("--tileparam-list file does not exist: {}".format(args.tileparam_list))
     if not os.path.isdir(args.libdir):
         parser.error("--libdir does not exist: {}".format(args.libdir))
     if not os.path.isfile(args.jobscript):
         parser.error("--jobscript does not exist: {}".format(args.jobscript))
 
     ## Verify other arguments
+    for datefilt_arg in [args.datefilt_start, args.datefilt_end]:
+        if datefilt_arg != '' and not (datefilt_arg.isdigit() and len(datefilt_arg) == 8):
+            parser.error("--datefilt-start and/or --datefilt-end options must be date strings in 'yyyymmdd' format")
     if [args.pbs, args.slurm, args.swift].count(True) > 1:
         parser.error("--pbs --slurm --swift are mutually exclusive")
     if args.rerun and args.rerun_without_cleanup:
@@ -395,6 +446,8 @@ def main():
         'refDemFile': args.ref_dem,
         'tileqcDir': args.tileqc_dir,
         'tileParamListFile': args.tileparam_list,
+        'dateFiltStart': args.datefilt_start,
+        'dateFiltEnd': args.datefilt_end,
         'make2m': make2m_arg,
         'finfile': template_finfile,
         'logfile': template_logfile,
@@ -440,6 +493,7 @@ def main():
             '--project', args.project,
             '--tile-def', args.tile_def,
             '--tileparam-list', args.tileparam_list,
+            '--version', args.version,
             '--libdir', args.libdir,
             '--tempdir', args.tempdir,
             '--logdir', args.logdir,
@@ -517,6 +571,13 @@ def main():
         ref_dem = args.ref_dem
         water_tile_dir = args.water_tile_dir
         tile_missing_watermask = False
+
+        if tile.startswith('utm'):
+            if args.project != 'earthdem':
+                parser.error("project should be 'earthdem' when 'utm*' prefix tilenames are provided")
+        else:
+            if args.project == 'earthdem':
+                parser.error("domain should NOT be 'earthdem' when tilenames do not have 'utm*' prefix")
 
         if tile_projstr == '' or earthdem_hemisphere_key in tile_def or earthdem_tilePrefix_key in ref_dem:
             assert args.project == 'earthdem'
@@ -758,22 +819,23 @@ def main():
                         'IN_PARALLEL=true,' if batch_job_submission else '',
                         '@'.join(tile_bundle) if batch_job_submission else tile,
                         ',ARG_WATERTILEDIR="{}"'.format(arg_waterTileDir) if arg_waterTileDir is not None else '',
-                        ','+sched_addl_envvars if sched_addl_envvars != '' else '',
-                        '-q {}'.format(args.queue) if args.queue is not None else '',
+                        ','+sched_addl_envvars if sched_addl_envvars else '',
+                        '-q {}'.format(args.queue) if args.queue else '',
                         '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
                         sched_addl_vars_inst,
                         batch_jobscript if batch_job_submission else tilerun_jobscript,
                     )
 
                 elif args.slurm:
-                    cmd = r""" {}sbatch -J {} -v {}{}ARG_TILENAME={}{}{} {} {} "{}" """.format(
+                    cmd = r""" {}sbatch -J {} --export {}{}ARG_TILENAME={}{}{} {} {} {} "{}" """.format(
                         sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
                         job_name,
                         'TILERUN_JOBSCRIPT="{}",'.format(tilerun_jobscript) if batch_job_submission else '',
                         'IN_PARALLEL=true,' if batch_job_submission else '',
                         '@'.join(tile_bundle) if batch_job_submission else tile,
                         ',ARG_WATERTILEDIR="{}"'.format(arg_waterTileDir) if arg_waterTileDir is not None else '',
-                        ','+sched_addl_envvars if sched_addl_envvars != '' else '',
+                        ','+sched_addl_envvars if sched_addl_envvars else '',
+                        '--partition {}'.format(args.queue) if args.queue else '',
                         '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
                         sched_addl_vars_inst,
                         batch_jobscript if batch_job_submission else tilerun_jobscript,

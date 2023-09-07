@@ -16,6 +16,7 @@ SCRIPT_FILE = os.path.abspath(os.path.realpath(__file__))
 SCRIPT_FNAME = os.path.basename(SCRIPT_FILE)
 SCRIPT_NAME, SCRIPT_EXT = os.path.splitext(SCRIPT_FNAME)
 SCRIPT_DIR = os.path.dirname(SCRIPT_FILE)
+HOME_DIR = os.path.expanduser('~/')
 
 
 ## General argument defaults and settings
@@ -47,6 +48,13 @@ elif hostname.startswith('nunatak'):
     sched_specify_outerr_paths = False
     sched_addl_vars = "-l walltime=100:00:00,nodes=1:ppn=8,mem=48gb -m n -k oe -j oe"
     sched_default_queue = 'old'
+elif hostname.startswith('pgc-comp'):
+    system_name = 'pgc'
+    sched_presubmit_cmd = ''
+    sched_addl_envvars = ''
+    sched_specify_outerr_paths = False
+    sched_addl_vars = f"--nodes=1 --ntasks=1 --cpus-per-task=12 --mem=60G --time=100:00:00 -o {HOME_DIR}/%x.o%j -e {HOME_DIR}/%x.o%j"
+    sched_default_queue = 'batch'
 else:
     warnings.warn("Hostname '{}' not recognized. System-specific settings will not be applied.".format(hostname))
     system_name = ''
@@ -83,13 +91,13 @@ project_tileDefFile_dict = {
     'earthdem':  '/mnt/pgc/data/projects/earthdem/tiledef_files/PGC_UTM_Mosaic_Tiles_{}.mat'.format(earthdem_hemisphere_key),
 }
 project_tileParamList_dict = {
-    'arcticdem': '',
+    'arcticdem': '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/tile_params/tileParamList.txt',
     'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_params/tileParamList_v13e.txt',
     'earthdem':  '',
 }
 project_version_dict = {
     'arcticdem': 'ArcticDEM,4.1',
-    'rema': 'REMA,2.0',
+    'rema': 'REMA,2.1',
     'earthdem': 'EarthDEM,1.1',
 }
 
@@ -249,8 +257,10 @@ def main():
 
     ## Convert argument paths to absolute paths
     args.srcdir = os.path.abspath(args.srcdir)
-    args.tile_def = os.path.abspath(args.tile_def if os.path.isfile(args.tile_def) else os.path.join(SCRIPT_DIR, args.tile_def))
-    args.tileparam_list = os.path.abspath(args.tileparam_list if os.path.isfile(args.tileparam_list) else os.path.join(SCRIPT_DIR, args.tileparam_list))
+    if args.tile_def != '':
+        args.tile_def = os.path.abspath(args.tile_def if os.path.isfile(args.tile_def) else os.path.join(SCRIPT_DIR, args.tile_def))
+    if args.tileparam_list != '':
+        args.tileparam_list = os.path.abspath(args.tileparam_list if os.path.isfile(args.tileparam_list) else os.path.join(SCRIPT_DIR, args.tileparam_list))
     args.libdir = os.path.abspath(args.libdir)
     args.tempdir = os.path.abspath(args.tempdir)
     args.logdir = os.path.abspath(os.path.join(args.srcdir, args.logdir) if args.logdir.startswith('../') else args.logdir)
@@ -263,6 +273,8 @@ def main():
     if args.project != 'earthdem':
         if not os.path.isfile(args.tile_def):
             parser.error("--tile-def file does not exist: {}".format(args.tile_def))
+    if args.tileparam_list != '' and not os.path.isfile(args.tileparam_list):
+        parser.error("--tileparam-list file does not exist: {}".format(args.tileparam_list))
     if not os.path.isdir(args.libdir):
         parser.error("--libdir does not exist: {}".format(args.libdir))
     if not os.path.isfile(args.jobscript):
@@ -390,6 +402,13 @@ def main():
             tile_projstr = projection_string
             tile_def = args.tile_def
 
+            if tile.startswith('utm'):
+                if args.project != 'earthdem':
+                    parser.error("project should be 'earthdem' when 'utm*' prefix tilenames are provided")
+            else:
+                if args.project == 'earthdem':
+                    parser.error("domain should NOT be 'earthdem' when tilenames do not have 'utm*' prefix")
+
             if tile_projstr == '' or earthdem_hemisphere_key in tile_def:
                 assert args.project == 'earthdem'
 
@@ -420,12 +439,6 @@ def main():
             dstfp = os.path.join(args.srcdir, task.t, dstfn)
             finfile = os.path.join(args.srcdir, task.t, dstfn.replace('.mat', '.fin'))
             subtile_dir = os.path.join(args.srcdir, task.t, 'subtiles')
-
-            if not os.path.isdir(subtile_dir):
-                message = "ERROR! Subtile directory ({}) does not exist, skipping {}".format(subtile_dir, dstfn)
-                print(message)
-                error_messages.append(message)
-                continue
 
             run_tile = True
             removing_existing_output = False
@@ -475,6 +488,12 @@ def main():
                     removing_existing_output = True
 
             if removing_existing_output:
+                if not os.path.isdir(subtile_dir):
+                    message = "ERROR! Subtile directory ({}) does not exist, skipping {}".format(subtile_dir, dstfn)
+                    print(message)
+                    error_messages.append(message)
+                    continue
+
                 dstfps_old_pattern = dstfp.replace('.mat', '*')
                 dstfps_old = glob.glob(dstfps_old_pattern)
                 if dstfps_old:
@@ -502,6 +521,11 @@ def main():
                         supertile_num_nodata_dict[task.t] += 1
 
             if run_tile:
+                if not os.path.isdir(subtile_dir):
+                    message = "ERROR! Subtile directory ({}) does not exist, skipping {}".format(subtile_dir, dstfn)
+                    print(message)
+                    error_messages.append(message)
+                    continue
                 tiles_to_run.append(outtile)
 
     task_success_rc = 3 if len(tiles_to_run) > 0 else -1
@@ -556,14 +580,14 @@ def main():
                 job_errfile = os.path.join(pbs_logdir, task_name+'.err')
 
                 if args.pbs:
-                    cmd = r""" {}qsub -N {} -v {}{}ARG_TILENAME={}{} {} {} {} "{}" """.format(
+                    cmd = r""" {}qsub -N {} --export {}{}ARG_TILENAME={}{} {} {} {} "{}" """.format(
                         sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
                         job_name,
                         'TILERUN_JOBSCRIPT="{}",'.format(tilerun_jobscript) if batch_job_submission else '',
                         'IN_PARALLEL=false,' if batch_job_submission else '',
                         '@'.join(tile_bundle) if batch_job_submission else tile,
-                        ','+sched_addl_envvars if sched_addl_envvars != '' else '',
-                        '-q {}'.format(args.queue) if args.queue is not None else '',
+                        ','+sched_addl_envvars if sched_addl_envvars else '',
+                        '-q {}'.format(args.queue) if args.queue else '',
                         '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
                         sched_addl_vars,
                         batch_jobscript if batch_job_submission else tilerun_jobscript,
@@ -572,13 +596,14 @@ def main():
                 elif args.slurm:
                     job_outfile = job_outfile.replace('pbs', 'slurm')
                     job_errfile = job_errfile.replace('pbs', 'slurm')
-                    cmd = r""" {}sbatch -J {} -v {}{}ARG_TILENAME={} {} {} "{}" """.format(
+                    cmd = r""" {}sbatch -J {} --export {}{}ARG_TILENAME={}{} {} {} {} "{}" """.format(
                         sched_presubmit_cmd+' ; ' if sched_presubmit_cmd != '' else '',
                         job_name,
                         'TILERUN_JOBSCRIPT="{}",'.format(tilerun_jobscript) if batch_job_submission else '',
                         'IN_PARALLEL=false,' if batch_job_submission else '',
                         '@'.join(tile_bundle) if batch_job_submission else tile,
-                        ','+sched_addl_envvars if sched_addl_envvars != '' else '',
+                        ','+sched_addl_envvars if sched_addl_envvars else '',
+                        '--partition {}'.format(args.queue) if args.queue else '',
                         '-o "{}" -e "{}"'.format(job_outfile, job_errfile) if sched_specify_outerr_paths else '',
                         sched_addl_vars,
                         batch_jobscript if batch_job_submission else tilerun_jobscript,

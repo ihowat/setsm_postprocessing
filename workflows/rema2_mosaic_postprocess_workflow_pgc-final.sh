@@ -24,6 +24,11 @@ for tiledir in v2/results/output_tiles/*/ ; do qsub -v "ARG_TILEDIR=${tiledir}" 
 
 ## Register tiles to ICESat-2
 
+## !!!!!!!!!!!!!!!!!!! ##
+echo MAKE SURE TO SKIP REGISTRATION FOR TILES IN THIS LIST:
+echo /mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/results/tiles_peninsula_skip-reg.txt
+## !!!!!!!!!!!!!!!!!!! ##
+
 # Create *_reg.mat copies of the tile .mat files with registration to ICESat-2.
 # - Registration info is calculated and stored in the "reg" variable of both registered and unregistrered .mat tile files.
 # - *_reg.mat files are created by the "applyRegistration" function with the 3D vector translation from registration applied to all data arrays.

@@ -25,7 +25,24 @@ MATLAB_LIBDIR = os.path.join(SCRIPT_DIR, "../setsm_postprocessing4")
 domain_finalQcMask_dict = {
     'arcticdem': None,
     'earthdem': None,
-    'rema': "/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/final_qc_mask/rema_final_mask.mat",
+    # 'rema': "/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/final_qc_mask/rema_v2/rema_final_mask.mat",
+    'rema': "/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/final_qc_mask/rema_v2.1/rema_final_mask_v2_1.mat",
+}
+supertile_key = '<supertile>'
+domain_refDemPath_dict = {
+    'arcticdem': "/mnt/pgc/data/elev/dem/copernicus-dem-30m/mosaic/arctic_tiles_wgs84/<supertile>_10m_cop30_wgs84.tif",
+    'earthdem': None,
+    'rema': "/mnt/pgc/data/elev/dem/copernicus-dem-30m/mosaic/rema_tiles_wgs84/<supertile>_10m_cop30_wgs84.tif",
+}
+domain_coverTifPath_dict = {
+    'arcticdem': "/mnt/pgc/data/thematic/landcover/esa_worldcover_2020/mosaics/arctic_tiles/<supertile>_10m_cover.tif",
+    'earthdem': None,
+    'rema': None,
+}
+domain_cop30SkipregShp_dict = {
+    'arcticdem': "/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/arcticdem_v4.1_mosaic_reg-cop30_skip-reg.shp",
+    'earthdem': None,
+    'rema': None,
 }
 
 
@@ -85,9 +102,15 @@ def get_arg_parser():
     parser.add_argument(
         '--output-set',
         type=str,
-        choices=['full', 'browse-meta', 'dem-browse', 'dem', 'meta'],
+        choices=['full', 'dem-browse', 'dem', 'browse', 'meta'],
         default='full',
-        help="Set of output tile result files to create."
+        help=wrap_multiline_str(r"""
+            Set of output tile result files to create. All settings include
+            creation of the meta.txt file.
+            \nIf 'browse' or 'meta', the default setting of --keep-old-results
+            will become 'other' so that only the browse.tif or meta.txt file,
+            will be built (or removed and rebuilt upon --rerun).
+        """)
     )
     parser.add_argument(
         '--tile-nocrop',
@@ -109,13 +132,108 @@ def get_arg_parser():
         """)
     )
     parser.add_argument(
+        '--ref-dem-path',
+        type=str,
+        default=None,
+        help=wrap_multiline_str(r"""
+            Path to reference DEM used for filtering with the --apply-ref-filter argument.
+            DEM should cover all input tiles, or include the '{}' substring in path to be
+            replaced with supertile name.
+            \n(default is {})
+        """.format(
+            supertile_key,
+            ', '.join(["{} if domain={}".format(val, dom) for dom, val in domain_refDemPath_dict.items()]
+        )))
+    )
+    parser.add_argument(
+        '--cover-tif-path',
+        type=str,
+        default=None,
+        help=wrap_multiline_str(r"""
+            Path to ESA WorldCover landcover raster used for filling water bodies with the reference DEM
+            if the --apply-water-fill option is provided. The path should include the '{}'
+            substring to be replaced with supertile name.
+            \n(default is {})
+        """.format(
+            supertile_key,
+            ', '.join(["{} if domain={}".format(val, dom) for dom, val in domain_coverTifPath_dict.items()]
+        )))
+    )
+    parser.add_argument(
+        '--apply-ref-filter',
+        type=str,
+        choices=['true', 'false'],
+        default='false',
+        help=wrap_multiline_str("""
+            Apply Ian's slopeDifferenceFilter to tile DEM data in memory before tif export,
+            using the reference DEM and landcover raster from the --ref-dem-path
+            and --cover-tif-path arguments.
+        """)
+    )
+    parser.add_argument(
+        '--apply-water-fill',
+        type=str,
+        choices=['true', 'false'],
+        default='false',
+        help=wrap_multiline_str("""
+            Apply Ian's fillWater to tile DEM data in memory before tif export,
+            using the reference DEM and landcover raster from the --ref-dem-path
+            and --cover-tif-path arguments.
+        """)
+    )
+    parser.add_argument(
+        '--fill-water-interp-method',
+        type=int,
+        choices=list(range(6)),
+        default=2,
+        help=wrap_multiline_str("""
+            Interpolation method to use for fillWater's inpaint_nans call.
+        """)
+    )
+
+    parser.add_argument(
+        '--register-to-ref',
+        type=str,
+        choices=['none', 'tiles', 'blobs', 'reportOffsetOnly'],
+        default='none',
+        help=wrap_multiline_str("""
+            Register DEM to reference DEM. Requires both reference DEM and
+            landcover raster from the --ref-dem-path and --cover-tif-path arguments.
+        """)
+    )
+    parser.add_argument(
+        '--register-to-ref-debug',
+        action='store_true',
+        help=wrap_multiline_str("""
+            (Only applicable when --register-to-ref value other than 'none' is provided)
+            Only write out a debug version of the registered DEM at 32m resolution,
+            with no filter or fill applied, and then exit.
+        """)
+    )
+    parser.add_argument(
+        '--register-cop30-skipreg-shp',
+        type=str,
+        default=None,
+        help=wrap_multiline_str(r"""
+            (Only applicable when --register-to-ref value other than 'none' is provided)
+            \nPath to shapefile of polygon features with 'skipreg' field value set to 1
+            where, in the COP30 registration process, DEM data blobs should not be
+            vertically adjusted.
+            \n(default is {})
+        """.format(
+            supertile_key,
+            ', '.join(["{} if domain={}".format(val, dom) for dom, val in domain_cop30SkipregShp_dict.items()]
+        )))
+    )
+    
+    parser.add_argument(
         '--add-sea-surface-height',
         type=str,
         choices=['true', 'false'],
         default='true',
         help=wrap_multiline_str("""
             In tile dem.tif area where ocean pixels ('land' mask is false) would
-            normally be set to NoData, set elevation values to height above the
+            normally be set to NoData, set elevation values to EGM2008 height above the
             WGS84 ellipsoid. 
         """)
     )
@@ -147,16 +265,24 @@ def get_arg_parser():
         '--rerun',
         action='store_true',
         help=wrap_multiline_str("""
-            Submit processing jobs even if exported results files
+            Submit processing jobs even if output-set results files
             already exist.
         """)
     )
     parser.add_argument(
         '--keep-old-results',
-        action='store_true',
-        help=wrap_multiline_str("""
-            Do not remove existing exported results files before submitting
-            processing jobs.
+        type=str,
+        choices=['output-set', 'other', 'meta', 'all', 'none'],
+        nargs='+',
+        default=[],
+        help=wrap_multiline_str(r"""
+            Do not remove these classes of existing results files before
+            submitting processing jobs. 'other' refers to tif results files
+            outside of the provided --output-set setting.
+            \nIf --output-set is 'browse' or 'meta', the default setting
+            of --keep-old-results will become 'other' so that only the
+            browse.tif or meta.txt file will be built
+            (or removed and rebuilt upon --rerun).
         """)
     )
 
@@ -235,8 +361,17 @@ def main():
             "No projstr mapping for argument 'domain': {}".format(script_args.domain)
         )
 
+    if script_args.ref_dem_path is None:
+        script_args.ref_dem_path = domain_refDemPath_dict[script_args.domain]
+    if script_args.cover_tif_path is None:
+        script_args.cover_tif_path = domain_coverTifPath_dict[script_args.domain]
     if script_args.final_qc_mask is None:
         script_args.final_qc_mask = domain_finalQcMask_dict[script_args.domain]
+    if script_args.register_cop30_skipreg_shp is None:
+        script_args.register_cop30_skipreg_shp = domain_cop30SkipregShp_dict[script_args.domain]
+
+    if script_args.output_set in ('browse', 'meta') and not script_args.keep_old_results:
+        script_args.keep_old_results = ['other']
 
     res_name = '{}m'.format(script_args.resolution)
 
@@ -247,30 +382,34 @@ def main():
 
     output_set_to_matscript_arg_dict = {
         'full': 'full',
-        'browse-meta': 'browseOnly',
         'dem-browse': 'demAndBrowse',
         'dem': 'demOnly',
+        'browse': 'browseOnly',
         'meta': 'metaOnly',
     }
 
     single_t2t_args = wrap_multiline_str(f"""
-        'resolution','{res_name}',
-        'outFormat','{script_args.tif_format.upper()}',
-        'outSet','{output_set_to_matscript_arg_dict[script_args.output_set]}',
-        'bufferMeters',{script_args.tile_buffer_meters}
+        , 'resolution','{res_name}'
+        , 'outFormat','{script_args.tif_format.upper()}'
+        , 'outSet','{output_set_to_matscript_arg_dict[script_args.output_set]}'
+        , 'bufferMeters',{script_args.tile_buffer_meters}
+        , 'registerToRef','{script_args.register_to_ref}'
     """)
     if script_args.tile_nocrop:
         single_t2t_args += ", 'noCrop'"
     if script_args.add_sea_surface_height == 'true':
         single_t2t_args += ", 'addSeaSurface'"
-    if script_args.use_final_qc_mask and script_args.final_qc_mask is not None:
-        single_t2t_args += ", 'maskFile','{}'".format(script_args.final_qc_mask)
+    if script_args.use_final_qc_mask == 'true' and script_args.final_qc_mask is not None:
+        single_t2t_args += ", 'qcMaskFile','{}'".format(script_args.final_qc_mask)
+    if script_args.register_to_ref_debug:
+        single_t2t_args += ", 'registerToRefDebug'"
+    if script_args.register_cop30_skipreg_shp:
+        single_t2t_args += ", 'registerBlobsSkipregShp','{}'".format(script_args.register_cop30_skipreg_shp)
+    single_t2t_args += ", 'fillWaterInterpMethod',{}".format(script_args.fill_water_interp_method)
 
     batch_t2t_args = single_t2t_args
     if script_args.output_set == 'meta':
         batch_t2t_args += ", 'metaOnly'"
-    elif script_args.output_set == 'dem':
-        batch_t2t_args += ", 'noMeta'"
 
     jobscript_utils.adjust_args(script_args, arg_parser)
     jobscript_utils.create_dirs(script_args, arg_parser)
@@ -280,9 +419,25 @@ def main():
 
     if not os.path.isdir(root_tiledir):
         arg_parser.error("Argument 'tiledir' is not an existing directory: {}".format(root_tiledir))
-
+    if script_args.apply_ref_filter == 'true' and not script_args.ref_dem_path:
+        arg_parser.error("--ref-dem-path cannot be empty when --apply-ref-filter=true")
+    if script_args.apply_water_fill == 'true' and (not script_args.ref_dem_path or not script_args.cover_tif_path):
+        arg_parser.error("--ref-dem-path and --cover-tif-path cannot be empty when --apply-water-fill=true")
+    if script_args.register_to_ref == 'none' and script_args.register_to_ref_debug:
+        arg_parser.error("--register-to-ref-debug cannot be provided when --register-to-ref='none'")
     if script_args.tile_org == 'osu' and script_args.process_by == 'supertile-dir':
         arg_parser.error("--process-by must be set to to 'tile-file' when --tile-org='osu'")
+
+    if script_args.apply_ref_filter == 'true' or script_args.apply_water_fill == 'true':
+        check_dir, _, _ = script_args.ref_dem_path.partition(supertile_key)
+        check_dir = os.path.dirname(check_dir)
+        if not os.path.isdir(check_dir):
+            arg_parser.error("--ref-dem-path directory does not exist: {}".format(check_dir))
+        if script_args.apply_water_fill:
+            check_dir, _, _ = script_args.cover_tif_path.partition(supertile_key)
+            check_dir = os.path.dirname(check_dir)
+            if not os.path.isdir(check_dir):
+                arg_parser.error("--cover-tif-path directory does not exist: {}".format(check_dir))
 
     jobscript_utils.verify_args(script_args, arg_parser)
 
@@ -306,6 +461,13 @@ def main():
 
     for supertile in supertile_list:
 
+        if supertile.startswith('utm'):
+            if script_args.domain != 'earthdem':
+                arg_parser.error("domain should be 'earthdem' when 'utm*' prefix tilenames are provided")
+        else:
+            if script_args.domain == 'earthdem':
+                arg_parser.error("domain should NOT be 'earthdem' when tilenames do not have 'utm*' prefix")
+
         tile_projstr = global_projstr
         if tile_projstr is None:
             assert script_args.domain == 'earthdem'
@@ -316,6 +478,18 @@ def main():
                 arg_parser.error("Expected only UTM tile names (e.g. 'utm10n_01_01'), but got '{}'".format(supertile))
 
             tile_projstr = utm_tilename_prefix
+
+        supertile_args = ''
+        if script_args.ref_dem_path:
+            ref_dem_file = script_args.ref_dem_path.replace(supertile_key, supertile)
+            supertile_args += ", 'refDemFile','{}'".format(ref_dem_file)
+        if script_args.cover_tif_path:
+            cover_tif_file = script_args.cover_tif_path.replace(supertile_key, supertile)
+            supertile_args += ", 'waterMaskFile','{}'".format(cover_tif_file)
+        if script_args.apply_ref_filter == 'true':
+            supertile_args += ", 'applySlopeDiffFilt'"
+        if script_args.apply_water_fill == 'true':
+            supertile_args += ", 'applyWaterFill'"
 
         run_tile_matlist = []
 
@@ -335,80 +509,65 @@ def main():
             metafp          = '{}_meta.txt'.format(tile_rootpath)
             matfile         = regmatfile if os.path.isfile(regmatfile) else unregmatfile
 
-            run_tile = True
+            fp_mad      = '{}_mad.tif'.format(tile_rootpath)
+            fp_count    = '{}_count.tif'.format(tile_rootpath)
+            fp_countmt  = '{}_countmt.tif'.format(tile_rootpath)
+            fp_mindate  = '{}_mindate.tif'.format(tile_rootpath)
+            fp_maxdate  = '{}_maxdate.tif'.format(tile_rootpath)
 
             if not os.path.isfile(unregmatfile) and not os.path.isfile(regmatfile):
-                print(
-                    "Tile {} {}m mat and reg.mat files do not exist{}: {}".format(
-                        tile_name, script_args.resolution,
-                        " (AND .fin file also does not exist!!)" if not os.path.isfile(finfp) else '',
-                        matfile
-                    )
-                )
+                print("Tile {} {}m mat and reg.mat files do not exist{}: {}".format(
+                    tile_name, script_args.resolution,
+                    " (AND .fin file also does not exist!!)" if not os.path.isfile(finfp) else '',
+                    matfile
+                ))
                 run_tile = False
 
-            elif script_args.output_set == 'meta':
-                if os.path.isfile(metafp):
-                    if script_args.rerun:
-                        print("Removing existing meta file: {}".format(metafp))
-                        if not script_args.dryrun:
-                            os.remove(metafp)
-                    else:
-                        print("{} exists, skipping".format(metafp))
-                        run_tile = False
-
-            elif script_args.output_set == 'dem':
-                if os.path.isfile(demfp):
-                    if script_args.rerun:
-                        print("Removing existing dem file: {}".format(demfp))
-                        if not script_args.dryrun:
-                            os.remove(demfp)
-                    else:
-                        print("{} exists, skipping".format(demfp))
-                        run_tile = False
-
-            elif script_args.output_set == 'dem-browse':
-                if os.path.isfile(demfp) or os.path.isfile(browsefp):
-                    if script_args.rerun:
-                        if os.path.isfile(demfp):
-                            print("Removing existing dem file: {}".format(demfp))
-                            if not script_args.dryrun:
-                                os.remove(demfp)
-                        if os.path.isfile(browsefp):
-                            print("Removing existing browse file: {}".format(browsefp))
-                            if not script_args.dryrun:
-                                os.remove(browsefp)
-                    elif os.path.isfile(demfp) and os.path.isfile(browsefp):
-                        print("{} dem and browse exist, skipping".format(demfp))
-                        run_tile = False
-
             else:
-                if script_args.rerun:
-                    assume_complete = False
-                if script_args.output_set == 'browse-meta':
-                    assume_complete = os.path.isfile(browsefp) and os.path.isfile(metafp)
-                else:
-                    assume_complete = os.path.isfile(demfp) and os.path.isfile(browsefp) and os.path.isfile(metafp)
+                output_set_results_files_dict = {
+                    'full':         [metafp, demfp, browsefp, fp_mad, fp_count, fp_countmt, fp_mindate, fp_maxdate],
+                    'dem-browse':   [metafp, demfp, browsefp],
+                    'dem':          [metafp, demfp],
+                    'browse':       [metafp, browsefp],
+                    'meta':         [metafp],
+                }
+                results_fp_list = output_set_results_files_dict[script_args.output_set]
+                results_fp_exist_set = set([fp for fp in results_fp_list if os.path.isfile(fp)])
 
-                if script_args.rerun or not assume_complete:
-                    if not script_args.keep_old_results:
-                        dstfps_old_pattern = [
-                            demfp.replace('_dem.tif', '*.tif'),
-                            metafp
-                        ]
-                        dstfps_old = [fp for pat in dstfps_old_pattern for fp in glob.glob(pat)]
-                        if dstfps_old:
-                            print("{}Removing existing tif tile results matching {}".format('(dryrun) ' if script_args.dryrun else '', dstfps_old_pattern))
-                            if not script_args.dryrun:
-                                for dstfp_old in dstfps_old:
-                                    os.remove(dstfp_old)
-
-                elif assume_complete:
-                    print("{} exist; skipping tile: {}".format(
-                        "browse and meta" if script_args.output_set == 'browse-meta' else "dem, browse, and meta",
-                        matfile
-                    ))
+                if not script_args.rerun and len(results_fp_list) == len(results_fp_exist_set):
+                    print("Tile {}: All results files exist, skipping".format(matfile))
                     run_tile = False
+
+                else:
+                    run_tile = True
+                    results_fp_remove_set = set()
+
+                    if 'all' in script_args.keep_old_results:
+                        pass
+                    else:
+                        results_fp_remove_set.update(results_fp_exist_set)
+                        if 'other' not in script_args.keep_old_results:
+                            dstfps_old_pattern = [
+                                metafp,
+                                demfp.replace('_dem.tif', '*.tif'),
+                            ]
+                            dstfps_old = set([fp for pat in dstfps_old_pattern for fp in glob.glob(pat)])
+                            results_fp_remove_set.update(dstfps_old)
+                        if 'output-set' in script_args.keep_old_results:
+                            results_fp_remove_set = results_fp_remove_set.difference(results_fp_exist_set)
+                        if 'meta' in script_args.keep_old_results and metafp in results_fp_remove_set:
+                            results_fp_remove_set.remove(metafp)
+
+                    if results_fp_remove_set:
+                        results_fp_remove_list = sorted(list(results_fp_remove_set))
+                        print("Tile {}: Removing existing results files{}:\n  {}".format(
+                            matfile,
+                            ' (dryrun)' if script_args.dryrun else '',
+                            '\n  '.join(results_fp_remove_list)
+                        ))
+                        if not script_args.dryrun:
+                            for fp in results_fp_remove_list:
+                                os.remove(fp)
 
             if run_tile:
                 run_tile_matlist.append(matfile)
@@ -440,29 +599,18 @@ def main():
 
                 task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
                     {matlab_addpath}
-                    batch_tiles2tif_v4('{supertile_dir}', '{tile_projstr}', {batch_t2t_args});
+                    batch_tiles2tif_v4('{supertile_dir}', '{tile_projstr}'{batch_t2t_args}{supertile_args});
                 """))
 
             else:
                 tile_matfile = tile_path
                 job_id, _ = os.path.splitext(os.path.basename(tile_matfile))
 
-                if script_args.output_set == 'dem':
-                    task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
-                        {matlab_addpath}
-                        writeTileToTifv4('{tile_matfile}', '{tile_projstr}', {single_t2t_args});
-                    """))
-                elif script_args.output_set == 'meta':
-                    task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
-                        {matlab_addpath}
-                        tileMetav4('{tile_matfile}');
-                    """))
-                else:
-                    task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
-                        {matlab_addpath}
-                        writeTileToTifv4('{tile_matfile}', '{tile_projstr}', {single_t2t_args});
-                        tileMetav4('{tile_matfile}');
-                    """))
+                task_cmd = jobscript_utils.matlab_cmdstr_to_shell_cmdstr(wrap_multiline_str(f"""
+                    {matlab_addpath}
+                    writeTileToTifv4('{tile_matfile}', '{tile_projstr}'{single_t2t_args}{supertile_args});
+                    tileMetav4('{tile_matfile}');
+                """))
 
             submit_cmd = job_handler.add_task_cmd(task_cmd, job_id)
             if submit_cmd is not None:

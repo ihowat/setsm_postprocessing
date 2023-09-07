@@ -1,8 +1,13 @@
 
-qc_dir_in  = '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_qc/tile_qc_v13e';
-qc_dir_out = '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/tile_qc/tile_qc_v13e_strips_v4.1';
-remerge_info_matfile = '/mnt/pgc/data/projects/earthdem/strip_databases/REMAdatabase4_2m_v4.1_20220511_remerge_info.mat';
+qc_dir_in  = '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/tile_qc/greenland_automosaic_qc';
+qc_dir_out = '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/tile_qc/greenland_automosaic_qc_strips_v4.1';
 
+old_strip_dbase = '/mnt/pgc/data/projects/earthdem/strip_databases/unity_databases/arcticdem_v4.1_greenland/arcticdem_strips.shp';
+remerge_info_matfile = '/mnt/pgc/data/projects/earthdem/strip_databases/ArcticDEMdatabase4_2m_v4.1_20230425_all_plus_reproj_remerge_info.mat';
+
+fprintf('Reading strips_v4 strip database shapefile: %s\n', old_strip_dbase);
+old_strip_dbase_shp = shaperead(old_strip_dbase);
+old_strip_dbase_stripID = arrayfun(@(feat) strrep(feat.strip, '_2m_lsf', ''), old_strip_dbase_shp, 'UniformOutput',false);
 
 fprintf('Loading remerge info matfile: %s\n', remerge_info_matfile);
 remerge_struct = load(remerge_info_matfile);
@@ -28,6 +33,8 @@ for qc_file_idx = 1:length(qc_files_cellarr)
     stripID_cellarr = unique(qc.stripID);
     for stripID_idx = 1:length(stripID_cellarr)
         stripID = stripID_cellarr{stripID_idx};
+        this_stripID_v4_dbase_feat = [];
+        this_stripID_v4_dbase_feat_segnum_arr = [];
 
         qc_this_stripID_idx_arr = find(strcmp(qc.stripID, stripID));
         qc_this_stripID_seg_arr = qc.seg(qc_this_stripID_idx_arr);
@@ -69,13 +76,13 @@ for qc_file_idx = 1:length(qc_files_cellarr)
             [v4_seg_arr, v41_seg_arr] = readRemergeInfoFile(remerge_info_file);
         else
             [strip_dir,~,~] = fileparts(remerge_info_file);
-            v4_nseg = length(dir([strip_dir,'/*_meta.txt']));
-            if v4_nseg == 0
+            v41_nseg = length(dir([strip_dir,'/*_meta.txt']));
+            if v41_nseg == 0
                 continue;
             end
             v4_seg_arr_temp = [];
             v41_seg_arr_temp = [];
-            for i = 1:v4_nseg
+            for i = 1:v41_nseg
                 v4_seg_arr_temp = [v4_seg_arr_temp; qc_this_stripID_seg_arr];
                 v41_seg_arr_temp = [v41_seg_arr_temp; i * ones(length(qc_this_stripID_seg_arr), 1)];
             end
@@ -126,18 +133,32 @@ for qc_file_idx = 1:length(qc_files_cellarr)
                     error('v4 segment number (%d) is not parted of expected working segment set', v4_seg_seg);
                 end
 
-                if v4_seg_flag == 3
-                    v41_seg_flag = 3;
-                else
-                    if ~isempty(v4_seg_x) && v4_seg_flag ~= 5
-                        error('qc exists with flag=%d; %s, stripID: %s, seg: %d', v4_seg_flag, qc_file, stripID, v4_seg_seg);
+                if v41_seg_flag == 0
+                    v41_seg_flag = v4_seg_flag;
+                elseif v4_seg_flag ~= v41_seg_flag || v4_seg_flag == 5
+                    if v4_seg_flag == 5 && v41_seg_flag ~= 5
+                        v41_seg_flag = 3;
                     end
-                    if v41_seg_flag ~= 3
-                        % FIXME: The following comparison should be inverted.
-                        % -t    But in addition, a QC mask should be added
-                        % -t    with the footprint of any '5' flag v4 segments.
-                        if v4_seg_flag > v41_seg_flag
-                            v41_seg_flag = v4_seg_flag;
+                    if v4_seg_flag == 5
+                        if isempty(this_stripID_v4_dbase_feat)
+                            this_stripID_v4_dbase_feat = old_strip_dbase_shp(find(strcmp(old_strip_dbase_stripID, stripID)));
+                            this_stripID_v4_dbase_feat_segnum_arr = [this_stripID_v4_dbase_feat.seg_id]';
+                        end
+                        v4_seg_dbase_feat_matches = this_stripID_v4_dbase_feat(find(this_stripID_v4_dbase_feat_segnum_arr == v4_seg_seg));
+
+                        % There should only be one feature that matches this stripID and seg_id,
+                        % but loop over all matches just in case there are duplicates (different SETSM ver for example).
+                        % Assume all of the data from this v4 stripID & seg_id combo is bad.
+                        for j = 1:length(v4_seg_dbase_feat_matches)
+                            v4_seg_dbase_feat = v4_seg_dbase_feat_matches(j);
+                            v4_seg_fp_xmin = min(v4_seg_dbase_feat.X) - 10;
+                            v4_seg_fp_xmax = max(v4_seg_dbase_feat.X) + 10;
+                            v4_seg_fp_ymin = min(v4_seg_dbase_feat.Y) - 10;
+                            v4_seg_fp_ymax = max(v4_seg_dbase_feat.Y) + 10;
+
+                            % Add the entire strip seg bounding box with 10m buffer as a QC polygon.
+                            v4_seg_x = [v4_seg_x, [v4_seg_fp_xmin, v4_seg_fp_xmin, v4_seg_fp_xmax, v4_seg_fp_xmax, v4_seg_fp_xmin]'];
+                            v4_seg_y = [v4_seg_y, [v4_seg_fp_ymin, v4_seg_fp_ymax, v4_seg_fp_ymax, v4_seg_fp_ymin, v4_seg_fp_ymin]'];
                         end
                     end
                 end
@@ -147,7 +168,7 @@ for qc_file_idx = 1:length(qc_files_cellarr)
 
             end
 
-            qc_out.stripID{end+1} = stripID;
+            qc_out.stripID{end+1} = ['SETSM_s2s041_', stripID];
             qc_out.seg(end+1) = v41_seg_seg;
             qc_out.flag(end+1) = v41_seg_flag;
             qc_out.x{end+1} = v41_seg_x;
