@@ -103,11 +103,11 @@ if [ -n "$tiledir" ]; then
     # Make sure this is an absolute path
     tiledir=$(readlink -f "$tiledir")
 else
-    tiledir="/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/results/output_tiles/"
-#    tiledir="/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/results/output_tiles_testing/"
+#    tiledir="/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/results/output_tiles/"
+    tiledir=""
 fi
 if [ -z "$resolution" ]; then
-    resolution='10m';
+#    resolution='10m';
     resolution='2m';
 fi
 
