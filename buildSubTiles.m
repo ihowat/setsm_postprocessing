@@ -780,6 +780,7 @@ parfor n=nstrt:subN
     end
     
 end
+disp("End of buildSubTiles.m");
 
 function [dZ, dX, dY] = perfadj(offsets,z,c0)
         it=1;
