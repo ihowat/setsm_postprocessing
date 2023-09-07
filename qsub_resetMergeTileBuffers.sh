@@ -88,14 +88,36 @@ echo "Changing to working directory: ${working_dir}"
 cd "$working_dir" || exit 1
 echo
 
-set -uo pipefail
-
 #module load gdal/2.1.3
 module load matlab/2019a
 
+## Arguments/Options
 tiledir="$ARG_TILEDIR"
-matlab_cmd="try; addpath('/mnt/pgc/data/common/repos/setsm_postprocessing4'); matfile_list=dir(['${tiledir}','/*_reg.mat']); matfile_paths=fullfile({matfile_list.folder},{matfile_list.name}); batch_resetMergeTileBuffers(matfile_paths); catch e; disp(getReport(e)); exit(1); end; exit(0)"
-#matlab_cmd="try; addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4'); matfile_list=dir(['${tiledir}','/*_reg.mat']); matfile_paths=fullfile({matfile_list.folder},{matfile_list.name}); batch_resetMergeTileBuffers(matfile_paths); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+resolution="$ARG_RESOLUTION"
+
+set -uo pipefail
+
+if [ -n "$tiledir" ]; then
+    # Make sure this is an absolute path
+    tiledir=$(readlink -f "$tiledir")
+else
+    tiledir=""
+fi
+if [ -z "$resolution" ]; then
+#    resolution='10m';
+    resolution='2m';
+fi
+
+
+## Validate arguments
+if [ ! -d "$tiledir" ]; then
+    echo "Tiledir does not exist: ${tiledir}"
+    exit 1
+fi
+
+
+matlab_cmd="try; addpath('/mnt/pgc/data/common/repos/setsm_postprocessing4'); batch_resetMergeTileBuffers('${tiledir}', '${resolution}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+#matlab_cmd="try; addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4'); batch_resetMergeTileBuffers('${tiledir}', '${resolution}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 
 echo "Argument tile directory: ${tiledir}"
 echo "Matlab command: \"${matlab_cmd}\""
