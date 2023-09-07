@@ -11,7 +11,8 @@ while (( $# != 0 )); do
         env_load_cmd="source ~/.bashrc ; conda activate pgc"
 
     elif [ "$env_request" == 'matlab' ]; then
-        env_load_cmd="module load matlab/2019a"
+#        env_load_cmd="module load matlab/2019a"
+        env_load_cmd=""
 
     else
         echo "Unsupported environment request: '${env_request}'"
