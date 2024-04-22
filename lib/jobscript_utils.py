@@ -483,7 +483,7 @@ def get_jobsubmit_cmd(
             '--partition {}'.format(script_args.job_queue) if script_args.job_queue is not None else '',
             '--ntasks {}'.format(script_args.job_ncpus) if script_args.job_ncpus is not None else '',
             '--mem {}G'.format(script_args.job_mem) if script_args.job_mem is not None else '',
-            '--time {}'.format(script_args.job_walltime) if script_args.job_walltime is not None else '',
+            '--time {}:00:00'.format(script_args.job_walltime) if script_args.job_walltime is not None else '',
             '--export "{}"'.format(envvar_list_str) if envvar_list_str is not None else '',
             '-o {}%x.o%j'.format(HOME_DIR),
             '-e {}%x.o%j'.format(HOME_DIR),
