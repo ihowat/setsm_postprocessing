@@ -333,6 +333,29 @@ if calcSlopeDiffFilt || ~strcmp(registerToRef, 'none')
 end
 
 if registerToRefDebug
+    outNameTif = strrep(outNameBase,'.mat',sprintf('_dem_debug-reg_%s_offset.tif', registerToRef));
+    if exist(outNameTif,'file')
+        delete(outNameTif);
+    end
+    if true
+        % Get the unregistered elevation array at the resolution of the reference DEM
+        [~,~,~,unreg_z_at_zr_res,~,~] = loadSlopefiltWaterfillArrays(m.z,m.x,m.y,refDemFile,waterMaskFile);
+        % Subtract the unregistered elevation array from the coregistered elevation array to compute the offset applied
+        offset_at_zr_res = z_at_zr_res - unreg_z_at_zr_res;
+        % Round float values to 1/128 meters to greatly improve compression effectiveness
+        rounded_offset_at_zr_res = round(offset_at_zr_res * 128.0) / 128.0;
+        % Assign NaN values to the NoData Value
+        rounded_offset_at_zr_res(isnan(offset_at_zr_res)) = -9999;
+        % Write to GeoTiff
+        if outFormat_is_cog
+            co_predictor = 'FLOATING_POINT';
+        else
+            co_predictor = '3';
+        end
+        writeGeotiff(outNameTif,I_ref.x,I_ref.y,rounded_offset_at_zr_res,4,-9999,projstr,'out_format',tif_format,'co_predictor',co_predictor,'cog_overview_resampling','BILINEAR')
+        clear rounded_offset_at_zr_res
+    end
+    fprintf('Offset tif written. Step duration: %s\n', getElapsedDuration(startTime));
     fprintf('Writing debug dem_reg_%s\n', registerToRef)
     outNameTif = strrep(outNameBase,'.mat',sprintf('_dem_debug-reg_%s.tif', registerToRef));
 %    if exist(outNameTif,'file') && ~overwrite
