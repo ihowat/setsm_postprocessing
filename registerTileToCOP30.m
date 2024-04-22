@@ -42,8 +42,11 @@ else
     skipreg_polyshape_arr = [];
 end
 
+
+startTime = getStartTime();
 fprintf('Loading reference DEM and ESA WorldCover raster\n');
 [z,x,y,z_at_zr_res,I_ref,C] = loadSlopefiltWaterfillArrays(matfile_or_z,x,y,refDemTif,coverTif);
+fprintf('Loading complete. Step duration: %s\n', getElapsedDuration(startTime));
 zr_dx = I_ref.x(2)-I_ref.x(1);
 
 if ~reportOffsetOnly
@@ -73,11 +76,13 @@ zr_masked(M) = nan;
 clear M;
 
 % Apply slope filter
+startTime = getStartTime();
 fprintf('Calculating and applying slope filter\n');
 avoidFilteringWaterFlag = true;
 M = slopeDifferenceFilter(I_ref.x,I_ref.y,z_at_zr_res,I_ref.z,C,avoidFilteringWaterFlag);
 z_masked(~M) = nan;
 clear M;
+fprintf('Filter complete. Step duration: %s\n', getElapsedDuration(startTime));
 
 % Check if any islands from watermask are actually flat filled (water) surface
 % in the reference DEM, and set them to NaN so they won't be used in offset calc.
@@ -109,6 +114,9 @@ end
 avg_offset_array_zr_res = [];
 
 if registerBlobs && ~reportOffsetOnly
+    startTime = getStartTime();
+    fprintf("Coregistring to blobs\n");
+
     % "blobs" are contiguous chunks of the 1x1km subtiles that were processed.
     z_data = ~isnan(z_at_zr_res);
     z_data_land = z_data;
@@ -205,6 +213,7 @@ if registerBlobs && ~reportOffsetOnly
         clear avg_offset_array avg_offset_array_z_res z_orig_nans z_reg_nans;
     end
     clear z_data CC;
+    fprintf('Coregistration complete. Step duration: %s\n', getElapsedDuration(startTime));
 end
 
 clear z_masked zr_masked;

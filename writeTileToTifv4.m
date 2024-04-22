@@ -333,6 +333,8 @@ if calcSlopeDiffFilt || ~strcmp(registerToRef, 'none')
 end
 
 if registerToRefDebug
+    startTime = getStartTime();
+    fprintf('Writing debug _dem_debug-reg_%s_offset.tif\n', registerToRef);
     outNameTif = strrep(outNameBase,'.mat',sprintf('_dem_debug-reg_%s_offset.tif', registerToRef));
     if exist(outNameTif,'file')
         delete(outNameTif);
@@ -356,6 +358,8 @@ if registerToRefDebug
         clear rounded_offset_at_zr_res
     end
     fprintf('Offset tif written. Step duration: %s\n', getElapsedDuration(startTime));
+
+    startTime = getStartTime();
     fprintf('Writing debug dem_reg_%s\n', registerToRef)
     outNameTif = strrep(outNameBase,'.mat',sprintf('_dem_debug-reg_%s.tif', registerToRef));
 %    if exist(outNameTif,'file') && ~overwrite
@@ -375,9 +379,11 @@ if registerToRefDebug
         writeGeotiff(outNameTif,I_ref.x,I_ref.y,z_at_zr_res_inst,4,-9999,projstr,'out_format',tif_format,'co_predictor',co_predictor,'cog_overview_resampling','BILINEAR')
         clear z_at_zr_res_inst
     end
+    fprintf('Coregistration debug tif written. Step duration: %s\n', getElapsedDuration(startTime));
 
     dz = z_at_zr_res - I_ref.z;
 
+    startTime = getStartTime();
     fprintf('Writing debug demdiff_reg_%s\n', registerToRef)
     outNameTif = strrep(outNameBase,'.mat',sprintf('_demdiff_debug-reg_%s.tif', registerToRef));
 %    if exist(outNameTif,'file') && ~overwrite
@@ -396,6 +402,8 @@ if registerToRefDebug
         end
         writeGeotiff(outNameTif,I_ref.x,I_ref.y,dz,4,-9999,projstr,'out_format',tif_format,'co_predictor',co_predictor,'cog_overview_resampling','BILINEAR')
     end
+    fprintf('Difference debug tif written. Step duration: %s\n', getElapsedDuration(startTime));
+
     return;
 end
 
