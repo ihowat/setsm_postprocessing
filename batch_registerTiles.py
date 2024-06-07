@@ -558,7 +558,7 @@ def main():
                 matlab_script = 'batchRegisterTilesToCOP30'
                 matscript_args += ", 'registerBlobs'"
                 if script_args.cop30_skipreg_shp:
-                    matscript_args += ", 'registerBlobsSkipregShp',{}".format(script_args.cop30_skipreg_shp)
+                    matscript_args += ", 'registerBlobsSkipregShp','{}'".format(script_args.cop30_skipreg_shp)
 
             elif script_args.reg_method == 'fillWater':
                 matlab_script = 'batchWaterFillTiles'
