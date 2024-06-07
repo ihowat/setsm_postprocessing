@@ -7,6 +7,8 @@ end
 org = 'osu';
 resolution = '10m';
 outfile = [];
+priority_suffix = '_reg.mat';
+secondary_suffix = '.mat';
 
 if ~isempty(varargin)
     org_choices = {'osu', 'pgc'};
@@ -30,6 +32,16 @@ if ~isempty(varargin)
     n = find(strcmpi('outfile', varargin));
     if ~isempty(n)
         outfile = varargin{n+1};
+    end
+
+    n = find(strcmpi('priority_suffix', varargin));
+    if ~isempty(n)
+        priority_suffix = varargin{n+1};
+    end
+
+    n = find(strcmpi('secondary_suffix', varargin));
+    if ~isempty(n)
+        secondary_suffix = varargin{n+1};
     end
 end
 
