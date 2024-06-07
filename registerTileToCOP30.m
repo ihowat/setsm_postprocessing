@@ -135,7 +135,7 @@ if registerBlobs && ~reportOffsetOnly
 
             if ~isempty(registerBlobsSkipregShp)
                 [idx_row,idx_col] = ind2sub(size(z_data), blob_idxlist);
-                B = bwtraceboundary(z_data, [idx_row(1) idx_col(1)], 'E');
+                B = bwtraceboundary(z_data, [idx_row(1) idx_col(1)], 'N', 8, Inf, 'clockwise');
                 B_row = B(:,1);
                 B_col = B(:,2);
                 blob_poly = polyshape(I_ref.x(B_col), I_ref.y(B_row));
