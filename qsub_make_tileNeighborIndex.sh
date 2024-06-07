@@ -95,7 +95,10 @@ module load matlab/2019a
 #org='osu'
 org='pgc';
 tiledir="$ARG_TILE_ROOTDIR"
-resolution="$ARG_RESOLUTION"
+resolution="${ARG_RESOLUTION:-'2m'}"
+matlib_dir="${ARG_MATLIB_DIR}"
+priority_suffix="${ARG_PRIORITY_SUFFIX:-'_reg_fill.mat'}"
+secondary_suffix="${ARG_SECONDARY_SUFFIX:-'_reg.mat'}"
 
 set -uo pipefail
 
@@ -121,8 +124,7 @@ tile_index_file="${tile_index_dir}/tileNeighborIndex_${resolution}.mat"
 
 mkdir -p "$tile_index_dir"
 
-matlab_cmd="try; addpath('/mnt/pgc/data/common/repos/setsm_postprocessing4'); tileNeighborIndex('${tiledir}', 'org','${org}', 'resolution','${resolution}', 'outfile','${tile_index_file}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
-#matlab_cmd="try; addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4'); tileNeighborIndex('${tiledir}', 'org','${org}', 'resolution','${resolution}', 'outfile','${tile_index_file}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+matlab_cmd="try; addpath('${matlib_dir}'); tileNeighborIndex('${tiledir}', 'org','${org}', 'resolution','${resolution}', 'outfile','${tile_index_file}', 'priority_suffix','${priority_suffix}', 'secondary_suffix','${secondary_suffix}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 
 echo "Argument tile directory: ${tiledir}"
 echo "Matlab command: \"${matlab_cmd}\""
