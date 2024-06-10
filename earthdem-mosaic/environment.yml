@@ -1,0 +1,20 @@
+name: earthdem-mosaic
+channels:
+  - conda-forge
+dependencies:
+  # dependencies for the earthdem-mosaic package
+  - python=3.11
+  - click
+  - pydantic-settings
+  - pip
+  - pip:
+      - -e .
+
+  # create_dem_metadata.py imports
+  - numpy
+  - pandas
+  - geopandas
+  - shapely
+
+  # proj_issame.py imports
+  - gdal=3.7.2
