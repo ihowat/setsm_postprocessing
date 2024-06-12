@@ -102,7 +102,7 @@ def get_arg_parser():
     parser.add_argument(
         '--output-set',
         type=str,
-        choices=['full', 'dem-browse', 'dem', 'browse', 'meta'],
+        choices=['full', 'dem-browse', 'dem', 'browse', 'meta', 'coreg-debug'],
         default='full',
         help=wrap_multiline_str(r"""
             Set of output tile result files to create. All settings include
@@ -386,6 +386,7 @@ def main():
         'dem': 'demOnly',
         'browse': 'browseOnly',
         'meta': 'metaOnly',
+        'coreg-debug': 'demAndBrowse',
     }
 
     single_t2t_args = wrap_multiline_str(f"""
@@ -425,6 +426,8 @@ def main():
         arg_parser.error("--ref-dem-path and --cover-tif-path cannot be empty when --apply-water-fill=true")
     if script_args.register_to_ref == 'none' and script_args.register_to_ref_debug:
         arg_parser.error("--register-to-ref-debug cannot be provided when --register-to-ref='none'")
+    if script_args.register_to_ref_debug and script_args.output_set != 'coreg-debug':
+        arg_parser.error("--output-set must be 'coreg-debug' if --register-to-ref-debug is used")
     if script_args.tile_org == 'osu' and script_args.process_by == 'supertile-dir':
         arg_parser.error("--process-by must be set to to 'tile-file' when --tile-org='osu'")
 
@@ -515,6 +518,10 @@ def main():
             fp_mindate  = '{}_mindate.tif'.format(tile_rootpath)
             fp_maxdate  = '{}_maxdate.tif'.format(tile_rootpath)
 
+            coreg_debug_offset = '{}_dem_debug-reg_{}_offset.tif'.format(tile_rootpath, script_args.register_to_ref)
+            coreg_debug_dem = '{}_dem_debug-reg_{}.tif'.format(tile_rootpath, script_args.register_to_ref)
+            coreg_debug_demdiff = '{}_demdiff_debug-reg_{}.tif'.format(tile_rootpath, script_args.register_to_ref)
+
             if not os.path.isfile(unregmatfile) and not os.path.isfile(regmatfile):
                 print("Tile {} {}m mat and reg.mat files do not exist{}: {}".format(
                     tile_name, script_args.resolution,
@@ -530,6 +537,7 @@ def main():
                     'dem':          [metafp, demfp],
                     'browse':       [metafp, browsefp],
                     'meta':         [metafp],
+                    'coreg-debug':  [coreg_debug_dem, coreg_debug_offset, coreg_debug_demdiff]
                 }
                 results_fp_list = output_set_results_files_dict[script_args.output_set]
                 results_fp_exist_set = set([fp for fp in results_fp_list if os.path.isfile(fp)])
