@@ -8,7 +8,7 @@ dependencies = [
 ]
 
 [project.scripts]
-# earthdem-mosaic = "earthdem_mosaic.cli.entry_point:entry_point"
+earthdem-mosaic = "earthdem_mosaic.cli:cli"
 
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
@@ -54,7 +54,7 @@ target-version = "py311"
 # McCabe complexity (`C901`) by default.
 # select = ["E4", "E7", "E9", "F"]
 select = ["ALL"]
-ignore = ["F401", "D100"]
+ignore = ["F401", "D100", "D211", "D213", "COM812", "ISC001", "D104"]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
