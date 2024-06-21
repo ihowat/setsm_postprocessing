@@ -40,7 +40,7 @@ cd "$SLURM_SUBMIT_DIR" || exit
 
 source "$HOME/.bashrc"; conda activate {conda_env_name}
 
-COMMAND={command_to_run}
+COMMAND='{command_to_run}'
 
 echo "$COMMAND"
 time eval "$COMMAND"
@@ -81,4 +81,4 @@ class ConfigurableJobscript:
         """Submit the jobscript to the cluster with sbatch"""
         if not self.path.exists():
             self.write()
-        subprocess.run(["echo", f"sbatch {self.path}"], check=True)
+        subprocess.run(["sbatch", f"{self.path}"], check=True)

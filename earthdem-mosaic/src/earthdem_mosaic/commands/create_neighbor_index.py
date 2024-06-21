@@ -1,3 +1,6 @@
+import shlex
+import subprocess
+
 import click
 
 from earthdem_mosaic.config import Settings
@@ -35,7 +38,8 @@ def create_neighbor_index(
     tile_index = (
         settings.WORKING_ZONES_DIR
         / str(utm_zone)
-        / "tile_index_files/tileNeighborIndex_2m.mat"
+        / "tile_index_files"
+        / "tileNeighborIndex_2m.mat"
     )
     priority_suffix = "_reg_fill_merge.mat"
     # To prevent the backfill with files other than those matching the priority suffix,
@@ -62,36 +66,41 @@ def create_neighbor_index(
         print(cmd)
         return
 
-    # Configure jobscript for slurm execution
-    jobscript_dir = tiledir / "jobscripts"
-    log_dir = tiledir / "logs"
+    if slurm or show_jobscript:
+        # Configure jobscript for slurm execution
+        jobscript_dir = tiledir / "jobscripts"
+        log_dir = tiledir / "logs"
 
-    prefix = "create_neighbor_index"
-    job_name = f"{prefix}_{utm_zone}"
+        prefix = "create_neighbor_index"
+        job_name = f"{prefix}_{utm_zone}"
 
-    jobscript = ConfigurableJobscript(
-        jobscript_name_prefix=prefix,
-        jobscript_dir=jobscript_dir,
-        sbatch_options=[
-            "--nodes 1",
-            "--ntasks 2",
-            "--mem=10G",
-            "--time 40:00:00",
-            "--partition=batch",
-            f"--job-name {job_name}",
-            f"--output {log_dir}/%x.o%j",
-            f"--error {log_dir}/%x.o%j",
-        ],
-        conda_env_name="earthdem-mosaic",
-        command_to_run=cmd,
-    )
+        jobscript = ConfigurableJobscript(
+            jobscript_name_prefix=prefix,
+            jobscript_dir=jobscript_dir,
+            sbatch_options=[
+                "--nodes 1",
+                "--ntasks 2",
+                "--mem=10G",
+                "--time 40:00:00",
+                "--partition=batch",
+                f"--job-name {job_name}",
+                f"--output {log_dir}/%x.o%j",
+                f"--error {log_dir}/%x.o%j",
+            ],
+            conda_env_name="earthdem-mosaic",
+            command_to_run=cmd,
+        )
 
-    if show_jobscript:
-        print(jobscript.content())
-        return
+        if show_jobscript:
+            print(jobscript.content())
+            return
 
-    if slurm:
-        print(f"Writing jobscript to: {jobscript.path}")
-        jobscript.write()
-        print(f"Submitting {jobscript.path.name} to queue")
-        jobscript.submit()
+        if slurm:
+            tile_index.parent.mkdir(exist_ok=True, parents=True)
+            print(f"Writing jobscript to: {jobscript.path}")
+            jobscript.write()
+            print(f"Submitting {jobscript.path.name} to queue")
+            jobscript.submit()
+
+    tile_index.parent.mkdir(exist_ok=True, parents=True)
+    subprocess.run(shlex.split(cmd), check=True)
