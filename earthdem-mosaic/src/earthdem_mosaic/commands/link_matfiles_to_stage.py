@@ -1,4 +1,5 @@
 import os
+import shutil
 from pathlib import Path
 
 import click
@@ -33,32 +34,47 @@ from earthdem_mosaic.commands._utils import EXISTING_DIR
     type=str,
     required=False,
 )
+@click.option(
+    "--link/--copy",
+    default=True,
+    help="Choice between hardlink or full copy",
+    show_default=True,
+)
 @click.option("-v", "--verbose", is_flag=True)
+@click.option("--dryrun", is_flag=True, help="Print actions without executing")
 def link_files_to_stage(
     src: Path,
     dst: Path,
     src_suffix: str,
     dst_suffix: str,
+    link: bool,
     verbose: bool,
+    dryrun: bool,
 ) -> None:
-    """Create hardlinks for files in one stage to the coresponding location in another
-    stage. Optionally replace the suffix of the destination file during linking.
+    """Create hardlinks (or full copies with --copy) for files in one stage to the
+    coresponding location in another stage. Optionally replace the suffix of the
+    destination file.
     """
     click.echo(
         f"Searching {src} for files with suffix: {src_suffix}",
     )
-    matfiles = src.glob(pattern=f"**/*{src_suffix}")
+    src_files = src.glob(pattern=f"**/*{src_suffix}")
 
-    for matfile in matfiles:
-        dst_str_path = str(matfile).replace(str(src), str(dst))
+    for src_file in src_files:
+        dst_str_path = str(src_file).replace(str(src), str(dst))
         if dst_suffix:
             dst_str_path = dst_str_path.replace(src_suffix, dst_suffix)
 
-        destination = Path(dst_str_path)
-        destination.parent.mkdir(parents=True, exist_ok=True)
+        dst_file = Path(dst_str_path)
+        dst_file.parent.mkdir(parents=True, exist_ok=True)
 
-        click.echo(f"cp --link {matfile} {destination}") if verbose else None
-        os.link(src=matfile, dst=destination)
+        if dryrun or verbose:
+            click.echo(f"cp --link {src_file} {dst_file}")
+        if not dryrun:
+            if link:
+                os.link(src=src_file, dst=dst_file)
+            else:
+                shutil.copy2(src=src_file, dst=dst_file)
 
     click.echo(f"Matched files linked to: {dst}")
     if dst_suffix:
