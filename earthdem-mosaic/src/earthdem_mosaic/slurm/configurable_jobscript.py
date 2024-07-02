@@ -36,14 +36,14 @@ echo Working directory: "$SLURM_SUBMIT_DIR"
 echo ________________________________________________________
 echo
 
-cd "$SLURM_SUBMIT_DIR" || exit
+cd "$SLURM_SUBMIT_DIR"
 
 source "$HOME/.bashrc"; conda activate {conda_env_name}
 
-COMMAND='{command_to_run}'
+COMMAND={command_to_run}
 
-echo "$COMMAND"
-time eval "$COMMAND"
+echo $COMMAND
+time eval $COMMAND
 """
 
 

@@ -101,6 +101,7 @@ def create_neighbor_index(
             jobscript.write()
             print(f"Submitting {jobscript.path.name} to queue")
             jobscript.submit()
+            return
 
     tile_index.parent.mkdir(exist_ok=True, parents=True)
     subprocess.run(shlex.split(cmd), check=True)

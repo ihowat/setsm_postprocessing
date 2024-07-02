@@ -1,9 +1,11 @@
 from .create_neighbor_index import create_neighbor_index
 from .create_working_dirs import create_working_dirs
+from .link_final_products import link_final_products
 from .link_matfiles_to_stage import link_files_to_stage
 from .link_source_matfiles import link_source_matfiles
 from .mosaic_outputs import mosaic_outputs
 from .show_settings import show_settings
+from .slope_filter_review import slope_filter_review
 from .wrap_batch_merge_tile_buffer import merge_buffers
 from .wrap_batch_register_tiles import (
     coreg_matfiles,
@@ -23,4 +25,6 @@ COMMANDS = [
     create_neighbor_index,
     merge_buffers,
     export_final_tifs,
+    slope_filter_review,
+    link_final_products,
 ]

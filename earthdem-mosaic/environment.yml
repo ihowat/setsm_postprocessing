@@ -6,6 +6,7 @@ dependencies:
   - python=3.11
   - click
   - pydantic-settings
+  - rasterio
   - pip
   - pip:
       - -e .

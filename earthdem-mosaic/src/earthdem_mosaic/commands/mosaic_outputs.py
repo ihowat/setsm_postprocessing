@@ -5,7 +5,6 @@ from pathlib import Path
 import click
 
 from earthdem_mosaic.commands._utils import EXISTING_DIR
-from earthdem_mosaic.config import Settings
 
 
 @click.command(short_help="Combine output TIFs into a mosaic")

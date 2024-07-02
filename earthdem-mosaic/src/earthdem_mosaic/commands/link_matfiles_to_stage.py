@@ -69,7 +69,13 @@ def link_files_to_stage(
         dst_file.parent.mkdir(parents=True, exist_ok=True)
 
         if dryrun or verbose:
-            click.echo(f"cp --link {src_file} {dst_file}")
+            mock_cmd = [
+                "cp",
+                "--link" if link else "",
+                f"{src_file}",
+                f"{dst_file}",
+            ]
+            click.echo(" ".join(mock_cmd))
         if not dryrun:
             if link:
                 os.link(src=src_file, dst=dst_file)

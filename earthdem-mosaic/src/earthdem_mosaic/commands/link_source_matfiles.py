@@ -9,9 +9,12 @@ from earthdem_mosaic.utm_zone import UtmZone
 
 @click.command(short_help="Hardlink source matfiles to working directory")
 @click.option("-v", "--verbose", is_flag=True)
+@click.option("--dryrun", is_flag=True, help="Print actions without executing")
 @click.argument("utm_zone", nargs=1, type=UtmZone)
 @click.pass_obj
-def link_source_matfiles(settings: Settings, verbose: bool, utm_zone: UtmZone) -> None:
+def link_source_matfiles(
+    settings: Settings, verbose: bool, dryrun: bool, utm_zone: UtmZone
+) -> None:
     """Hardlink the 2m .mat files from Settings.MATFILE_SOURCE_DIR to the 00-matfiles
     working directory of the UTM zone.
 
@@ -33,10 +36,13 @@ def link_source_matfiles(settings: Settings, verbose: bool, utm_zone: UtmZone) -
         dst_matfile = Path(
             str(src_matfile).replace(str(src_supertiles_dir), str(dst_supertiles_dir)),
         )
-        dst_matfile.parent.mkdir(parents=True, exist_ok=True)
 
-        click.echo(f"cp --link {src_matfile} {dst_matfile}") if verbose else None
-        os.link(src=src_matfile, dst=dst_matfile)
+        if not dst_matfile.exists():
+            if verbose or dryrun:
+                click.echo(f"cp --link {src_matfile} {dst_matfile}")
+            if not dryrun:
+                dst_matfile.parent.mkdir(parents=True, exist_ok=True)
+                os.link(src=src_matfile, dst=dst_matfile)
 
         # Most, but not necessarily all, matfiles will have an adjacent .fin file
         # Matfile processing scripts check for these .fin files and output warnings
@@ -44,5 +50,9 @@ def link_source_matfiles(settings: Settings, verbose: bool, utm_zone: UtmZone) -
         src_finfile = src_matfile.with_suffix(".fin")
         if src_finfile.exists():
             dst_finfile = dst_matfile.with_suffix(".fin")
-            click.echo(f"cp --link {src_finfile} {dst_finfile}") if verbose else None
-            os.link(src=src_finfile, dst=dst_finfile)
+            if not dst_finfile.exists():
+                if verbose or dryrun:
+                    click.echo(f"cp --link {src_finfile} {dst_finfile}")
+                if not dryrun:
+                    dst_finfile.parent.mkdir(parents=True, exist_ok=True)
+                    os.link(src=src_finfile, dst=dst_finfile)

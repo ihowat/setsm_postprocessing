@@ -151,7 +151,6 @@ def _export_tif_base_cmd(
             "--register-to-ref none",
             "--add-sea-surface-height false",
             "--use-final-qc-mask false",
-            "--keep-old-results output-set",
             "--tile-org pgc",
             "--process-by tile-file",
             f"--matlib {settings.SETSM_POSTPROCESSING_MATLAB_DIR}",
@@ -172,6 +171,11 @@ def _export_tif_base_cmd(
     is_flag=True,
     help="Apply slope filter before exporting TIFs",
 )
+@click.option(
+    "--rerun",
+    is_flag=True,
+    help="Remove existing outputs before running",
+)
 @click.argument("utm_zone", nargs=1, type=UtmZone)
 @click.argument(
     "tiles",
@@ -185,6 +189,7 @@ def export_final_tifs(
     dryrun: bool,
     show_command: bool,
     apply_slope_filter: bool,
+    rerun: bool,
     utm_zone: UtmZone,
     tiles: Path,
 ) -> None:
@@ -201,6 +206,10 @@ def export_final_tifs(
         tiledir=tiledir,
         apply_slope_filter=apply_slope_filter,
     )
+    if rerun:
+        cmd = "\n\t".join([cmd, "--rerun"])
+    else:
+        cmd = "\n\t".join([cmd, "--keep-old-results output-set"])
     if slurm:
         cmd = "\n\t".join([cmd, _slurm_options(settings)])
     if dryrun:

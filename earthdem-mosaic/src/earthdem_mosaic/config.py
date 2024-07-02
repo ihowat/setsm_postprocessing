@@ -4,17 +4,27 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    # Source and reference data
     MATFILE_SOURCE_DIR: Path
-    LANDCOVER_DIR: Path
-    REFERENCE_DEM_DIR: Path
+    """Directory of matfiles output from batch_mosaicSubTiles.py"""
 
-    # Location of scripts called by this project
+    LANDCOVER_DIR: Path
+    """Directory of pre-tiled ESA WorldCover TIFs"""
+
+    REFERENCE_DEM_DIR: Path
+    """Directory of pre-tiled Copernicus 30m TIFs"""
+
+    FINAL_PRODUCTS_DIR: Path
+    """Directory to save final production artifacts"""
+
     SETSM_POSTPROCESSING_PYTHON_DIR: Path
+    """Directory of Python batch processing scripts wrapping matlab algorithms"""
+
     SETSM_POSTPROCESSING_MATLAB_DIR: Path
+    """Directory of matlab algorithms"""
 
     # Working directories
     WORKING_ZONES_DIR: Path
+    """Directory of in process UTM Zones"""
 
     # Configure automatic discovery and loading of settings from env file
     # The prefix must be included in the entries in the env file. Example:

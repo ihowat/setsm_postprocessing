@@ -14,11 +14,11 @@ from earthdem_mosaic.commands._utils import EXISTING_DIR
 @click.argument("src_nodata", nargs=1, type=int)
 @click.option("--resampling-method", type=str, default="bilinear", show_default=True)
 def mosaic_outputs(
-        stage_dir: Path,
-        suffix: str,
-        tif_resolution: int,
-        src_nodata: int,
-        resampling_method: str,
+    stage_dir: Path,
+    suffix: str,
+    tif_resolution: int,
+    src_nodata: int,
+    resampling_method: str,
 ) -> None:
     """Create a mosaics of all TIFs in a stage directory with the same suffix.
 

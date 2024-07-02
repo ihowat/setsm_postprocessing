@@ -6,9 +6,12 @@ from earthdem_mosaic.utm_zone import UtmZone
 
 @click.command()
 @click.option("-v", "--verbose", is_flag=True)
+@click.option("--dryrun", is_flag=True, help="Print actions without executing")
 @click.argument("utm_zone", nargs=1, type=UtmZone)
 @click.pass_obj
-def create_working_dirs(settings: Settings, verbose: bool, utm_zone: UtmZone) -> None:
+def create_working_dirs(
+    settings: Settings, verbose: bool, dryrun: bool, utm_zone: UtmZone
+) -> None:
     """Create working directories for a UTM zone"""
     zone_dir = settings.WORKING_ZONES_DIR / str(utm_zone)
     stage_dirs = [
@@ -18,15 +21,19 @@ def create_working_dirs(settings: Settings, verbose: bool, utm_zone: UtmZone) ->
         zone_dir / "30-yes-slope-filter",
     ]
 
-    click.echo(f"Creating directory: {zone_dir}") if verbose else None
-    zone_dir.mkdir(exist_ok=True)
+    if verbose or dryrun:
+        click.echo(f"Creating directory: {zone_dir}")
+    if not dryrun:
+        zone_dir.mkdir(exist_ok=True)
 
     # create the stage directory itself and a 'logs' subdirectory
     for stage_dir in stage_dirs:
-        click.echo(f"Creating directory: {stage_dir}") if verbose else None
-        click.echo(f"Creating directory: {stage_dir / 'logs'}") if verbose else None
+        if verbose or dryrun:
+            click.echo(f"Creating directory: {stage_dir}")
+            click.echo(f"Creating directory: {stage_dir / 'logs'}")
 
-        stage_dir.mkdir(exist_ok=True)
-        (stage_dir / "logs").mkdir(exist_ok=True)
+        if not dryrun:
+            stage_dir.mkdir(exist_ok=True)
+            (stage_dir / "logs").mkdir(exist_ok=True)
 
     click.echo(f"Working directories created at: {zone_dir}")
