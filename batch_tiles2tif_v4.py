@@ -517,6 +517,7 @@ def main():
             fp_countmt  = '{}_countmt.tif'.format(tile_rootpath)
             fp_mindate  = '{}_mindate.tif'.format(tile_rootpath)
             fp_maxdate  = '{}_maxdate.tif'.format(tile_rootpath)
+            fp_datamask = '{}_datamask.tif'.format(tile_rootpath)
 
             coreg_debug_offset = '{}_dem_debug-reg_{}_offset.tif'.format(tile_rootpath, script_args.register_to_ref)
             coreg_debug_dem = '{}_dem_debug-reg_{}.tif'.format(tile_rootpath, script_args.register_to_ref)
@@ -532,7 +533,7 @@ def main():
 
             else:
                 output_set_results_files_dict = {
-                    'full':         [metafp, demfp, browsefp, fp_mad, fp_count, fp_countmt, fp_mindate, fp_maxdate],
+                    'full':         [metafp, demfp, browsefp, fp_mad, fp_count, fp_countmt, fp_mindate, fp_maxdate, fp_datamask],
                     'dem-browse':   [metafp, demfp, browsefp],
                     'dem':          [metafp, demfp],
                     'browse':       [metafp, browsefp],
