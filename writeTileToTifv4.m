@@ -545,6 +545,8 @@ if ~all(cellfun(@isempty, masks_array))
     end
 end
 
+datamask = ~(isnan(z) | bad_data_or_filled_mask);
+
 filled_mask = zeros(length(y), length(x), 'logical');
 filled_masks_array = {
     water_fill_mask,
@@ -558,7 +560,6 @@ if ~all(cellfun(@isempty, filled_masks_array))
         end
     end
 end
-datamask = ~filled_mask;
 clear filled_mask;
 
 
