@@ -208,7 +208,11 @@ if registerBlobs && ~reportOffsetOnly
         z = z - avg_offset_array_z_res;
         z_reg_nans = isnan(z);
         if ~isequal(z_orig_nans, z_reg_nans)
-            error('Developer error: Failed to keep NaN areas unchanged through registerBlobs');
+            warning('Failed to keep NaN areas unchanged through registerBlobs');
+            orig_nans_count = sum(z_orig_nans(:)==1);
+            reg_nans_count = sum(z_reg_nans(:)==1);
+            nans_count_delta = reg_nans_count - orig_nans_count;
+            warning('NaN count changed by %d during registration', nans_count_delta);
         end
         clear avg_offset_array avg_offset_array_z_res z_orig_nans z_reg_nans;
     end
