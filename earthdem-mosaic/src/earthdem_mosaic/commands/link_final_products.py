@@ -1,4 +1,5 @@
 import os
+import shutil
 from enum import StrEnum
 from pathlib import Path
 
@@ -46,10 +47,29 @@ def all_tiles_reviewed(gdf: GeoDataFrame) -> bool:
     return gdf["reviewed"].all()
 
 
-def hardlink(src: Path, dst: Path) -> None:
+def hardlink_file(src: Path, dst: Path) -> None:
+    """Create a hardlink from src to dst, overwriting dst if it exists."""
     dst.unlink() if dst.exists() else None
     dst.parent.mkdir(exist_ok=True, parents=True)
     os.link(src=src, dst=dst)
+
+
+def hardlink_tree(src: Path, dst: Path) -> None:
+    """Create hardlinks for a directory (src) and its contents to dst. Does not
+    overwrite dst files if they already exist.
+    """
+    if not src.exists():
+        raise FileExistsError(f"{src} does not exist")
+    if not src.is_dir():
+        raise NotADirectoryError(f"{src} is not a directory")
+    if dst.exists() and not dst.is_dir():
+        raise NotADirectoryError(f"{dst} is not a directory")
+
+    try:
+        shutil.copytree(src, dst, copy_function=os.link)
+    except FileExistsError:
+        # Do not overwrite existing destination files
+        pass
 
 
 @click.command(short_help="Hardlink selected tiles to the final products directory.")
@@ -60,12 +80,12 @@ def hardlink(src: Path, dst: Path) -> None:
 @click.argument("skipreg-shapefile", nargs=1, type=EXISTING_FILE)
 @click.pass_obj
 def link_final_products(
-    settings: Settings,
-    verbose: bool,
-    dryrun: bool,
-    utm_zone: UtmZone,
-    slope_filter_review: Path,
-    skipreg_shapefile: Path,
+        settings: Settings,
+        verbose: bool,
+        dryrun: bool,
+        utm_zone: UtmZone,
+        slope_filter_review: Path,
+        skipreg_shapefile: Path,
 ) -> None:
     """Move the final matfiles and TIFs to the directory set in the
     EARTHDEM_MOSAIC_FINAL_PRODUCTS_DIR environment variable.
@@ -95,13 +115,21 @@ def link_final_products(
                 click.echo(f"Source file not found: {src}")
                 continue
             dst = (
-                settings.FINAL_PRODUCTS_DIR / f"{utm_zone}" / src.parent.name / src.name
+                    settings.FINAL_PRODUCTS_DIR / f"{utm_zone}" / src.parent.name / src.name
             )
             if dryrun or verbose:
                 click.echo(f"rm {dst}") if dst.exists() else None
                 click.echo(f"cp --link {src} {dst}")
             if not dryrun:
-                hardlink(src, dst)
+                hardlink_file(src, dst)
+
+    click.echo("Linking processing_logs to final products directory")
+    src = settings.WORKING_ZONES_DIR / f"{utm_zone}" / "processing_logs"
+    dst = settings.FINAL_PRODUCTS_DIR / f"{utm_zone}" / "processing_logs"
+    if dryrun or verbose:
+        click.echo(f"cp -R --link {src} {dst}")
+    if not dryrun:
+        hardlink_tree(src, dst)
 
     click.echo("Linking SLOPE_FILTER_REVIEW file to final products directory")
     src = slope_filter_review
@@ -110,7 +138,7 @@ def link_final_products(
         click.echo(f"rm {dst}") if dst.exists() else None
         click.echo(f"cp --link {src} {dst}")
     if not dryrun:
-        hardlink(src, dst)
+        hardlink_file(src, dst)
 
     click.echo("Linking SKIPREG_SHAPEFILE files to final products directory")
     shapefile_parts = skipreg_shapefile.parent.glob(f"{skipreg_shapefile.stem}.*")
@@ -120,4 +148,4 @@ def link_final_products(
             click.echo(f"rm {dst}") if dst.exists() else None
             click.echo(f"cp --link {src} {dst}")
         if not dryrun:
-            hardlink(src, dst)
+            hardlink_file(src, dst)
