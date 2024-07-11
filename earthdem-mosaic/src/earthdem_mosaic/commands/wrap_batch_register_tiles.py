@@ -103,33 +103,22 @@ def coreg_matfiles(
     """Apply coregistration to the matfiles directly to produce '_reg.mat' versions of
     the tiles.
     """
-    REG_METHOD = "cop30"
-    JOB_NAME_PREFIX = "reg<resolution>m"
+    reg_method = "cop30"
+    job_name_prefix = "reg<resolution>m"
     cmd = _base_cmd(
-        settings=settings, tiles=tiles, utm_zone=utm_zone, reg_method=REG_METHOD
+        settings=settings, tiles=tiles, utm_zone=utm_zone, reg_method=reg_method
     )
     if skipreg_shp:
         cmd = "\n\t".join([cmd, _skipreg_option(skipreg_shp)])
     if slurm:
         cmd = "\n\t".join(
-            [cmd, _slurm_options(settings=settings, job_name_prefix=JOB_NAME_PREFIX)]
+            [cmd, _slurm_options(settings=settings, job_name_prefix=job_name_prefix)]
         )
     if dryrun:
         cmd = "\n\t".join([cmd, _dryrun_option()])
     if show_command:
         print(cmd)
         return
-
-    # TODO: Log the command and its output to a log file in the {stage}/logs directory
-    log = (
-        settings.WORKING_ZONES_DIR
-        / f"{utm_zone}"
-        / "00-matfiles"
-        / "logs"
-        / "coreg_matifiles.log"
-    )
-    if not log.exists():
-        log.touch()
 
     subprocess.run(shlex.split(cmd), check=True)
 
@@ -160,30 +149,19 @@ def water_flatten_matfiles(
     """Apply water flattening to the matfiles directly to produce '_reg_fill.mat'
     versions of the tiles.
     """
-    REG_METHOD = "fillWater"
-    JOB_NAME_PREFIX = "fill<resolution>m"
+    reg_method = "fillWater"
+    job_name_prefix = "reg<resolution>m"
     cmd = _base_cmd(
-        settings=settings, tiles=tiles, utm_zone=utm_zone, reg_method=REG_METHOD
+        settings=settings, tiles=tiles, utm_zone=utm_zone, reg_method=reg_method
     )
     if slurm:
         cmd = "\n\t".join(
-            [cmd, _slurm_options(settings=settings, job_name_prefix=JOB_NAME_PREFIX)]
+            [cmd, _slurm_options(settings=settings, job_name_prefix=job_name_prefix)]
         )
     if dryrun:
         cmd = "\n\t".join([cmd, _dryrun_option()])
     if show_command:
         print(cmd)
         return
-
-    # TODO: Log the command and its output to a log file in the {stage}/logs directory
-    log = (
-        settings.WORKING_ZONES_DIR
-        / f"{utm_zone}"
-        / "00-matfiles"
-        / "logs"
-        / "water_flatten_matifiles.log"
-    )
-    if not log.exists():
-        log.touch()
 
     subprocess.run(shlex.split(cmd), check=True)

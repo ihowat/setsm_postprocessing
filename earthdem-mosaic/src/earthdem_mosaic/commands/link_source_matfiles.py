@@ -38,7 +38,7 @@ def link_source_matfiles(
         )
 
         if not dst_matfile.exists():
-            if verbose or dryrun:
+            if verbose:
                 click.echo(f"cp --link {src_matfile} {dst_matfile}")
             if not dryrun:
                 dst_matfile.parent.mkdir(parents=True, exist_ok=True)
@@ -51,7 +51,7 @@ def link_source_matfiles(
         if src_finfile.exists():
             dst_finfile = dst_matfile.with_suffix(".fin")
             if not dst_finfile.exists():
-                if verbose or dryrun:
+                if verbose:
                     click.echo(f"cp --link {src_finfile} {dst_finfile}")
                 if not dryrun:
                     dst_finfile.parent.mkdir(parents=True, exist_ok=True)

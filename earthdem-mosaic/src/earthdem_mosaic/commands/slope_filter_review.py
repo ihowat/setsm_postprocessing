@@ -130,7 +130,11 @@ def slope_filter_review(settings: Settings, verbose: bool, utm_zone: UtmZone) ->
     # Add review fields with default values
     gdf["reviewed"] = False
     gdf["skip_slope_filter"] = False
-    gdf["exclude_tile"] = False
+
+    EXCLUDE_TILE_THRESHOLD = 70.0  # percent
+    gdf["exclude_tile"] = (
+        gdf["nodata_percent_yes_slope_filter"] > EXCLUDE_TILE_THRESHOLD
+    )
 
     # Reorder fields and sort rows by quartertile name
     gdf = gdf[

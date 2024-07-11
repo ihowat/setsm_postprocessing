@@ -48,7 +48,7 @@ def _dryrun_option() -> str:
     return "--dryrun"
 
 
-def _slurm_options(settings: Settings) -> str:
+def _slurm_options(settings: Settings, job_name_prefix: str) -> str:
     job_config_file = (
         settings.SETSM_POSTPROCESSING_PYTHON_DIR / "lib/jobscript_config.ini"
     )
@@ -61,7 +61,7 @@ def _slurm_options(settings: Settings) -> str:
             "--slurm",
             f"--job-config-file {job_config_file}",
             f"--job-script '{job_script}'",
-            "--job-name-prefix 't2t<resolution>m'",
+            f"--job-name-prefix '{job_name_prefix}'",
             "--job-ncpus 2",
             "--job-mem 99",
             "--job-walltime 4",
@@ -97,25 +97,18 @@ def coreg_debug(
     tiles: Path,
 ) -> None:
     """Produce coregistered DEMs and offset TIFs for review."""
+    job_name_prefix = "t2t_coreg_debug"
+
     cmd = _coreg_debug_base_cmd(settings=settings, tiles=tiles, utm_zone=utm_zone)
     if slurm:
-        cmd = "\n\t".join([cmd, _slurm_options(settings)])
+        cmd = "\n\t".join(
+            [cmd, _slurm_options(settings=settings, job_name_prefix=job_name_prefix)]
+        )
     if dryrun:
         cmd = "\n\t".join([cmd, _dryrun_option()])
     if show_command:
         print(cmd)
         return
-
-    # TODO: Log the command and its output to a log file in the {stage}/logs directory
-    log = (
-        settings.WORKING_ZONES_DIR
-        / f"{utm_zone}"
-        / "10-coregistration-debug"
-        / "logs"
-        / "coreg_debug.log"
-    )
-    if not log.exists():
-        log.touch()
 
     subprocess.run(shlex.split(cmd), check=True)
 
@@ -195,8 +188,10 @@ def export_final_tifs(
 ) -> None:
     """Export final TIFs with or without slope filtering"""
     if not apply_slope_filter:
+        job_name_prefix = "t2t_no_slope_filter"
         tiledir = settings.WORKING_ZONES_DIR / str(utm_zone) / "20-no-slope-filter"
     else:
+        job_name_prefix = "t2t_yes_slope_filter"
         tiledir = settings.WORKING_ZONES_DIR / str(utm_zone) / "30-yes-slope-filter"
 
     cmd = _export_tif_base_cmd(
@@ -211,22 +206,13 @@ def export_final_tifs(
     else:
         cmd = "\n\t".join([cmd, "--keep-old-results output-set"])
     if slurm:
-        cmd = "\n\t".join([cmd, _slurm_options(settings)])
+        cmd = "\n\t".join(
+            [cmd, _slurm_options(settings=settings, job_name_prefix=job_name_prefix)]
+        )
     if dryrun:
         cmd = "\n\t".join([cmd, _dryrun_option()])
     if show_command:
         print(cmd)
         return
-
-    # TODO: Log the command and its output to a log file in the {stage}/logs directory
-    log = (
-        settings.WORKING_ZONES_DIR
-        / f"{utm_zone}"
-        / "10-coregistration-debug"
-        / "logs"
-        / "export_final_tifs.log"
-    )
-    if not log.exists():
-        log.touch()
 
     subprocess.run(shlex.split(cmd), check=True)

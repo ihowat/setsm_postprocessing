@@ -98,15 +98,4 @@ def merge_buffers(
         print(cmd)
         return
 
-    # TODO: Log the command and its output to a log file in the {stage}/logs directory
-    log = (
-        settings.WORKING_ZONES_DIR
-        / f"{utm_zone}"
-        / "00-matfiles"
-        / "logs"
-        / "merge_tile_buffers.log"
-    )
-    if not log.exists():
-        log.touch()
-
     subprocess.run(shlex.split(cmd), check=True)

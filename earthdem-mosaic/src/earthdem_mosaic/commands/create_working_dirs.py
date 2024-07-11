@@ -22,15 +22,15 @@ def create_working_dirs(
         zone_dir / "processing_logs",
     ]
 
-    if verbose or dryrun:
+    if verbose:
         click.echo(f"Creating directory: {zone_dir}")
     if not dryrun:
         zone_dir.mkdir(exist_ok=True)
 
     # create the stage directory itself and a 'logs' subdirectory
     for dir in subdirectories:
-        if verbose or dryrun:
-            click.echo(f"Creating directory: {subdirectories}")
+        if verbose:
+            click.echo(f"Creating directory: {dir}")
         if not dryrun:
             dir.mkdir(exist_ok=True)
 
