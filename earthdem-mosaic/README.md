@@ -50,8 +50,7 @@ earthdem-mosaic link-source-matfiles $UTM_ZONE --verbose
 
 Create a line-delimited list of supertiles to process:
 ```shell
-# Run from the 00-matfiles stage directory
-find -maxdepth 1 -type d -name "utm*" | sed "s|./||" > ../all_supertiles.txt
+find ./00-matfiles/ -maxdepth 1 -type d -name "utm*" | sed "s|./00-matfiles/||" | sort > ./all_supertiles.txt
 ```
 
 ## Review coregistration offsets
@@ -162,27 +161,19 @@ earthdem-mosaic merge-buffers $UTM_ZONE ./all_supertiles.txt column --slurm --dr
 earthdem-mosaic merge-buffers $UTM_ZONE ./all_supertiles.txt column --slurm
 ```
 
-## Create final products without applying the slope filter
+## Create final products
 
-Link the `_reg_fill_merge.mat` file to the `20-no-slope-filter` & `30-yes-slope-filter` directory, renaming the 
-destination files to exclude the `_reg_fill_merge` part of the file name. Link the `.fin` files from `00-matfiles` to
-the destination folders as well
+Link the `_reg_fill_merge.mat` file to the stage directory (`20-no-slope-filter` or `30-yes-slope-filter`), renaming the 
+destination files to exclude the `_reg_fill_merge` part of the file name. Link the `.fin` files from `00-matfiles` to 
+the destination folders as well. Then submit the TIF creation process to the cluster.
+
+### No slope filter
 
 ```shell
 # Link files to the 20-no-slope-filter directory
 earthdem-mosaic link-files-to-stage --src 00-matfiles/ --dst 20-no-slope-filter/ --src-suffix _reg_fill_merge.mat --dst-suffix .mat
 earthdem-mosaic link-files-to-stage --src 00-matfiles/ --dst 20-no-slope-filter/ --src-suffix .fin
 
-# Link files to the 30-yes-slope-filter directory
-earthdem-mosaic link-files-to-stage --src 00-matfiles/ --dst 30-yes-slope-filter/ --src-suffix _reg_fill_merge.mat --dst-suffix .mat
-earthdem-mosaic link-files-to-stage --src 00-matfiles/ --dst 30-yes-slope-filter/ --src-suffix .fin
-```
-
-Export the final products twice, once without the slope filter and once with it. 
-
-First, without the slope filter:
-
-```shell
 # Inspect the generated command
 earthdem-mosaic export-final-tifs $UTM_ZONE ./all_supertiles.txt --slurm --dryrun --show-command
 # Preform a dryrun
@@ -191,9 +182,13 @@ earthdem-mosaic export-final-tifs $UTM_ZONE ./all_supertiles.txt --slurm --dryru
 earthdem-mosaic export-final-tifs $UTM_ZONE ./all_supertiles.txt --slurm
 ```
 
-Then with the slope filter applied:
+### Yes slope filter
 
 ```shell
+# Link files to the 30-yes-slope-filter directory
+earthdem-mosaic link-files-to-stage --src 00-matfiles/ --dst 30-yes-slope-filter/ --src-suffix _reg_fill_merge.mat --dst-suffix .mat
+earthdem-mosaic link-files-to-stage --src 00-matfiles/ --dst 30-yes-slope-filter/ --src-suffix .fin
+
 # Inspect the generated command
 earthdem-mosaic export-final-tifs $UTM_ZONE ./all_supertiles.txt --apply-slope-filter --slurm --dryrun --show-command
 # Preform a dryrun
@@ -204,7 +199,7 @@ earthdem-mosaic export-final-tifs $UTM_ZONE ./all_supertiles.txt --apply-slope-f
 
 ## Review slope filter
 
-Create the slope filter review products: VRT mosaics of the _browse.tif files and the <UTM ZONE>_slope_filter_review.gpkg
+Create VRT mosaics of the `*_browse.tif` files:
 
 ```shell
 # Run from within the 20-no-slope-filter directory
@@ -212,7 +207,11 @@ gdalbuildvrt ./20-no-slope-filter_browse.vrt $(find -type f -name "*_browse.tif"
 
 # Run from within the 30-yes-slope-filter directory
 gdalbuildvrt ./30-yes-slope-filter_browse.vrt $(find -type f -name "*_browse.tif" | paste -sd " ")
+```
 
+Create the slope filter review geopackage:
+
+```shell
 earthdem-mosaic slope-filter-review $UTM_ZONE --verbose
 ```
 
