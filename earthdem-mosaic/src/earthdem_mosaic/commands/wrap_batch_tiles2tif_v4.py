@@ -48,13 +48,14 @@ def _dryrun_option() -> str:
     return "--dryrun"
 
 
-def _slurm_options(settings: Settings, job_name_prefix: str) -> str:
+def _slurm_options(settings: Settings, job_name_prefix: str, utm_zone: UtmZone) -> str:
     job_config_file = (
         settings.SETSM_POSTPROCESSING_PYTHON_DIR / "lib/jobscript_config.ini"
     )
     job_script = (
         settings.SETSM_POSTPROCESSING_PYTHON_DIR / "lib/jobscript_<scheduler>.sh"
     )
+    job_log_dir = settings.WORKING_ZONES_DIR / f"{utm_zone}" / "processing_logs"
 
     return "\n\t".join(
         [
@@ -62,6 +63,7 @@ def _slurm_options(settings: Settings, job_name_prefix: str) -> str:
             f"--job-config-file {job_config_file}",
             f"--job-script '{job_script}'",
             f"--job-name-prefix '{job_name_prefix}'",
+            f"--job-log-dir {job_log_dir}",
             "--job-ncpus 2",
             "--job-mem 99",
             "--job-walltime 4",
@@ -101,9 +103,10 @@ def coreg_debug(
 
     cmd = _coreg_debug_base_cmd(settings=settings, tiles=tiles, utm_zone=utm_zone)
     if slurm:
-        cmd = "\n\t".join(
-            [cmd, _slurm_options(settings=settings, job_name_prefix=job_name_prefix)]
+        slurm_options = _slurm_options(
+            settings=settings, job_name_prefix=job_name_prefix, utm_zone=utm_zone
         )
+        cmd = "\n\t".join([cmd, slurm_options])
     if dryrun:
         cmd = "\n\t".join([cmd, _dryrun_option()])
     if show_command:
@@ -206,9 +209,10 @@ def export_final_tifs(
     else:
         cmd = "\n\t".join([cmd, "--keep-old-results output-set"])
     if slurm:
-        cmd = "\n\t".join(
-            [cmd, _slurm_options(settings=settings, job_name_prefix=job_name_prefix)]
+        slurm_options = _slurm_options(
+            settings=settings, job_name_prefix=job_name_prefix, utm_zone=utm_zone
         )
+        cmd = "\n\t".join([cmd, slurm_options])
     if dryrun:
         cmd = "\n\t".join([cmd, _dryrun_option()])
     if show_command:

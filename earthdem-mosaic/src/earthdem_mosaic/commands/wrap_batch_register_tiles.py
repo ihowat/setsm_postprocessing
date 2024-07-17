@@ -45,13 +45,14 @@ def _dryrun_option() -> str:
     return "--dryrun"
 
 
-def _slurm_options(settings: Settings, job_name_prefix: str) -> str:
+def _slurm_options(settings: Settings, job_name_prefix: str, utm_zone: UtmZone) -> str:
     job_config_file = (
         settings.SETSM_POSTPROCESSING_PYTHON_DIR / "lib/jobscript_config.ini"
     )
     job_script = (
         settings.SETSM_POSTPROCESSING_PYTHON_DIR / "lib/jobscript_<scheduler>.sh"
     )
+    job_log_dir = settings.WORKING_ZONES_DIR / f"{utm_zone}" / "processing_logs"
 
     return "\n\t".join(
         [
@@ -60,6 +61,7 @@ def _slurm_options(settings: Settings, job_name_prefix: str) -> str:
             "--job-config-on",
             f"--job-script '{job_script}'",
             f"--job-name-prefix '{job_name_prefix}'",
+            f"--job-log-dir {job_log_dir}",
             "--job-ncpus 4",
             "--job-mem 200",
             "--job-walltime 48",
@@ -111,9 +113,10 @@ def coreg_matfiles(
     if skipreg_shp:
         cmd = "\n\t".join([cmd, _skipreg_option(skipreg_shp)])
     if slurm:
-        cmd = "\n\t".join(
-            [cmd, _slurm_options(settings=settings, job_name_prefix=job_name_prefix)]
+        slurm_options = _slurm_options(
+            settings=settings, job_name_prefix=job_name_prefix, utm_zone=utm_zone
         )
+        cmd = "\n\t".join([cmd, slurm_options])
     if dryrun:
         cmd = "\n\t".join([cmd, _dryrun_option()])
     if show_command:
@@ -155,9 +158,10 @@ def water_flatten_matfiles(
         settings=settings, tiles=tiles, utm_zone=utm_zone, reg_method=reg_method
     )
     if slurm:
-        cmd = "\n\t".join(
-            [cmd, _slurm_options(settings=settings, job_name_prefix=job_name_prefix)]
+        slurm_options = _slurm_options(
+            settings=settings, job_name_prefix=job_name_prefix, utm_zone=utm_zone
         )
+        cmd = "\n\t".join([cmd, slurm_options])
     if dryrun:
         cmd = "\n\t".join([cmd, _dryrun_option()])
     if show_command:

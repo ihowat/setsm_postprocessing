@@ -11,6 +11,7 @@ import time
 import warnings
 from collections import defaultdict
 from datetime import datetime
+import pathlib
 
 
 # Script paths
@@ -286,6 +287,14 @@ def argparse_add_job_scheduler_group(
         default=jobname_prefix,
         help="String prefix affixed to job names for sumitted jobs."
     )
+    group.add_argument(
+        '--job-log-dir',
+        type=pathlib.Path,
+        default=pathlib.Path.home(),
+        help=wrap_multiline_str("""
+            Directory to write slurm logs (combined stdout & stderr).
+        """)
+    )
 
     group.add_argument(
         '--job-ncpus',
@@ -485,8 +494,8 @@ def get_jobsubmit_cmd(
             '--mem {}G'.format(script_args.job_mem) if script_args.job_mem is not None else '',
             '--time {}:00:00'.format(script_args.job_walltime) if script_args.job_walltime is not None else '',
             '--export "{}"'.format(envvar_list_str) if envvar_list_str is not None else '',
-            '-o {}%x.o%j'.format(HOME_DIR),
-            '-e {}%x.o%j'.format(HOME_DIR),
+            f'-o {script_args.job_log_dir / "%x.o%j"}',
+            f'-e {script_args.job_log_dir / "%x.o%j"}',
             script_args.job_script
         ])
 
