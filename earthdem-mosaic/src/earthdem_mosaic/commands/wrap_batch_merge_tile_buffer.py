@@ -33,7 +33,7 @@ def _dryrun_option() -> str:
     return "--dryrun"
 
 
-def _slurm_options(settings: Settings, utm_zone: UtmZone) -> str:
+def _slurm_options(settings: Settings, utm_zone: UtmZone, job_name_prefix: str) -> str:
     job_config_file = (
         settings.SETSM_POSTPROCESSING_PYTHON_DIR / "lib/jobscript_config.ini"
     )
@@ -48,7 +48,7 @@ def _slurm_options(settings: Settings, utm_zone: UtmZone) -> str:
             f"--job-config-file {job_config_file}",
             "--job-config-on",
             f"--job-script '{job_script}'",
-            "--job-name-prefix 'mtb<resolution>m'",
+            f"--job-name-prefix '{job_name_prefix}'",
             f"--job-log-dir {job_log_dir}",
             "--job-ncpus 4",
             "--job-mem 200",
@@ -93,7 +93,11 @@ def merge_buffers(
     """Adjust overlapping tile buffers to merge adjacent tiles"""
     cmd = _base_cmd(settings=settings, tiles=tiles, utm_zone=utm_zone, axis=axis)
     if slurm:
-        cmd = "\n\t".join([cmd, _slurm_options(settings=settings, utm_zone=utm_zone)])
+        job_name_prefix = f"mtb_{axis}"
+        slurm_options = _slurm_options(
+            settings=settings, utm_zone=utm_zone, job_name_prefix=job_name_prefix
+        )
+        cmd = "\n\t".join([cmd, slurm_options])
     if dryrun:
         cmd = "\n\t".join([cmd, _dryrun_option()])
     if show_command:
