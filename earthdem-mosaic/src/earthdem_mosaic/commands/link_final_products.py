@@ -2,6 +2,7 @@ import os
 import shutil
 from enum import StrEnum
 from pathlib import Path
+from typing import Optional
 
 import click
 import geopandas
@@ -77,7 +78,7 @@ def hardlink_tree(src: Path, dst: Path) -> None:
 @click.option("--dryrun", is_flag=True, help="Print actions without executing")
 @click.argument("utm_zone", nargs=1, type=UtmZone)
 @click.argument("slope-filter-review", nargs=1, type=EXISTING_FILE)
-@click.argument("skipreg-shapefile", nargs=1, type=EXISTING_FILE)
+@click.argument("skipreg-shapefile", nargs=1, type=EXISTING_FILE, required=False)
 @click.pass_obj
 def link_final_products(
         settings: Settings,
@@ -85,7 +86,7 @@ def link_final_products(
         dryrun: bool,
         utm_zone: UtmZone,
         slope_filter_review: Path,
-        skipreg_shapefile: Path,
+        skipreg_shapefile: Optional[Path],
 ) -> None:
     """Move the final matfiles and TIFs to the directory set in the
     EARTHDEM_MOSAIC_FINAL_PRODUCTS_DIR environment variable.
@@ -140,12 +141,13 @@ def link_final_products(
     if not dryrun:
         hardlink_file(src, dst)
 
-    click.echo("Linking SKIPREG_SHAPEFILE files to final products directory")
-    shapefile_parts = skipreg_shapefile.parent.glob(f"{skipreg_shapefile.stem}.*")
-    for src in shapefile_parts:
-        dst = settings.FINAL_PRODUCTS_DIR / f"{utm_zone}" / src.name
-        if dryrun or verbose:
-            click.echo(f"rm {dst}") if dst.exists() else None
-            click.echo(f"cp --link {src} {dst}")
-        if not dryrun:
-            hardlink_file(src, dst)
+    if skipreg_shapefile:
+        click.echo("Linking SKIPREG_SHAPEFILE files to final products directory")
+        shapefile_parts = skipreg_shapefile.parent.glob(f"{skipreg_shapefile.stem}.*")
+        for src in shapefile_parts:
+            dst = settings.FINAL_PRODUCTS_DIR / f"{utm_zone}" / src.name
+            if dryrun or verbose:
+                click.echo(f"rm {dst}") if dst.exists() else None
+                click.echo(f"cp --link {src} {dst}")
+            if not dryrun:
+                hardlink_file(src, dst)
