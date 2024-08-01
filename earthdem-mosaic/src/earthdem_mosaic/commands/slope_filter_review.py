@@ -155,3 +155,5 @@ def slope_filter_review(settings: Settings, verbose: bool, utm_zone: UtmZone) ->
 
     print(f"Writing slope filter review features to: {review_features}")
     gdf.to_file(filename=review_features)
+    # Set the permissions of the slope_filter_review geopackage to -rw-rw-r--
+    review_features.chmod(0o664)
