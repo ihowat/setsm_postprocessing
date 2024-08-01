@@ -124,10 +124,10 @@ of the `_reg_fill.mat` files with the suffix `_reg_fill_merge.mat` and then oper
 
 ```shell
 # Preform a dryrun
-earthdem-mosaic link-files-to-stage --src 00-matfiles/ --dst 00-matfiles/ --src-suffix _reg_fill.mat --dst-suffix _reg_fill_merge.mat --copy --verbose --dryrun
+earthdem-mosaic link-files-to-stage --src 00-matfiles/ --dst 00-matfiles/ --src-suffix _reg_fill.mat --dst-suffix _reg_fill_merge.mat --verbose --dryrun
     
 # Copy the matfiles
-earthdem-mosaic link-files-to-stage --src 00-matfiles/ --dst 00-matfiles/ --src-suffix _reg_fill.mat --dst-suffix _reg_fill_merge.mat --copy --verbose
+earthdem-mosaic link-files-to-stage --src 00-matfiles/ --dst 00-matfiles/ --src-suffix _reg_fill.mat --dst-suffix _reg_fill_merge.mat --verbose
 ```
 
 Build the tile neighbor index. This will create a file at <UTM ZONE>/tile_index_files/tileNeighborIndex_2m.mat that is
