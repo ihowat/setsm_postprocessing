@@ -14,6 +14,13 @@ def wrap_with_try_catch(cmd: str) -> str:
 
 
 @click.command(short_help="Create matfile tile neighbor index")
+@click.option(
+    "--suffix",
+    type=str,
+    default="_reg_fill_merge.mat",
+    show_default=True,
+    help="File suffix of matfiles to index",
+)
 @click.option("--slurm", is_flag=True, help="Submit jobs to slurm cluster")
 @click.option(
     "--show-command",
@@ -29,6 +36,7 @@ def wrap_with_try_catch(cmd: str) -> str:
 @click.pass_obj
 def create_neighbor_index(
     settings: Settings,
+    suffix: str,
     slurm: bool,
     show_command: bool,
     show_jobscript: bool,
@@ -41,7 +49,7 @@ def create_neighbor_index(
         / "tile_index_files"
         / "tileNeighborIndex_2m.mat"
     )
-    priority_suffix = "_reg_fill_merge.mat"
+    priority_suffix = suffix
     # To prevent the backfill with files other than those matching the priority suffix,
     # pass a secondary suffix that won't match any files.
     secondary_suffix = "_match_nothing.mat"
