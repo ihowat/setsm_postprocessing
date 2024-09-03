@@ -1,8 +1,10 @@
+import itertools
 import os
 from pathlib import Path
 
 import click
 
+from earthdem_mosaic.commands._utils import EXISTING_FILE
 from earthdem_mosaic.config import Settings
 from earthdem_mosaic.utm_zone import UtmZone
 
@@ -10,10 +12,16 @@ from earthdem_mosaic.utm_zone import UtmZone
 @click.command(short_help="Hardlink source matfiles to working directory")
 @click.option("-v", "--verbose", is_flag=True)
 @click.option("--dryrun", is_flag=True, help="Print actions without executing")
+@click.option(
+    "--supertiles",
+    type=EXISTING_FILE,
+    required=False,
+    help="Text file list of supertiles (one supertile per line)",
+)
 @click.argument("utm_zone", nargs=1, type=UtmZone)
 @click.pass_obj
 def link_source_matfiles(
-    settings: Settings, verbose: bool, dryrun: bool, utm_zone: UtmZone
+    settings: Settings, verbose: bool, dryrun: bool, supertiles: Path, utm_zone: UtmZone
 ) -> None:
     """Hardlink the 2m .mat files from Settings.MATFILE_SOURCE_DIR to the 00-matfiles
     working directory of the UTM zone.
@@ -27,7 +35,17 @@ def link_source_matfiles(
     click.echo(
         f"Searching {settings.MATFILE_SOURCE_DIR} for files with suffix: _2m.mat",
     )
-    matfiles = settings.MATFILE_SOURCE_DIR.glob(pattern=f"**/{utm_zone}*_2m.mat")
+    if supertiles:
+        with supertiles.open() as f:
+            supertile_dirs = [settings.MATFILE_SOURCE_DIR / line.strip() for line in f]
+        matfiles = itertools.chain(
+            *[
+                supertile_dir.glob(pattern=f"{utm_zone}*_2m.mat")
+                for supertile_dir in supertile_dirs
+            ]
+        )
+    else:
+        matfiles = settings.MATFILE_SOURCE_DIR.glob(pattern=f"**/{utm_zone}*_2m.mat")
 
     src_supertiles_dir = settings.MATFILE_SOURCE_DIR
     dst_supertiles_dir = settings.WORKING_ZONES_DIR / f"{utm_zone}" / "00-matfiles"
