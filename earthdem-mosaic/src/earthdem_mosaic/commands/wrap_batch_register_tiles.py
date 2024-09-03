@@ -1,6 +1,8 @@
 import shlex
 import subprocess
+from itertools import chain
 from pathlib import Path
+from typing import Self
 
 import click
 
@@ -9,68 +11,145 @@ from earthdem_mosaic.config import Settings
 from earthdem_mosaic.utm_zone import UtmZone
 
 
-def _base_cmd(
-    settings: Settings, tiles: Path, utm_zone: UtmZone, reg_method: str
-) -> str:
-    tiledir = settings.WORKING_ZONES_DIR / str(utm_zone) / "00-matfiles"
-    ref_dem_path = (
-        settings.REFERENCE_DEM_DIR / str(utm_zone) / "<supertile>_10m_cop30_wgs84.tif"
-    )
-    cover_tif_path = (
-        settings.LANDCOVER_DIR
-        / str(utm_zone)
-        / "<supertile>_10m_esa_worldcover_2021.tif"
-    )
+class BatchRegisterTilesBase:
+    def __init__(self, settings: Settings, utm_zone: UtmZone, tiles: Path):
+        # This dict stores portions of the command. The keys represent independent
+        # portions of the command such as "base", "slurm" "dryrun". This allows for
+        # multiple calls to the same portion of the command builder to override the
+        # previous calls to it. For example: cmd.dryrun().dryrun() will not result in
+        # multiple '--dryrun' flags being included in the final command.
+        self._cmd_parts: dict[[str], list[str]] = {}
 
-    return "\n\t".join(
-        [
-            f"python {settings.SETSM_POSTPROCESSING_PYTHON_DIR}/batch_registerTiles.py",
-            f"{tiledir} {tiles} earthdem 2",
+        self.tiles = tiles
+        self.script = (
+            settings.SETSM_POSTPROCESSING_PYTHON_DIR / "batch_registerTiles.py"
+        )
+        self.matlib = settings.SETSM_POSTPROCESSING_MATLAB_DIR
+        self.utm_zone_working_dir = settings.WORKING_ZONES_DIR / f"{utm_zone}"
+        self.ref_dem_path = (
+            settings.REFERENCE_DEM_DIR
+            / f"{utm_zone}"
+            / "<supertile>_10m_cop30_wgs84.tif"
+        )
+        self.cover_tif_path = (
+            settings.LANDCOVER_DIR
+            / f"{utm_zone}"
+            / "<supertile>_10m_esa_worldcover_2021.tif"
+        )
+        self.job_config_file = (
+            settings.SETSM_POSTPROCESSING_PYTHON_DIR / "lib/jobscript_config.ini"
+        )
+        self.job_script = (
+            settings.SETSM_POSTPROCESSING_PYTHON_DIR / "lib/jobscript_<scheduler>.sh"
+        )
+        self.job_log_dir = (
+            settings.WORKING_ZONES_DIR / f"{utm_zone}" / "processing_logs"
+        )
+        self.task_bundle_dir = Path.home() / "scratch" / "task_bundles"
+
+    def slurm(
+        self,
+        job_name_prefix: str,
+        job_ncpus: int,
+        job_mem: int,
+        job_walltime: int,
+        job_queue: str,
+    ) -> Self:
+        """Prepare the command for submission to the slurm cluster."""
+        key = "slurm"
+        value = [
+            "--slurm",
+            f"--job-config-file {self.job_config_file}",
+            f"--job-script '{self.job_script}'",
+            f"--job-name-prefix '{job_name_prefix}'",
+            f"--job-log-dir {self.job_log_dir}",
+            f"--job-ncpus {job_ncpus}",
+            f"--job-mem {job_mem}",
+            f"--job-walltime {job_walltime}",
+            f"--job-queue {job_queue}",
+            "--tasks-per-job 1",
+            "--tasks-per-job-mode serial",
+            f"--task-bundle-dir {self.task_bundle_dir}",
+        ]
+        self._cmd_parts.update({key: value})
+        return self
+
+    def skipreg_shp(self, shp: Path) -> Self:
+        """Features where coregistration should not be applied."""
+        key = "skipreg"
+        value = [f"--cop30-skipreg-shp {shp}"]
+        self._cmd_parts.update({key: value})
+        return self
+
+    def dryrun(self) -> Self:
+        """Preform a dryrun of the command."""
+        key = "dryrun"
+        value = ["--dryrun"]
+        self._cmd_parts.update({key: value})
+        return self
+
+    def as_str(self, *, pretty: bool = False) -> str:
+        """Export a string, either formatted or not."""
+        sep = "\n\t" if pretty else " "
+        parts = chain(*self._cmd_parts.values())
+        return sep.join(parts)
+
+    def as_list(self) -> list[str]:
+        """Export as a list of strings that can be passed to subprocess.run()."""
+        parts = chain(*self._cmd_parts.values())
+        return shlex.split(" ".join(parts))
+
+
+class CoregisterToCop30(BatchRegisterTilesBase):
+    def __init__(self, settings: Settings, utm_zone: UtmZone, tiles: Path):
+        super().__init__(settings=settings, utm_zone=utm_zone, tiles=tiles)
+        self.base_command()
+
+    def base_command(self) -> Self:
+        """Coregister to Cop30 base command."""
+        stage_dir = "00-matfiles"
+        reg_method = "cop30"
+
+        key = "base"
+        value = [
+            f"python {self.script}",
+            f"{self.utm_zone_working_dir / stage_dir} {self.tiles} earthdem 2",
             f"--reg-method {reg_method}",
-            f"--ref-dem-path '{ref_dem_path}'",
-            f"--cover-tif-path '{cover_tif_path}'",
+            f"--ref-dem-path '{self.ref_dem_path}'",
+            f"--cover-tif-path '{self.cover_tif_path}'",
             "--tile-org pgc",
             "--process-by supertile-dir",
             "--process-group separate",
-            f"--matlib {settings.SETSM_POSTPROCESSING_MATLAB_DIR}",
-        ],
-    )
+            f"--matlib {self.matlib}",
+        ]
+        self._cmd_parts.update({key: value})
+        return self
 
 
-def _skipreg_option(skipreg_shp: Path) -> str:
-    return f"--cop30-skipreg-shp {skipreg_shp}"
+class FillWater(BatchRegisterTilesBase):
+    def __init__(self, settings: Settings, utm_zone: UtmZone, tiles: Path):
+        super().__init__(settings=settings, utm_zone=utm_zone, tiles=tiles)
+        self.base_command()
 
+    def base_command(self) -> Self:
+        """Fill Water base command."""
+        stage_dir = "00-matfiles"
+        reg_method = "fillWater"
 
-def _dryrun_option() -> str:
-    return "--dryrun"
-
-
-def _slurm_options(settings: Settings, job_name_prefix: str, utm_zone: UtmZone) -> str:
-    job_config_file = (
-        settings.SETSM_POSTPROCESSING_PYTHON_DIR / "lib/jobscript_config.ini"
-    )
-    job_script = (
-        settings.SETSM_POSTPROCESSING_PYTHON_DIR / "lib/jobscript_<scheduler>.sh"
-    )
-    job_log_dir = settings.WORKING_ZONES_DIR / f"{utm_zone}" / "processing_logs"
-
-    return "\n\t".join(
-        [
-            "--slurm",
-            f"--job-config-file {job_config_file}",
-            "--job-config-on",
-            f"--job-script '{job_script}'",
-            f"--job-name-prefix '{job_name_prefix}'",
-            f"--job-log-dir {job_log_dir}",
-            "--job-ncpus 4",
-            "--job-mem 200",
-            "--job-walltime 48",
-            "--job-queue big_mem",
-            "--tasks-per-job 1",
-            "--tasks-per-job-mode serial",
-            "--task-bundle-dir $HOME/scratch/task_bundles",
-        ],
-    )
+        key = "base"
+        value = [
+            f"python {self.script}",
+            f"{self.utm_zone_working_dir / stage_dir} {self.tiles} earthdem 2",
+            f"--reg-method {reg_method}",
+            f"--ref-dem-path '{self.ref_dem_path}'",
+            f"--cover-tif-path '{self.cover_tif_path}'",
+            "--tile-org pgc",
+            "--process-by supertile-dir",
+            "--process-group separate",
+            f"--matlib {self.matlib}",
+        ]
+        self._cmd_parts.update({key: value})
+        return self
 
 
 @click.command(short_help="Apply coregistration to matfiles")
@@ -105,25 +184,24 @@ def coreg_matfiles(
     """Apply coregistration to the matfiles directly to produce '_reg.mat' versions of
     the tiles.
     """
-    reg_method = "cop30"
-    job_name_prefix = "reg<resolution>m"
-    cmd = _base_cmd(
-        settings=settings, tiles=tiles, utm_zone=utm_zone, reg_method=reg_method
-    )
+    cmd = CoregisterToCop30(settings=settings, utm_zone=utm_zone, tiles=tiles)
     if skipreg_shp:
-        cmd = "\n\t".join([cmd, _skipreg_option(skipreg_shp)])
+        cmd.skipreg_shp(shp=skipreg_shp)
     if slurm:
-        slurm_options = _slurm_options(
-            settings=settings, job_name_prefix=job_name_prefix, utm_zone=utm_zone
+        cmd.slurm(
+            job_name_prefix="reg<resolution>m",
+            job_ncpus=4,
+            job_mem=99,
+            job_walltime=48,
+            job_queue="big_mem",
         )
-        cmd = "\n\t".join([cmd, slurm_options])
     if dryrun:
-        cmd = "\n\t".join([cmd, _dryrun_option()])
+        cmd.dryrun()
     if show_command:
-        print(cmd)
+        print(cmd.as_str(pretty=True))
         return
 
-    subprocess.run(shlex.split(cmd), check=True)
+    subprocess.run(cmd.as_list(), check=True)
 
 
 @click.command(short_help="Apply water flattening to matfiles")
@@ -152,20 +230,19 @@ def water_flatten_matfiles(
     """Apply water flattening to the matfiles directly to produce '_reg_fill.mat'
     versions of the tiles.
     """
-    reg_method = "fillWater"
-    job_name_prefix = "reg<resolution>m"
-    cmd = _base_cmd(
-        settings=settings, tiles=tiles, utm_zone=utm_zone, reg_method=reg_method
-    )
+    cmd = FillWater(settings=settings, utm_zone=utm_zone, tiles=tiles)
     if slurm:
-        slurm_options = _slurm_options(
-            settings=settings, job_name_prefix=job_name_prefix, utm_zone=utm_zone
+        cmd.slurm(
+            job_name_prefix="reg<resolution>m",
+            job_ncpus=4,
+            job_mem=120,
+            job_walltime=48,
+            job_queue="big_mem",
         )
-        cmd = "\n\t".join([cmd, slurm_options])
     if dryrun:
-        cmd = "\n\t".join([cmd, _dryrun_option()])
+        cmd.dryrun()
     if show_command:
-        print(cmd)
+        print(cmd.as_str(pretty=True))
         return
 
-    subprocess.run(shlex.split(cmd), check=True)
+    subprocess.run(cmd.as_list(), check=True)
