@@ -171,6 +171,17 @@ def get_arg_parser():
         """)
     )
     parser.add_argument(
+        '--apply-topo-filter',
+        type=str,
+        choices=['true', 'false'],
+        default='false',
+        help=wrap_multiline_str("""
+            Apply Ian's Residual Topography Fractional Difference Filter to tile
+            DEM data in memory before tif export using the reference DEM and landcover
+            raster from the --ref-dem-path and --cover-tif-path arguments.
+        """)
+    )
+    parser.add_argument(
         '--apply-water-fill',
         type=str,
         choices=['true', 'false'],
@@ -422,6 +433,8 @@ def main():
         arg_parser.error("Argument 'tiledir' is not an existing directory: {}".format(root_tiledir))
     if script_args.apply_ref_filter == 'true' and not script_args.ref_dem_path:
         arg_parser.error("--ref-dem-path cannot be empty when --apply-ref-filter=true")
+    if script_args.apply_topo_filter == 'true' and not script_args.ref_dem_path:
+        arg_parser.error("--ref-dem-path cannot be empty when --apply-topo-filter=true")
     if script_args.apply_water_fill == 'true' and (not script_args.ref_dem_path or not script_args.cover_tif_path):
         arg_parser.error("--ref-dem-path and --cover-tif-path cannot be empty when --apply-water-fill=true")
     if script_args.register_to_ref == 'none' and script_args.register_to_ref_debug:
@@ -431,7 +444,7 @@ def main():
     if script_args.tile_org == 'osu' and script_args.process_by == 'supertile-dir':
         arg_parser.error("--process-by must be set to to 'tile-file' when --tile-org='osu'")
 
-    if script_args.apply_ref_filter == 'true' or script_args.apply_water_fill == 'true':
+    if script_args.apply_ref_filter == 'true' or script_args.apply_water_fill == 'true' or script_args.apply_topo_filter == 'true':
         check_dir, _, _ = script_args.ref_dem_path.partition(supertile_key)
         check_dir = os.path.dirname(check_dir)
         if not os.path.isdir(check_dir):
@@ -491,6 +504,8 @@ def main():
             supertile_args += ", 'waterMaskFile','{}'".format(cover_tif_file)
         if script_args.apply_ref_filter == 'true':
             supertile_args += ", 'applySlopeDiffFilt'"
+        if script_args.apply_topo_filter == 'true':
+            supertile_args += ", 'applyResidualTopographyFractionalDifferenceFilter'"
         if script_args.apply_water_fill == 'true':
             supertile_args += ", 'applyWaterFill'"
 

@@ -7,10 +7,17 @@ from earthdem_mosaic.utm_zone import UtmZone
 @click.command()
 @click.option("-v", "--verbose", is_flag=True)
 @click.option("--dryrun", is_flag=True, help="Print actions without executing")
+@click.option(
+    "--topo-filter", is_flag=True, help="Create '40-yes-topo-filter' directory"
+)
 @click.argument("utm_zone", nargs=1, type=UtmZone)
 @click.pass_obj
 def create_working_dirs(
-    settings: Settings, verbose: bool, dryrun: bool, utm_zone: UtmZone
+    settings: Settings,
+    verbose: bool,
+    dryrun: bool,
+    topo_filter: bool,
+    utm_zone: UtmZone,
 ) -> None:
     """Create working directories for a UTM zone"""
     zone_dir = settings.WORKING_ZONES_DIR / str(utm_zone)
@@ -21,6 +28,9 @@ def create_working_dirs(
         zone_dir / "30-yes-slope-filter",
         zone_dir / "processing_logs",
     ]
+
+    if topo_filter:
+        subdirectories.append(zone_dir / "40-yes-topo-filter")
 
     if verbose:
         click.echo(f"Creating directory: {zone_dir}")

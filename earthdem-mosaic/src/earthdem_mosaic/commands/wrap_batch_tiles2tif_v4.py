@@ -130,6 +130,7 @@ class CoregDebug(BatchTiles2TifV4Base):
             f"--ref-dem-path '{self.ref_dem_path}'",
             f"--cover-tif-path '{self.cover_tif_path}'",
             "--apply-ref-filter false",
+            "--apply-topo-filter false",
             "--apply-water-fill false",
             "--fill-water-interp-method 2",
             "--register-to-ref blobs",
@@ -164,6 +165,7 @@ class NoSlopeFilter(BatchTiles2TifV4Base):
             f"--ref-dem-path '{self.ref_dem_path}'",
             f"--cover-tif-path '{self.cover_tif_path}'",
             "--apply-ref-filter false",
+            "--apply-topo-filter false",
             "--apply-water-fill false",
             "--fill-water-interp-method 2",
             "--register-to-ref none",
@@ -196,6 +198,40 @@ class YesSlopeFilter(BatchTiles2TifV4Base):
             f"--ref-dem-path '{self.ref_dem_path}'",
             f"--cover-tif-path '{self.cover_tif_path}'",
             "--apply-ref-filter true",
+            "--apply-topo-filter false",
+            "--apply-water-fill false",
+            "--fill-water-interp-method 2",
+            "--register-to-ref none",
+            "--add-sea-surface-height false",
+            "--use-final-qc-mask false",
+            "--tile-org pgc",
+            "--process-by tile-file",
+            f"--matlib {self.matlib}",
+        ]
+        self._cmd_parts.update({key: value})
+        return self
+
+
+class YesTopoFilter(BatchTiles2TifV4Base):
+    def __init__(self, settings: Settings, utm_zone: UtmZone, tiles: Path):
+        super().__init__(settings=settings, utm_zone=utm_zone, tiles=tiles)
+        self.base_command()
+
+    def base_command(self) -> Self:
+        """Yes Slope Filter base command."""
+        stage_dir = "40-yes-topo-filter"
+
+        key = "base"
+        value = [
+            f"python {self.script}",
+            f"{self.utm_zone_working_dir / stage_dir} {self.tiles} earthdem 2",
+            "--tif-format cog",
+            "--output-set full",
+            "--tile-buffer-meters 100",
+            f"--ref-dem-path '{self.ref_dem_path}'",
+            f"--cover-tif-path '{self.cover_tif_path}'",
+            "--apply-ref-filter false",
+            "--apply-topo-filter true",
             "--apply-water-fill false",
             "--fill-water-interp-method 2",
             "--register-to-ref none",
@@ -268,6 +304,11 @@ def coreg_debug(
     help="Apply slope filter before exporting TIFs",
 )
 @click.option(
+    "--apply-topo-filter",
+    is_flag=True,
+    help="Apply topography filter before exporting TIFs",
+)
+@click.option(
     "--rerun",
     is_flag=True,
     help="Remove existing outputs before running",
@@ -285,13 +326,20 @@ def export_final_tifs(
     dryrun: bool,
     show_command: bool,
     apply_slope_filter: bool,
+    apply_topo_filter: bool,
     rerun: bool,
     utm_zone: UtmZone,
     tiles: Path,
 ) -> None:
     """Export final TIFs with or without slope filtering"""
+    if apply_slope_filter and apply_topo_filter:
+        click.echo("--apply-slope-filter and --apply-topo-filter are mutually exclusive")
+        exit(1)
+
     if apply_slope_filter:
         cmd = YesSlopeFilter(settings=settings, utm_zone=utm_zone, tiles=tiles)
+    elif apply_topo_filter:
+        cmd = YesTopoFilter(settings=settings, utm_zone=utm_zone, tiles=tiles)
     else:
         cmd = NoSlopeFilter(settings=settings, utm_zone=utm_zone, tiles=tiles)
 
@@ -305,7 +353,15 @@ def export_final_tifs(
             job_walltime=4,
             job_queue="big_mem",
         )
-    if slurm and not apply_slope_filter:
+    if slurm and apply_topo_filter:
+        cmd = cmd.slurm(
+            job_name_prefix="t2t_yes_topo_filter",
+            job_ncpus=2,
+            job_mem=99,
+            job_walltime=4,
+            job_queue="big_mem",
+        )
+    if slurm and not (apply_slope_filter or apply_topo_filter):
         cmd = cmd.slurm(
             job_name_prefix="t2t_no_slope_filter",
             job_ncpus=2,
