@@ -4,6 +4,7 @@ import argparse
 import glob
 import math
 import os
+import pathlib
 import socket
 import subprocess
 import sys
@@ -53,8 +54,8 @@ elif hostname.startswith('pgc-comp'):
     system_name = 'pgc'
     sched_presubmit_cmd = ''
     sched_addl_envvars = ''
-    sched_specify_outerr_paths = False
-    sched_addl_vars = f"--nodes=1 --ntasks=1 --cpus-per-task=24 --mem=120G --time=200:00:00 -o {HOME_DIR}/%x.o%j -e {HOME_DIR}/%x.o%j"
+    sched_specify_outerr_paths = True
+    sched_addl_vars = f"--nodes=1 --ntasks=1 --cpus-per-task=24 --mem=120G --time=200:00:00"
     sched_default_queue = 'batch'
 else:
     warnings.warn("Hostname '{}' not recognized. System-specific settings will not be applied.".format(hostname))
@@ -400,7 +401,7 @@ def main():
 
     log_time = datetime.now().strftime("%Y%m%d%H%M%S")
     bst_logdir = os.path.join(args.logdir, 'matlab', 'bst', target_res)
-    pbs_logdir = os.path.join(args.logdir, 'pbs', 'bst', target_res)
+    pbs_logdir = os.path.join(args.logdir, 'slurm', 'bst', target_res)
     if batch_job_submission:
         pbs_logdir = '{}_batch_{}_{}-tiles'.format(pbs_logdir, log_time, len(tiles))
     swift_logrootdir = os.path.join(args.logdir, 'swift')
@@ -796,8 +797,8 @@ def main():
                     tile = tiles_to_run[task_start_idx]
                     task_name = tile
                 job_name = 'bst_{}'.format(task_name)
-                job_outfile = os.path.join(pbs_logdir, task_name+'.out')
-                job_errfile = os.path.join(pbs_logdir, task_name+'.err')
+                job_outfile = os.path.join(pbs_logdir, task_name+'.o%j')
+                job_errfile = os.path.join(pbs_logdir, task_name+'.o%j')
 
                 arg_waterTileDir = None
                 if auto_select_arcticdem_water_tile_dir:
@@ -850,6 +851,9 @@ def main():
 
                 print("{}, {}".format(jobnum, cmd))
                 if not args.dryrun:
+                    # Make the paths to the logfiles
+                    pathlib.Path(job_outfile).parent.mkdir(parents=True, exist_ok=True)
+                    pathlib.Path(job_errfile).parent.mkdir(parents=True, exist_ok=True)
                     matlab_cmd_rc = subprocess.call(cmd, shell=True, cwd=(pbs_logdir if args.pbs else None))
                     if matlab_cmd_rc == 2 and matlab_cmd_success is not False:
                         matlab_cmd_success = True

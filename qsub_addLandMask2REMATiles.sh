@@ -88,12 +88,12 @@ echo "Changing to working directory: ${working_dir}"
 cd "$working_dir" || exit 1
 echo
 
-set -uo pipefail
 
 #module load gdal/2.1.3
-module load matlab/2019a
+#module load matlab/2019a
 
 ## Arguments/Options
+matlib="$ARG_MATLIB"
 tiledir="$ARG_TILEDIR"
 tiledef_file="/mnt/pgc/data/projects/earthdem/tiledef_files/rema_tile_definitions_plus_sgssi2.mat"
 #tiledef_file="/mnt/pgc/data/projects/earthdem/tiledef_files/rema_subtile_definitions.mat"
@@ -108,10 +108,11 @@ if [ ! -f "$tiledef_file" ]; then
     exit 1
 fi
 
-matlab_cmd="try; addpath('/mnt/pgc/data/common/repos/setsm_postprocessing4'); addLandMask2REMATiles('${tiledir}', '${tiledef_file}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
+matlab_cmd="try; addpath('${matlib}'); addLandMask2REMATiles('${tiledir}', '${tiledef_file}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 #matlab_cmd="try; addpath('/mnt/pgc/data/scratch/erik/repos/setsm_postprocessing4'); addLandMask2REMATiles('${tiledir}', '${tiledef_file}'); catch e; disp(getReport(e)); exit(1); end; exit(0)"
 
 echo "Argument tile directory: ${tiledir}"
 echo "Matlab command: \"${matlab_cmd}\""
 
+set -uo pipefail
 time matlab -nojvm -nodisplay -nosplash -r "$matlab_cmd"
