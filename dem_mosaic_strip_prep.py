@@ -209,29 +209,49 @@ def main():
 
         # Add BST cmd to the list and build water tile
         if os.path.isfile(dbase_out):
-            utmzone = tile.split('_')[0]
             water_tile_dir = project_water_tile_dir_dict[args.project]
-            water_tile_dir = water_tile_dir if args.project != 'earthdem' else os.path.join(water_tile_dir, utmzone)
+            tile_parts = tile.split('_')
+            if args.project == 'earthdem':
+                if len(tile_parts) == 3:
+                    utmzone, row, col = tile_parts
+                    water_tile_dir = os.path.join(water_tile_dir, utmzone)
+                else:
+                    error_msg = f"Invalid tile name {tile} - EarthDEM tiles must be formatted like this: 'utm45s_45_05'"
+                    logger.error(error_msg)
+                    error_msgs.append(error_msg)
+                    continue
 
-            # Build water tile if needed
-            water_tile = os.path.join(water_tile_dir, f'{tile}_water.tif')
-            if not os.path.isfile(water_tile):
-                logger.info("Building water tile")
+
+                # Build adjacent water tiles if needed - EarthDEM only
+                water_tile_fail = False
                 os.makedirs(water_tile_dir, exist_ok=True)
-                src_water_tile = os.path.join(esa_worldcover_dir, utmzone, f'{tile}_10m_esa_worldcover_2021.tif')
-                water_cmd = (f'gdal_calc.py --calc "logical_and(A>=80,A<=80)" '
-                             f'-A {src_water_tile} --outfile {water_tile}')
-                subprocess.call(water_cmd, shell=True)
-            if not os.path.isfile(water_tile):
-                error_msg = f"Building water tile failed: {water_tile}"
-                logger.error(error_msg)
-                error_msgs.append(error_msg)
+                row = int(row)
+                col = int(col)
+                for r in row-1, row, row+1:
+                    for c in col-1, col, col+1:
+                        _tile = f'{utmzone}_{r:02}_{c:02}'
+                        water_tile = os.path.join(water_tile_dir, f'{_tile}_water.tif')
+                        if not os.path.isfile(water_tile):
+                            logger.info(f"Building intersecting water tile: {_tile}")
+                            src_water_tile = os.path.join(esa_worldcover_dir, utmzone, f'{tile}_10m_esa_worldcover_2021.tif')
+                            water_cmd = (f'gdal_calc.py --calc "logical_and(A>=80,A<=80)" '
+                                         f'-A {src_water_tile} --outfile {water_tile}')
+                            if os.path.isfile(src_water_tile):
+                                subprocess.call(water_cmd, shell=True)
+                                if not os.path.isfile(water_tile):
+                                    error_msg = f"Building water tile failed: {water_tile}"
+                                    logger.error(error_msg)
+                                    error_msgs.append(error_msg)
+                                    water_tile_fail = True
+                                    continue
 
-            else:
-                bst_cmd = (f'python {script_dir}/batch_buildSubTiles.py {results_dir} {tile} --project {args.project}'
-                           f' --strip-db {dbase_out} --water-tile-dir {water_tile_dir} --chain-mst --slurm '
-                           f'--queue low_priority')
-                tile_bst[tile] = bst_cmd
+                if water_tile_fail:
+                    continue
+
+            bst_cmd = (f'python {script_dir}/batch_buildSubTiles.py {results_dir} {tile} --project {args.project}'
+                       f' --strip-db {dbase_out} --water-tile-dir {water_tile_dir} --chain-mst --slurm'
+                       f' --rerun')
+            tile_bst[tile] = bst_cmd
 
     # Run reprojection jobs for border strips for all affected tiles
     if len(reproject_list) > 0:
