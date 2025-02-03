@@ -352,7 +352,7 @@ def main():
             '.sh',
             '{}_{}.sh'.format(
                 '_{}'.format(args.project) if args.project is not None else '',
-                datetime.now().strftime("%Y%m%d%H%M%S")
+                datetime.now().strftime("%Y%m%d%H%M%S%f")
             )
         )
 

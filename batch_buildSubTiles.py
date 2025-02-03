@@ -55,7 +55,7 @@ elif hostname.startswith('pgc-comp'):
     sched_presubmit_cmd = ''
     sched_addl_envvars = ''
     sched_specify_outerr_paths = True
-    sched_addl_vars = f"--nodes=1 --ntasks=1 --cpus-per-task=24 --mem=120G --time=200:00:00"
+    sched_addl_vars = f"--nodes=1 --cpus-per-task=24 --mem=105G --time=48:00:00 --gres bandwidth:400 --licenses vida:100 --nice=1000"
     sched_default_queue = 'batch'
 else:
     warnings.warn("Hostname '{}' not recognized. System-specific settings will not be applied.".format(hostname))
@@ -461,7 +461,7 @@ def main():
         '.sh',
         '{}_{}.sh'.format(
             '_{}'.format(args.project) if args.project is not None else '',
-            datetime.now().strftime("%Y%m%d%H%M%S")
+            datetime.now().strftime("%Y%m%d%H%M%S%f")
         )
     )
 
@@ -537,7 +537,7 @@ def main():
             '.sh',
             '{}_{}.sh'.format(
                 '_{}'.format(args.project) if args.project is not None else '',
-                datetime.now().strftime("%Y%m%d%H%M%S")
+                datetime.now().strftime("%Y%m%d%H%M%S%f")
             )
         )
 

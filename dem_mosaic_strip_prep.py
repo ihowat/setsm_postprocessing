@@ -30,6 +30,13 @@ project_water_tile_dir_dict = {
     'earthdem':  '/mnt/pgc/data/projects/earthdem/watermasks/esa_worldcover_2021',
 }
 
+project_tile_ref_loc = {
+    # project: location on vida of completed tiles
+    'arcticdem': '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/results/output_tiles',
+    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2/results/output_tiles',
+    'earthdem':  '/mnt/pgc/data/elev/dem/setsm/EarthDEM/mosaic/v1.2/results/output_tiles',
+}
+
 esa_worldcover_dir = '/mnt/pgc/data/thematic/landcover/esa_worldcover_2021/data/processed'
 gtp_tile_def = '/mnt/pgc/data/projects/nga/trex/PGC_Package/TREx_GeoTilesPlus_globalIndex.shp'
 script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -38,7 +45,17 @@ headers = ['dem_id','stripdemid','epsg','location']
 
 
 def main():
-    """docstring"""
+    """
+    Identify and stage Strip DEMs for the mosaic building process
+
+    0) Pull tile results in from their stored location on Vida if they were computed in an earlier batch
+    1) Identify strips overlapping input tiles in `strip_dem`master`
+    2) Link correctly projected strips to a staging location
+    3) Reproect any strips from adjacent UTM zones
+    4) build the matlab DB that drives mosaicking
+    5) submit the BST+MST job to Rookery
+
+    """
 
     parser = argparse.ArgumentParser(
         description="Identify and stage source DEMs for mosaicking",
@@ -52,7 +69,7 @@ def main():
         help='list of mosaic tiles; either specified on command line (comma delimited),'
              ' or a text file list (each tile on separate line)')
     parser.add_argument("--prep-only", action="store_true", default=False,
-                        help="skip  BST+MST job submission step")
+                        help="skip final step of BST+MST job submission")
     args = parser.parse_args()
 
     # Verify arguments
@@ -93,6 +110,8 @@ def main():
         tile_proj_strip_dir = os.path.join(tile_dir, '2m_proj')
         os.makedirs(tile_dir, exist_ok=True)
         dbase_out = os.path.join(tile_dir, f'{tile}_db.mat')
+
+        # TODO: check for tile in general location and link results over if existing, then skip DB building and BST steps
 
         # If matlab database already exists, skip the prep part
         if not os.path.isfile(dbase_out):
@@ -250,7 +269,7 @@ def main():
 
             bst_cmd = (f'python {script_dir}/batch_buildSubTiles.py {results_dir} {tile} --project {args.project}'
                        f' --strip-db {dbase_out} --water-tile-dir {water_tile_dir} --chain-mst --slurm'
-                       f' --rerun')
+                       f' --rerun --chain-mst-no-local')
             tile_bst[tile] = bst_cmd
 
     # Run reprojection jobs for border strips for all affected tiles
