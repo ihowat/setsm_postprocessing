@@ -76,6 +76,10 @@ def main():
              ' or a text file list (each tile on separate line)')
     parser.add_argument("--prep-only", action="store_true", default=False,
                         help="skip final step of BST+MST job submission")
+    parser.add_argument("--skip-link", action="store_true", default=False,
+                        help="skip strip linking and reprojection and use only what's already there")
+    parser.add_argument("--make-10m-only", action="store_true", default=False,
+                        help="make 10m mosaics only")
     args = parser.parse_args()
 
     # Verify arguments
@@ -186,23 +190,26 @@ def main():
             logger.info(f"{len(strips_correct)} strips match tile projection")
             logger.info(f"{len(strips_to_project)} strips require reprojection")
 
+            # TODO Add strip pulling from Tape when needed here
+
             # Link strips to staging dir if correctly projected
-            logger.info(f"Linking strips to {tile_strip_dir}")
-            for result in strips_correct:
-                srcfile = result[3]
-                src_bn = srcfile.replace('_dem.tif', '')
-                srcfiles = glob.glob(src_bn + '*')
-                srcdir_name = os.path.basename(os.path.dirname(srcfile))
-                dstdir = os.path.join(tile_strip_dir, srcdir_name)
-                os.makedirs(dstdir, exist_ok=True)
-                for sf in srcfiles:
-                    dstfile = os.path.join(dstdir, os.path.basename(sf))
-                    if not os.path.isfile(dstfile):
-                        os.link(sf, dstfile)
+            if not args.skip_link:
+                logger.info(f"Linking strips to {tile_strip_dir}")
+                for result in strips_correct:
+                    srcfile = result[3]
+                    src_bn = srcfile.replace('_dem.tif', '')
+                    srcfiles = glob.glob(src_bn + '*')
+                    srcdir_name = os.path.basename(os.path.dirname(srcfile))
+                    dstdir = os.path.join(tile_strip_dir, srcdir_name)
+                    os.makedirs(dstdir, exist_ok=True)
+                    for sf in srcfiles:
+                        dstfile = os.path.join(dstdir, os.path.basename(sf))
+                        if not os.path.isfile(dstfile):
+                            os.link(sf, dstfile)
 
             # Prep strips for reprojection (if needed)
             compile_db = True
-            if len(strips_to_project) > 0:
+            if len(strips_to_project) > 0 and not args.skip_link:
                 proj_completed = glob.glob(tile_proj_strip_dir + '/*/*_meta.txt')
                 if len(proj_completed) >= len(strips_to_project):
                     logger.info(f"Border strips reprojected - located in {tile_proj_strip_dir}")
@@ -219,7 +226,7 @@ def main():
 
             # Compile DB
             if compile_db:
-                # Check are is at least one strip to put into the DB
+                # Check there is at least one strip to put into the DB
                 if len(strips_correct) > 0 or len(strips_to_project) > 0:
                     if not os.path.isfile(dbase_out):
                         logger.info("Compiling matlab strip DB")
@@ -270,10 +277,10 @@ def main():
                     continue
 
             bst_cmd = (f'python {script_dir}/batch_buildSubTiles.py {results_dir} {tile} --project {args.project}'
-                       f' --strip-db {dbase_out} --water-tile-dir {water_tile_dir} --chain-mst --slurm'
-                       f' --rerun --chain-mst-no-local')
                        f' --strip-db {dbase_out} --water-tile-dir {water_tile_dir} --ref-dem {ref_dem}'
                        f' --slurm --rerun --chain-mst-no-local')
+            if args.make_10m_only:
+                bst_cmd = bst_cmd + ' --make-10m-only --chain-mst-keep-subtiles'
             tile_bst[tile] = bst_cmd
 
     # Run reprojection jobs for border strips for all affected tiles
@@ -309,7 +316,7 @@ def main():
             logger.info(f"Tiles already submitted: {running_tiles}")
 
         # Submit the tile if not already submitted
-        logger.info("Submitting BST jobs")
+        logger.info("Submitting 10m BST jobs" if args.make_10m_only else "Submitting 2m BST jobs")
         for tile_name, bst_cmd in tile_bst.items():
             if tile_name in running_tiles:
                 logger.info(f"Tile {tile_name} already submitted")
