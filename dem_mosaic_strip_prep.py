@@ -9,7 +9,7 @@ import psycopg2 as pg
 import logging
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(format='%(asctime)s %(message)s', level=logging.DEBUG)
+logging.basicConfig(format='%(asctime)s %(message)s', level=logging.DEBUG, datefmt='%Y-%m-%d %H:%M:%S')
 
 project_choices = [
     'arcticdem',
@@ -113,15 +113,25 @@ def main():
     i=0
     for tile in tiles:
         i+=1
-        logger.info(f"Processing tile {i} of {len(tiles)}: {tile}")
 
+        # TODO: check for tile in general location and link results over if existing,
+
+        # Check if the tile is complete
+        count_10m_fins = len(glob.glob(os.path.join(results_dir,tile,f'{tile}_10m.fin')))
+        count_2m_fins = len(glob.glob(os.path.join(results_dir,tile,f'{tile}_*_2m.fin')))
+        if args.make_10m_only and count_10m_fins == 1:
+            logger.info(f"Tile {i} of {len(tiles)}: {tile} 10m results complete")
+            continue
+        if count_2m_fins == 4 and count_10m_fins == 1:
+            logger.info(f"Tile {i} of {len(tiles)}: {tile} 2m results complete")
+            continue
+
+        logger.info(f"Tile {i} of {len(tiles)}: {tile} processing")
         tile_dir = os.path.join(os.path.realpath(args.dstdir), 'src', tile)
         tile_strip_dir = os.path.join(tile_dir, '2m')
         tile_proj_strip_dir = os.path.join(tile_dir, '2m_proj')
         os.makedirs(tile_dir, exist_ok=True)
         dbase_out = os.path.join(tile_dir, f'{tile}_db.mat')
-
-        # TODO: check for tile in general location and link results over if existing, then skip DB building and BST steps
 
         # If matlab database already exists, skip the prep part
         if not os.path.isfile(dbase_out):
@@ -316,31 +326,18 @@ def main():
 
         # Submit the tile if not already submitted
         logger.info("Submitting 10m BST jobs" if args.make_10m_only else "Submitting 2m BST jobs")
-        i=0
-        bst_cmds = []
+        j=0
         os.makedirs(results_dir, exist_ok=True)
         for tile_name, bst_cmd in tile_bst.items():
             # Check if the tile is already in the queue
             if tile_name in running_tiles:
                 logger.info(f"Tile {tile_name} in the queue")
                 continue
-            # Check if the tile is complete
-            count_10m_fins = len(glob.glob(os.path.join(results_dir,tile_name,f'{tile_name}_10m.fin')))
-            count_2m_fins = len(glob.glob(os.path.join(results_dir,tile_name,f'{tile_name}_*_2m.fin')))
-            if args.make_10m_only and count_10m_fins == 1:
-                logger.info(f"Tile {tile_name} 10m results complete")
-                continue
-            if count_2m_fins == 4 and count_10m_fins == 1:
-                logger.info(f"Tile {tile_name} 2m results complete")
-                continue
-            # If not complete, add BST+MST command to a list to run
-            bst_cmds.append(bst_cmd)
-        # Run BST+MST cmds
-        for bst_cmd in bst_cmds:
+            # If not running, run BST+MST cmds
             logger.info(bst_cmd)
             subprocess.call(bst_cmd, shell=True)
-            i+=1
-        logger.info(f"{i} BST+MST jobs submitted.")
+            j+=1
+        logger.info(f"{j} BST+MST jobs submitted.")
 
     # Print accumulated error messages
     if len(error_msgs) > 0:
