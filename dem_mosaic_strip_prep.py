@@ -260,11 +260,11 @@ def main():
                         _tile = f'{utmzone}_{r:02}_{c:02}'
                         water_tile = os.path.join(water_tile_dir, f'{_tile}_water.tif')
                         if not os.path.isfile(water_tile):
-                            logger.info(f"Building intersecting water tile: {_tile}")
-                            src_water_tile = os.path.join(esa_worldcover_dir, utmzone, f'{tile}_10m_esa_worldcover_2021.tif')
-                            water_cmd = (f'gdal_calc.py --calc "logical_and(A>=80,A<=80)" '
-                                         f'-A {src_water_tile} --outfile {water_tile}')
+                            src_water_tile = os.path.join(esa_worldcover_dir, utmzone, f'{_tile}_10m_esa_worldcover_2021.tif')
                             if os.path.isfile(src_water_tile):
+                                logger.info(f"Building intersecting water tile: {_tile}")
+                                water_cmd = (f'gdal_calc.py -q --calc "logical_and(A>=80,A<=80)" '
+                                             f'-A {src_water_tile} --outfile {water_tile}')
                                 subprocess.call(water_cmd, shell=True)
                                 if not os.path.isfile(water_tile):
                                     error_msg = f"Building water tile failed: {water_tile}"
@@ -299,7 +299,6 @@ def main():
             logger.info("Work for prep-only complete. Run without --prep-only argument to submit BST+MST jobs")
 
     # If all tiles have reprojected strips and a matlab db, submit the BST+MST jobs
-    # TODO develop check for completed tiles - currently the BST script handles this so no job is submitted (I think)
     if run_bst and len(tile_bst) > 0:
         # Query slurm to see if any tiles are running
         running_tiles = []
@@ -317,14 +316,31 @@ def main():
 
         # Submit the tile if not already submitted
         logger.info("Submitting 10m BST jobs" if args.make_10m_only else "Submitting 2m BST jobs")
+        i=0
+        bst_cmds = []
+        os.makedirs(results_dir, exist_ok=True)
         for tile_name, bst_cmd in tile_bst.items():
+            # Check if the tile is already in the queue
             if tile_name in running_tiles:
-                logger.info(f"Tile {tile_name} already submitted")
-            else:
-                os.makedirs(results_dir, exist_ok=True)
-                logger.info(bst_cmd)
-                subprocess.call(bst_cmd, shell=True)
-        logger.info("BST+MST jobs submitted.")
+                logger.info(f"Tile {tile_name} in the queue")
+                continue
+            # Check if the tile is complete
+            count_10m_fins = len(glob.glob(os.path.join(results_dir,tile_name,f'{tile_name}_10m.fin')))
+            count_2m_fins = len(glob.glob(os.path.join(results_dir,tile_name,f'{tile_name}_*_2m.fin')))
+            if args.make_10m_only and count_10m_fins == 1:
+                logger.info(f"Tile {tile_name} 10m results complete")
+                continue
+            if count_2m_fins == 4 and count_10m_fins == 1:
+                logger.info(f"Tile {tile_name} 2m results complete")
+                continue
+            # If not complete, add BST+MST command to a list to run
+            bst_cmds.append(bst_cmd)
+        # Run BST+MST cmds
+        for bst_cmd in bst_cmds:
+            logger.info(bst_cmd)
+            subprocess.call(bst_cmd, shell=True)
+            i+=1
+        logger.info(f"{i} BST+MST jobs submitted.")
 
     # Print accumulated error messages
     if len(error_msgs) > 0:
