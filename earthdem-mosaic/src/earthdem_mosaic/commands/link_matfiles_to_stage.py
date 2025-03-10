@@ -40,6 +40,9 @@ from earthdem_mosaic.commands._utils import EXISTING_DIR
     help="Choice between hardlink or full copy",
     show_default=True,
 )
+@click.option(
+    "--overwrite", is_flag=True, help="Overwrite the destination file if it exists"
+)
 @click.option("-v", "--verbose", is_flag=True)
 @click.option("--dryrun", is_flag=True, help="Print actions without executing")
 def link_files_to_stage(
@@ -48,6 +51,7 @@ def link_files_to_stage(
     src_suffix: str,
     dst_suffix: str,
     link: bool,
+    overwrite: bool,
     verbose: bool,
     dryrun: bool,
 ) -> None:
@@ -66,7 +70,13 @@ def link_files_to_stage(
             dst_str_path = dst_str_path.replace(src_suffix, dst_suffix)
 
         dst_file = Path(dst_str_path)
-        dst_file.parent.mkdir(parents=True, exist_ok=True)
+
+        if dst_file.exists() and not overwrite:
+            if verbose:
+                click.echo(
+                    f"Skipping {src_file} --> Destination already exists and --overwrite flag not provided"
+                )
+            continue
 
         if dryrun or verbose:
             mock_cmd = [
@@ -77,6 +87,9 @@ def link_files_to_stage(
             ]
             click.echo(" ".join(mock_cmd))
         if not dryrun:
+            if overwrite:
+                dst_file.unlink()
+            dst_file.parent.mkdir(parents=True, exist_ok=True)
             if link:
                 os.link(src=src_file, dst=dst_file)
             else:

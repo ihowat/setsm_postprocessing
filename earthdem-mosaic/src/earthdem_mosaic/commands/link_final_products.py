@@ -15,7 +15,6 @@ from earthdem_mosaic.utm_zone import UtmZone
 
 class FinalProduct(StrEnum):
     BROWSE = "_browse.tif"
-    COUNTMT = "_countmt.tif"
     COUNT = "_count.tif"
     DATAMASK = "_datamask.tif"
     DEM = "_dem.tif"

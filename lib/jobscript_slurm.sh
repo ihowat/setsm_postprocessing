@@ -5,6 +5,7 @@
 #SBATCH --ntasks 2
 #SBATCH --mem=8G
 #SBATCH -o %x.o%j
+#SBATCH --licenses=vida:100
 
 echo ________________________________________
 echo

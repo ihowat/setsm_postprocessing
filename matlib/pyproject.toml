@@ -1,0 +1,12 @@
+[project]
+name = "matlib"
+description = "Python API for a library of SETSM Postprocessing Matlab scripts."
+version = "0.1.0"
+requires-python = ">= 3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pytest",
+]
