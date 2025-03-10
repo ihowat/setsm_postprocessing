@@ -37,12 +37,6 @@ project_tile_ref_loc = {
     'earthdem':  '/mnt/pgc/data/elev/dem/setsm/EarthDEM/mosaic/v1.2/results/output_tiles',
 }
 
-project_ref_dem = {
-    'arcticdem': '/mnt/pgc/data/elev/dem/copernicus-dem-30m/mosaic/arctic_tiles_wgs84',
-    'rema': '/mnt/pgc/data/elev/dem/copernicus-dem-30m/mosaic/rema_tiles_wgs84',
-    'earthdem': '/mnt/pgc/data/elev/dem/copernicus-dem-30m/mosaic/earth_tiles_wgs84',
-}
-
 esa_worldcover_dir = '/mnt/pgc/data/thematic/landcover/esa_worldcover_2021/data/processed'
 gtp_tile_def = '/mnt/pgc/data/projects/nga/trex/PGC_Package/TREx_GeoTilesPlus_globalIndex.shp'
 script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -252,13 +246,11 @@ def main():
         # Add BST cmd to the list and build water tile
         if os.path.isfile(dbase_out):
             water_tile_dir = project_water_tile_dir_dict[args.project]
-            ref_dem = f'{project_ref_dem[args.project]}/{tile}_10m_cop30_wgs84.tif'
             tile_parts = tile.split('_')
             if args.project == 'earthdem':
                 #if len(tile_parts) == 3: # this was checked before and should always be true
                 utmzone, row, col = tile_parts
                 water_tile_dir = os.path.join(water_tile_dir, utmzone)
-                ref_dem = f"{project_ref_dem[args.project]}/{utmzone}/{tile}_10m_cop30_wgs84.tif"
 
                 # Build adjacent water tiles if needed - EarthDEM only
                 water_tile_fail = False
@@ -287,7 +279,7 @@ def main():
                     continue
 
             bst_cmd = (f'python {script_dir}/batch_buildSubTiles.py {results_dir} {tile} --project {args.project}'
-                       f' --strip-db {dbase_out} --water-tile-dir {water_tile_dir} --ref-dem {ref_dem}'
+                       f' --strip-db {dbase_out} --water-tile-dir {water_tile_dir}'
                        f' --slurm --rerun --chain-mst-no-local')
             if args.make_10m_only:
                 bst_cmd = bst_cmd + ' --make-10m-only --chain-mst-keep-subtiles'
