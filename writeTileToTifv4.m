@@ -121,6 +121,13 @@ else
     applySlopeDiffFilt = false;
 end
 
+n = find(strcmpi('applyResidualTopographyFractionalDifferenceFilter',varargin));
+if ~isempty(n)
+    applyResidualTopographyFractionalDifferenceFilter = true;
+else
+    applyResidualTopographyFractionalDifferenceFilter = false;
+end
+
 n = find(strcmpi('applyWaterFill',varargin));
 if ~isempty(n)
     applyWaterFill = true;
@@ -169,6 +176,10 @@ end
 
 if applySlopeDiffFilt && isempty(refDemFile)
     error("'applySlopeDiffFilt' option requires 'refDemFile' to be provided")
+end
+
+if applyResidualTopographyFractionalDifferenceFilter && isempty(refDemFile)
+    error("'applyResidualTopographyFractionalDifferenceFilter' option requires 'refDemFile' to be provided")
 end
 
 if applyWaterFill && (isempty(refDemFile) || isempty(waterMaskFile))
@@ -314,7 +325,7 @@ else
     calcSlopeDiffFilt = false;
 end
 
-if calcSlopeDiffFilt || ~strcmp(registerToRef, 'none')
+if calcSlopeDiffFilt || ~strcmp(registerToRef, 'none') || applyResidualTopographyFractionalDifferenceFilter
     if isempty(z)
         z = m.z;
     end
@@ -408,6 +419,7 @@ if registerToRefDebug
 end
 
 slope_filter_mask = [];
+topo_filter_mask = [];
 water_fill_mask = [];
 sea_surface_mask = [];
 qc_mask_sea = [];
@@ -448,6 +460,29 @@ if calcSlopeDiffFilt
 %        slope_filter_mask_for_waterfill = ~M_at_z_res;
 %        clear M M_at_z_res;
 %    end
+end
+if applyResidualTopographyFractionalDifferenceFilter
+    fprintf('Calculating Residual Topography Fractional Difference Filter\n')
+
+    % Compute the mask using the DEM that has been downsampled to match the reference DEM resolution
+    RTFDMask = RTFDFilter(z_at_zr_res, I_ref.z);
+
+    % Upsample the mask to the full resolution of the DEM, if necessary
+    maskCurrentResolution = I_ref.x(2) - I_ref.x(1);
+    maskTargetResolution = x(2) - x(1);
+    if maskCurrentResolution ~= maskTargetResolution
+        RTFDMask = interp2(I_ref.x, I_ref.y(:), RTFDMask, x, y(:), '*nearest');
+    end
+
+    % Apply the mask to the DEM
+    % The RTFDMask encodes 0 where the data is "bad" and 1 where the data is "good"
+    % We want to overwrite the DEM value with NAN where RTFDMask == 0, so we flip it
+    % to create the topo_filter_mask and then apply that to z
+    topo_filter_mask = ~RTFDMask;
+    z(topo_filter_mask) = NaN;
+
+    % Clean up
+    clear RTFDMask;
 end
 clear I_ref z_at_zr_res;
 
@@ -524,10 +559,10 @@ if isempty(water_fill_mask) && ismember('waterFillMask', m_varlist)
     water_fill_mask = m.waterFillMask;
 end
 
-datamask = ~isnan(z);
-bad_data_or_filled_mask = zeros(length(y), length(x), 'logical');
+bad_data_or_filled_mask = [];
 masks_array = {
     slope_filter_mask,
+    topo_filter_mask,
     water_fill_mask,
     sea_surface_mask,
     qc_mask_sea,
@@ -537,13 +572,19 @@ if ~applySlopeDiffFilt
     masks_array(1) = [];
 end
 if ~all(cellfun(@isempty, masks_array))
+    bad_data_or_filled_mask = zeros(length(y), length(x), 'logical');
     for i = 1:length(masks_array)
         M = masks_array{i};
         if ~isempty(M)
             bad_data_or_filled_mask(M) = 1;
         end
     end
+end
+
+if ~isempty(bad_data_or_filled_mask)
     datamask = ~(isnan(z) | bad_data_or_filled_mask);
+else
+    datamask = ~isnan(z);
 end
 
 filled_mask = zeros(length(y), length(x), 'logical');
