@@ -14,6 +14,7 @@ update_env:
 	mamba run -n $(env_name) python -m pip install -e ./earthdem-mosaic
 	mamba run -n $(env_name) python -m pip install -e ./rema-mosaic
 	mamba run -n $(env_name) python -m pip install -e ./matlib
+	mamba run -n $(env_name) python -m pip install -e ./mosaic-pipeline
 
 ## create_env: Create a new mamba environment
 .PHONY: create_env
@@ -22,6 +23,7 @@ create_env:
 	mamba run -n $(env_name) python -m pip install -e ./earthdem-mosaic
 	mamba run -n $(env_name) python -m pip install -e ./rema-mosaic
 	mamba run -n $(env_name) python -m pip install -e ./matlib
+	mamba run -n $(env_name) python -m pip install -e ./mosaic-pipeline
 
 ## remove_env: Remove the mamba environment
 .PHONY: remove_env
