@@ -833,30 +833,6 @@ if ~(browse_only || dem_and_browse)
         end
     end
 
-    % matchtag count
-    if ismember('Nmt', m_varlist)
-        fprintf('Writing Nmt\n')
-        outNameTif = strrep(outNameBase,'.mat','_countmt.tif');
-        if exist(outNameTif,'file') && ~overwrite
-            fprintf('%s exists, skipping\n',outNameTif);
-        else
-            Nmt=m.Nmt;
-            if ~isempty(bad_data_or_filled_mask)
-                Nmt(bad_data_or_filled_mask) = 0;
-            end
-            Nmt=Nmt(ny(1):ny(end),nx(1):nx(end));
-            if outFormat_is_cog
-                co_predictor = 'NO';
-%                co_predictor = 'STANDARD';
-            else
-                co_predictor = '1';
-%                co_predictor = '2';
-            end
-            writeGeotiff(outNameTif,x,y,Nmt,1,0,projstr,'out_format',tif_format,'co_predictor',co_predictor,'cog_overview_resampling','NEAREST')
-            clear Nmt
-        end
-    end
-
     % Maximum date
     if ismember('tmax', m_varlist)
         fprintf('Writing tmax\n')
