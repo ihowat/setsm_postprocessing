@@ -11,6 +11,12 @@ import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(format='%(asctime)s %(message)s', level=logging.DEBUG, datefmt='%Y-%m-%d %H:%M:%S')
 
+archive_loc_dict = {
+    'arcticdem': '/mnt/pgc/data/elev/dem/setsm/ArcticDEM/mosaic/v4.1/results/output_tiles',
+    'rema':      '/mnt/pgc/data/elev/dem/setsm/REMA/mosaic/v2.0/results/output_tiles',
+    'earthdem':  '/mnt/pgc/data/elev/dem/setsm/EarthDEM/mosaic/v1.2/results/output_tiles',
+}
+
 project_choices = [
     'arcticdem',
     'rema',
@@ -108,16 +114,40 @@ def main():
     for tile in tiles:
         i+=1
 
-        # TODO: check for tile in general location and link results over if existing,
+        archive_tile_loc = os.path.join(archive_loc_dict[args.project], tile)
+        result_tile_dir = os.path.join(results_dir, tile)
 
         # Check if the tile is complete
-        count_10m_fins = len(glob.glob(os.path.join(results_dir,tile,f'{tile}_10m.fin')))
-        count_2m_fins = len(glob.glob(os.path.join(results_dir,tile,f'{tile}_*_2m.fin')))
+        count_10m_fins = len(glob.glob(os.path.join(result_tile_dir,f'{tile}_10m.fin')))
+        count_2m_fins = len(glob.glob(os.path.join(result_tile_dir,f'{tile}_*_2m.fin')))
         if args.make_10m_only and count_10m_fins == 1:
             logger.info(f"Tile {i} of {len(tiles)}: {tile} 10m results complete")
             continue
         if count_2m_fins == 4 and count_10m_fins == 1:
             logger.info(f"Tile {i} of {len(tiles)}: {tile} 2m results complete")
+            continue
+
+        # Check if the tile already exists in the archive location and is complete.
+        # Link it over if so.
+        if os.path.isdir(archive_tile_loc):
+            count_10m_fins = len(glob.glob(os.path.join(archive_tile_loc,f'{tile}_10m.fin')))
+            count_2m_fins = len(glob.glob(os.path.join(archive_tile_loc,f'{tile}_*_2m.fin')))
+            subtile_dir_exist = os.path.isdir(os.path.join(archive_tile_loc, 'subtiles'))
+            if subtile_dir_exist:
+                error_msg = (f"Tile '{tile}' has a subtile dir in the archive location ({archive_tile_loc}) indicating "
+                             f"it's not complete and needs investigation")
+                logger.error(error_msg)
+                error_msgs.append(error_msg)
+            elif (args.make_10m_only and count_10m_fins == 1) or (count_2m_fins == 4 and count_10m_fins == 1):
+                os.makedirs(result_tile_dir, exist_ok=True)
+                for f in os.listdir(archive_tile_loc):
+                    os.link(os.path.join(archive_tile_loc, f), os.path.join(result_tile_dir, f))
+                logger.info(f"Tile {i} of {len(tiles)}: {tile} results linked from archive location ({archive_tile_loc})")
+            else:
+                error_msg = (f"Tile '{tile}' is incomplete in the archive location ({archive_tile_loc}) and needs"
+                             f" investigation.")
+                logger.error(error_msg)
+                error_msgs.append(error_msg)
             continue
 
         logger.info(f"Tile {i} of {len(tiles)}: {tile} processing")
@@ -265,7 +295,7 @@ def main():
                             src_water_tile = os.path.join(esa_worldcover_dir, utmzone, f'{_tile}_10m_esa_worldcover_2021.tif')
                             if os.path.isfile(src_water_tile):
                                 logger.info(f"Building intersecting water tile: {_tile}")
-                                water_cmd = (f'gdal_calc.py -q --calc "logical_and(A>=80,A<=80)" '
+                                water_cmd = (f'gdal_calc.py --calc "logical_and(A>=80,A<=80)" '
                                              f'-A {src_water_tile} --outfile {water_tile}')
                                 subprocess.call(water_cmd, shell=True)
                                 if not os.path.isfile(water_tile):
@@ -273,7 +303,6 @@ def main():
                                     logger.error(error_msg)
                                     error_msgs.append(error_msg)
                                     water_tile_fail = True
-                                    continue
 
                 if water_tile_fail:
                     continue
