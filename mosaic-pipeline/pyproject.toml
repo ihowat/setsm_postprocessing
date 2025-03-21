@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mosaic-pipeline"
+description = "Mosaic production automation using matlib and parsl"
+version = "0.1.0"
+requires-python = ">= 3.11"
+dependencies = [
+    "parsl",
+    "matlib", # TODO: This will only work if the local matlib has already been installed in the env
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+    "pytest",
+]

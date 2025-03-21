@@ -25,3 +25,6 @@ dependencies:
 
   # proj_issame.py imports
   - gdal=3.7.2
+
+  # dependency for reading matfiles directly
+  - hdf5storage
