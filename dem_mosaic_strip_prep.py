@@ -3,6 +3,7 @@ import csv
 import glob
 import os
 import subprocess
+import re
 
 import geopandas as gpd
 import psycopg2 as pg
@@ -83,12 +84,17 @@ def main():
     args = parser.parse_args()
 
     # Verify arguments
-    if args.tiles.lower().endswith(('.txt', '.csv')) or os.path.isfile(args.tiles):
-        tilelist_file = args.tiles
+    tilelist_file = args.tiles
+    if args.tiles.lower().endswith(('.txt', '.csv')):
         if not os.path.isfile(args.tiles):
             parser.error("'tiles' argument tilelist file does not exist: {}".format(tilelist_file))
         with open(tilelist_file, 'r') as tilelist_fp:
             tiles = [line for line in tilelist_fp.read().splitlines() if line != '']
+    elif args.tiles.lower().endswith(('.shp')):
+        if not os.path.isfile(args.tiles):
+            parser.error("'tiles' argument tilelist file does not exist: {}".format(tilelist_file))
+        gdf = gpd.read_file(args.tiles,columns=['name'])
+        tiles = gdf['name'].tolist()
     else:
         tiles = args.tiles.split(',')
     tiles = sorted(list(set(tiles)))
@@ -113,6 +119,21 @@ def main():
     i=0
     for tile in tiles:
         i+=1
+
+        # Check tile name format
+        tile_name_pattern = re.compile(r'(^(utm(?P<zone>\d{2})(?P<hemi>[ns]))?_?(?P<tilename>\d{2}_\d{2})$)', re.IGNORECASE)
+        m = tile_name_pattern.match(tile)
+        if not m:
+            logger.error(f"Tile name improperly formatted: {tile}")
+            continue
+        tname_groups = m.groupdict()
+        if epsg is None:
+            if not tname_groups['zone']:
+                logger.error("Tile name has no utm zone preface so target projection cannot be derived")
+                continue
+            else:
+                hemi_val = 100 if tname_groups['hemi']=='s' else 0
+                epsg = 32600 + int(tname_groups['zone']) + hemi_val
 
         archive_tile_loc = os.path.join(archive_loc_dict[args.project], tile)
         result_tile_dir = os.path.join(results_dir, tile)
@@ -165,17 +186,6 @@ def main():
             strips_to_project = []
             csvs = [(strips_correct, strips_correct_fp),
                     (strips_to_project, strips_to_project_fp)]
-            # Derive epsg from tile name if needed
-            if args.project == 'earthdem':
-                tileparts = tile.split('_')
-                if len(tileparts) != 3:
-                    logger.error("Tile name has no utm zone preface so target projection cannot be derived")
-                    continue
-                utmzone = tileparts[0]
-                zone = utmzone[3:5]
-                hemi = utmzone[5].lower()
-                hemi_val = 100 if hemi=='s' else 0
-                epsg = 32600 + int(zone) + hemi_val
 
             # If the results already exist, read them in
             if os.path.isfile(strips_correct_fp) and os.path.isfile(strips_to_project_fp):
@@ -321,7 +331,7 @@ def main():
             csvwriter = csv.writer(csvfile, delimiter=' ')
             csvwriter.writerows(reproject_list)
         reproj_cmd = (f'python {script_home}/setsm_postprocessing_python/reproject_setsm.py {reproject_list_fp}'
-                      f' --scheduler slurm --tasks-per-job 20')
+                      f' --scheduler slurm --tasks-per-job 20 --simple-meta-fp-verts')
         subprocess.call(reproj_cmd, shell=True)
         logger.info("Reprojection job(s) submitted.  Wait for them to complete and rerun this script.")
 
