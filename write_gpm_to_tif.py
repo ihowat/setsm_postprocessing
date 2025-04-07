@@ -91,13 +91,19 @@ def write_gpm_to_tif(
         write_timeseries_n(matfile, out_file, spatial_props)
 
         click.echo("Writing date range GeoTiff")
-        out_file = (subdir / f"{matfile.stem}_date_range.tif",)
+        out_file = subdir / f"{matfile.stem}_date_range.tif"
         write_date_range(matfile, out_file, spatial_props)
 
 
+def load_mat_variable(matfile: Path, variable: str) -> NDArray:
+    var_dict = hdf5storage.loadmat(
+        file_name=path_as_str(matfile), variable_names=[variable]
+    )
+    return var_dict[variable]
+
+
 def load_t(matfile: Path) -> NDArray[np.datetime64]:
-    var_dict = hdf5storage.loadmat(file_name=path_as_str(matfile), variable_names=["t"])
-    arr: np.ndarray = var_dict["t"]
+    arr = load_mat_variable(matfile, "t")
     arr = arr.squeeze()
     days_since_y2k = arr - Y2K_DATENUM
     datetime_array = np.array(
@@ -108,61 +114,48 @@ def load_t(matfile: Path) -> NDArray[np.datetime64]:
 
 
 def load_t0(matfile: Path) -> NDArray[np.uint16]:
-    var_dict = hdf5storage.loadmat(
-        file_name=path_as_str(matfile), variable_names=["t0"]
-    )
-    arr: np.ndarray = var_dict["t0"]
+    arr = load_mat_variable(matfile, "t0")
     arr = arr - Y2K_DATENUM  # Convert to days since January 1, 2000
     arr[arr < 0] = 0  # Set any negative values (days before January 1, 2000) to zero
-    arr[np.isnan(arr)] = 0  # Set NaNs to zero
+    arr[~np.isfinite(arr)] = 0  # Set NaN, +Inf & -Inf to zero
     arr = arr.astype(np.uint16)
     return arr
 
 
 def load_t1(matfile: Path) -> NDArray[np.uint16]:
-    var_dict = hdf5storage.loadmat(
-        file_name=path_as_str(matfile), variable_names=["t1"]
-    )
-    arr: np.ndarray = var_dict["t1"]
+    arr = load_mat_variable(matfile, "t1")
     arr = arr - Y2K_DATENUM  # Convert to days since January 1, 2000
     arr[arr < 0] = 0  # Set any negative values (days before January 1, 2000) to zero
-    arr[np.isnan(arr)] = 0  # Set NaNs to zero
+    arr[~np.isfinite(arr)] = 0  # Set NaN, +Inf & -Inf to NoData value
     arr = arr.astype(np.uint16)
     return arr
 
 
 def load_z(matfile: Path) -> NDArray[np.float32]:
-    var_dict = hdf5storage.loadmat(file_name=path_as_str(matfile), variable_names=["z"])
-    arr: np.ndarray = var_dict["z"]
-    arr[np.isnan(arr)] = -9999.0
+    arr = load_mat_variable(matfile, "z")
+    arr[~np.isfinite(arr)] = -9999  # Set NaN, +Inf & -Inf to NoData value
     return arr
 
 
 def load_zerr(matfile: Path) -> NDArray[np.float32]:
-    var_dict = hdf5storage.loadmat(
-        file_name=path_as_str(matfile), variable_names=["zerr"]
-    )
-    arr: np.ndarray = var_dict["zerr"]
-    arr[np.isnan(arr)] = -9999.0
+    arr = load_mat_variable(matfile, "zerr")
+    arr[~np.isfinite(arr)] = -9999  # Set NaN, +Inf & -Inf to NoData value
     return arr
 
 
 def load_n(matfile: Path) -> NDArray[np.uint16]:
-    var_dict = hdf5storage.loadmat(file_name=path_as_str(matfile), variable_names=["N"])
-    arr: np.ndarray = var_dict["N"]
+    arr = load_mat_variable(matfile, "N")
     arr = arr.astype(np.uint16)
     return arr
 
 
 def load_x(matfile: Path) -> NDArray[np.float32]:
-    var_dict = hdf5storage.loadmat(file_name=path_as_str(matfile), variable_names=["x"])
-    arr: np.ndarray = var_dict["x"]
+    arr = load_mat_variable(matfile, "x")
     return arr.squeeze()
 
 
 def load_y(matfile: Path) -> NDArray[np.float32]:
-    var_dict = hdf5storage.loadmat(file_name=path_as_str(matfile), variable_names=["y"])
-    arr: np.ndarray = var_dict["y"]
+    arr = load_mat_variable(matfile, "y")
     return arr.squeeze()
 
 
