@@ -99,7 +99,7 @@ def main():
         tiles = args.tiles.split(',')
     tiles = sorted(list(set(tiles)))
 
-    tile_def_tbl, epsg = project_tile_def_dict[args.project]
+    tile_def_tbl, global_epsg = project_tile_def_dict[args.project]
     results_dir = os.path.join(os.path.realpath(args.dstdir), 'results')
     src_dir = os.path.join(os.path.realpath(args.dstdir), 'src')
     reproject_list_fp = os.path.join(src_dir, "reprojection_list.txt")
@@ -127,6 +127,7 @@ def main():
             logger.error(f"Tile name improperly formatted: {tile}")
             continue
         tname_groups = m.groupdict()
+        epsg = global_epsg
         if epsg is None:
             if not tname_groups['zone']:
                 logger.error("Tile name has no utm zone preface so target projection cannot be derived")
