@@ -6,8 +6,8 @@ An installable python package that contains postprocessing stages for creating E
 
 Create the conda environment:
 ```shell
-mamba env create --file environment.yml
-mamba activate earthdem-mosaic
+conda env create --file environment.yml
+conda activate earthdem-mosaic
 ```
 
 Create and configure the .env for the project

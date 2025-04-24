@@ -29,7 +29,7 @@ Otherwise, it will look for `.env` in the package root.
 
 ### Create environment
 
-Create the mamba environment `mosaic-production` using the environment file located in the `setsm_postprcessing_pgc`
+Create the conda environment `mosaic-production` using the environment file located in the `setsm_postprcessing_pgc`
 repo. This environment will contain the `rema-mosaic` CLI that is used throughout the processing.
 ```shell
 cd /path/to/repos/setsm_postprocessing_pgc
@@ -38,9 +38,9 @@ cd /path/to/repos/setsm_postprocessing_pgc
 make create_env
 
 # Else:
-mamba env create -n mosaic-production -f environment.mosaic-production-clis.yml
-mamba run -n mosaic-production python -m pip install -e ./earthdem-mosaic
-mamba run -n mosaic-production python -m pip install -e ./rema-mosaic
+conda env create -n mosaic-production -f environment.mosaic-production-clis.yml
+conda run -n mosaic-production python -m pip install -e ./earthdem-mosaic
+conda run -n mosaic-production python -m pip install -e ./rema-mosaic
 ```
 
 ### Validate setup
@@ -50,7 +50,7 @@ Verify that the environment is created and configured correctly by running the `
 set up correctly.
 
 ```shell
-mamba activate mosaic-production
+conda activate mosaic-production
 rema-mosaic show-settings
 # Expected output
 # {

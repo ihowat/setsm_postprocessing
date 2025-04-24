@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-readonly MAMBA_ENV_NAME="earthdem-mosaic"
+readonly CONDA_ENV_NAME="earthdem-mosaic"
 readonly SLEEP_DURATION="10s"
 
 error() {
@@ -26,7 +26,7 @@ fi
 
 if [[ -v EARTHDEM_MOSAIC_ENV_FILE ]]; then
     echo "Using config: $EARTHDEM_MOSAIC_ENV_FILE"
-    mamba run -n "$MAMBA_ENV_NAME" earthdem-mosaic show-settings
+    conda run -n "$CONDA_ENV_NAME" earthdem-mosaic show-settings
 else
     echo "Environment variable EARTHDEM_MOSAIC_ENV_FILE not set"
     exit 1
@@ -46,6 +46,6 @@ gdalbuildvrt ./30-yes-slope-filter_browse.vrt $(find -type f -name "*_browse.tif
 cd ..
 
 echo "Building slope filter review GeoPackage"
-mamba run -n "$MAMBA_ENV_NAME" --live-stream earthdem-mosaic slope-filter-review "$UTM_ZONE" --verbose
+conda run -n "$CONDA_ENV_NAME" --live-stream earthdem-mosaic slope-filter-review "$UTM_ZONE" --verbose
 
 echo "Processing complete."
