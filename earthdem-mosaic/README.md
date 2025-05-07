@@ -225,3 +225,48 @@ earthdem-mosaic link-final-products $UTM_ZONE "${UTM_ZONE}_slope_filter_review.g
 # Link the files
 earthdem-mosaic link-final-products $UTM_ZONE "${UTM_ZONE}_slope_filter_review.gpkg" "${UTM_ZONE}_skipreg.shp" --verbose
 ```
+
+## Using the workflows
+
+This section describes a streamlined process that uses bash scripts to group together sequential processing commands.
+The workflows execute the same steps as described in the previous sections.
+
+```shell
+# Activate the environment and set environment variables
+conda activate earthdem-mosaic 
+export EARTHDEM_MOSAIC_ENV_FILE="/path/to/.env" 
+export UTM_ZONE=utm18n
+export SETSM_POSTPROCESSING_PGC_REPO="/path/to/this/repo"
+
+# Create the working directory and prepare to submit the coreg-debug stage
+# See the output at the end of the script for submitting the stage to the cluster
+bash $SETSM_POSTPROCESSING_PGC_REPO/workflows/earthdem/init_zone_and_prepare_coreg_debug.sh
+
+# Monitor the state of the processing for this particular zone
+bash $SETSM_POSTPROCESSING_PGC_REPO/earthdem-mosaic/earthdem_monitor.sh --zone $UTM_ZONE
+
+# Create the coreg-debug VRT for review
+cd 10-coregistration-debug/ && gdalbuildvrt ./10-coregistration-debug_offset.vrt $(find -type f -name "*_offset.tif" | paste -sd " ") && cd ..
+
+# Apply the coregistration to the matfiles
+earthdem-mosaic coreg-matfiles $UTM_ZONE ./all_supertiles.txt --skipreg-shp "${UTM_ZONE}_skipreg.shp" --slurm --dryrun
+
+# Apply water flattening to the matfiles
+earthdem-mosaic water-flatten-matfiles $UTM_ZONE ./all_supertiles.txt --slurm --dryrun
+
+# Prepare to submit the merge-buffers stages
+# See the output at the end of the script for submitting the stage to the cluster
+bash $SETSM_POSTPROCESSING_PGC_REPO/workflows/earthdem/prepare_merge_buffers.sh
+
+# Prepare to submit the tif-export stages
+bash $SETSM_POSTPROCESSING_PGC_REPO/workflows/earthdem/prepare_slope_filter.sh
+
+# Submit both the no-slope-filter and yes-slope-filter jobs to the cluster
+earthdem-mosaic export-final-tifs $UTM_ZONE ./all_supertiles.txt --slurm && earthdem-mosaic export-final-tifs $UTM_ZONE ./all_supertiles.txt --slurm --apply-slope-filter
+
+# Create review VRTs and GPKG
+bash $SETSM_POSTPROCESSING_PGC_REPO/workflows/earthdem/prepare_slope_filter_review.sh
+
+# Link the final products to the results after review is complete
+earthdem-mosaic link-final-products $UTM_ZONE "${UTM_ZONE}_slope_filter_review.gpkg" "${UTM_ZONE}_skipreg.shp" --verbose
+```
