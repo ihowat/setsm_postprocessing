@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-readonly CONDA_ENV_NAME="earthdem-mosaic"
+readonly CONDA_ENV_NAME="mosaic-production"
 readonly SLEEP_DURATION="10s"
 
 error() {
@@ -32,29 +32,30 @@ else
     exit 1
 fi
 
-sleep_for_duration
 
-echo "Creating working directories"
+echo "Creating working directories..."
+sleep_for_duration
 conda run -n "$CONDA_ENV_NAME" --live-stream earthdem-mosaic create-working-dirs "$UTM_ZONE" --verbose
+
+
+echo "Linking source matfiles..."
 sleep_for_duration
-
-
-echo "Linking source matfiles"
 conda run -n "$CONDA_ENV_NAME" --live-stream earthdem-mosaic link-source-matfiles "$UTM_ZONE" --verbose
-sleep_for_duration
 
-echo "Creating supertile list"
+echo "Creating supertile list..."
+sleep_for_duration
 find "./$UTM_ZONE/00-matfiles/" -maxdepth 1 -type d -name "utm*" | sed "s|./$UTM_ZONE/00-matfiles/||" | sort > "./$UTM_ZONE/all_supertiles.txt"
-sleep_for_duration
 
-echo "Linking matfiles to 10-coregistration-debug directory"
+echo "Linking matfiles to 10-coregistration-debug directory..."
+sleep_for_duration
 conda run -n "$CONDA_ENV_NAME" --live-stream earthdem-mosaic link-files-to-stage --src "./$UTM_ZONE/00-matfiles" --dst "./$UTM_ZONE/10-coregistration-debug" --src-suffix ".mat" --verbose
 
-echo "Linking fin files to 10-coregistration-debug directory"
-conda run -n "$CONDA_ENV_NAME" --live-stream earthdem-mosaic link-files-to-stage --src "./$UTM_ZONE/00-matfiles" --dst "./$UTM_ZONE/10-coregistration-debug" --src-suffix ".fin" --verbose
+echo "Linking fin files to 10-coregistration-debug directory..."
 sleep_for_duration
+conda run -n "$CONDA_ENV_NAME" --live-stream earthdem-mosaic link-files-to-stage --src "./$UTM_ZONE/00-matfiles" --dst "./$UTM_ZONE/10-coregistration-debug" --src-suffix ".fin" --verbose
 
-echo "Preforming dryrun for coreg-debug stage"
+echo "Preforming dryrun for coreg-debug stage..."
+sleep_for_duration
 conda run -n "$CONDA_ENV_NAME" --live-stream earthdem-mosaic coreg-debug "$UTM_ZONE" "./$UTM_ZONE/all_supertiles.txt" --slurm --dryrun
 
 echo "Processing complete. Run the following command to submit to the cluster:"

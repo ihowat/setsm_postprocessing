@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-readonly CONDA_ENV_NAME="earthdem-mosaic"
+readonly CONDA_ENV_NAME="mosaic-production"
 readonly SLEEP_DURATION="10s"
 
 error() {
@@ -32,20 +32,22 @@ else
     exit 1
 fi
 
+
+
+echo "Building 20-no-slope-filter VRT..."
 sleep_for_duration
-
-
-echo "Building 20-no-slope-filter VRT"
 cd 20-no-slope-filter/
 gdalbuildvrt ./20-no-slope-filter_browse.vrt $(find -type f -name "*_browse.tif" | paste -sd " ")
 cd ..
 
-echo "Building 30-yes-slope-filter VRT"
+echo "Building 30-yes-slope-filter VRT..."
+sleep_for_duration
 cd 30-yes-slope-filter/
 gdalbuildvrt ./30-yes-slope-filter_browse.vrt $(find -type f -name "*_browse.tif" | paste -sd " ")
 cd ..
 
-echo "Building slope filter review GeoPackage"
+echo "Building slope filter review GeoPackage..."
+sleep_for_duration
 conda run -n "$CONDA_ENV_NAME" --live-stream earthdem-mosaic slope-filter-review "$UTM_ZONE" --verbose
 
 echo "Processing complete."
