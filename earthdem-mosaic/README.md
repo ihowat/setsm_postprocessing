@@ -6,8 +6,8 @@ An installable python package that contains postprocessing stages for creating E
 
 Create the conda environment:
 ```shell
-conda env create --file environment.yml
-conda activate earthdem-mosaic
+conda env create --file ../environment.mosaic-production.yml
+conda activate mosaic-production
 ```
 
 Create and configure the .env for the project
@@ -226,14 +226,14 @@ earthdem-mosaic link-final-products $UTM_ZONE "${UTM_ZONE}_slope_filter_review.g
 earthdem-mosaic link-final-products $UTM_ZONE "${UTM_ZONE}_slope_filter_review.gpkg" "${UTM_ZONE}_skipreg.shp" --verbose
 ```
 
-## Using the workflows
+# Using the workflows
 
 This section describes a streamlined process that uses bash scripts to group together sequential processing commands.
 The workflows execute the same steps as described in the previous sections.
 
 ```shell
 # Activate the environment and set environment variables
-conda activate earthdem-mosaic 
+conda activate mosaic-production
 export EARTHDEM_MOSAIC_ENV_FILE="/path/to/.env" 
 export UTM_ZONE=utm18n
 export SETSM_POSTPROCESSING_PGC_REPO="/path/to/this/repo"
@@ -243,7 +243,7 @@ export SETSM_POSTPROCESSING_PGC_REPO="/path/to/this/repo"
 bash $SETSM_POSTPROCESSING_PGC_REPO/workflows/earthdem/init_zone_and_prepare_coreg_debug.sh
 
 # Monitor the state of the processing for this particular zone
-bash $SETSM_POSTPROCESSING_PGC_REPO/earthdem-mosaic/earthdem_monitor.sh --zone $UTM_ZONE
+bash $SETSM_POSTPROCESSING_PGC_REPO/earthdem-mosaic/earthdem_monitor.sh --zone $UTM_ZONE --starttime YYYY-MM-DD
 
 # Create the coreg-debug VRT for review
 cd 10-coregistration-debug/ && gdalbuildvrt ./10-coregistration-debug_offset.vrt $(find -type f -name "*_offset.tif" | paste -sd " ") && cd ..
