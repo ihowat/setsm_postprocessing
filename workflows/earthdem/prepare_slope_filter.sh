@@ -2,8 +2,7 @@
 
 set -euo pipefail
 
-readonly CONDA_ENV_NAME="earthdem-mosaic"
-readonly SLEEP_DURATION="10s"
+readonly SLEEP_DURATION="5s"
 
 error() {
   local line=$1      # Line number from ${LINENO}
@@ -26,32 +25,41 @@ fi
 
 if [[ -v EARTHDEM_MOSAIC_ENV_FILE ]]; then
     echo "Using config: $EARTHDEM_MOSAIC_ENV_FILE"
-    conda run -n "$CONDA_ENV_NAME" earthdem-mosaic show-settings
+    earthdem-mosaic show-settings
 else
     echo "Environment variable EARTHDEM_MOSAIC_ENV_FILE not set"
     exit 1
 fi
 
-sleep_for_duration
 
 echo "Linking .mat and .fin files to 20-no-slope-filter"
-conda run -n "$CONDA_ENV_NAME" --live-stream earthdem-mosaic link-files-to-stage --src 00-matfiles/ --dst 20-no-slope-filter/ --src-suffix _reg_fill_merge.mat --dst-suffix .mat
-conda run -n "$CONDA_ENV_NAME" --live-stream earthdem-mosaic link-files-to-stage --src 00-matfiles/ --dst 20-no-slope-filter/ --src-suffix .fin
+sleep_for_duration
+earthdem-mosaic link-files-to-stage --src 00-matfiles/ --dst 20-no-slope-filter/ \
+                                    --src-suffix _reg_fill_merge.mat --dst-suffix .mat
+earthdem-mosaic link-files-to-stage --src 00-matfiles/ --dst 20-no-slope-filter/ \
+                                    --src-suffix .fin
+
 
 echo "Preforming dryrun for no-slope-filter export"
-conda run -n "$CONDA_ENV_NAME" --live-stream earthdem-mosaic export-final-tifs "$UTM_ZONE" ./all_supertiles.txt --slurm --dryrun
 sleep_for_duration
+earthdem-mosaic export-final-tifs "$UTM_ZONE" ./all_supertiles.txt --slurm --dryrun
+
 
 echo "Linking .mat and .fin files to 30-yes-slope-filter"
-conda run -n "$CONDA_ENV_NAME" --live-stream earthdem-mosaic link-files-to-stage --src 00-matfiles/ --dst 30-yes-slope-filter/ --src-suffix _reg_fill_merge.mat --dst-suffix .mat
-conda run -n "$CONDA_ENV_NAME" --live-stream earthdem-mosaic link-files-to-stage --src 00-matfiles/ --dst 30-yes-slope-filter/ --src-suffix .fin
+sleep_for_duration
+earthdem-mosaic link-files-to-stage --src 00-matfiles/ --dst 30-yes-slope-filter/ \
+                                    --src-suffix _reg_fill_merge.mat --dst-suffix .mat
+earthdem-mosaic link-files-to-stage --src 00-matfiles/ --dst 30-yes-slope-filter/ \
+                                    --src-suffix .fin
 
 echo "Preforming dryrun for yes-slope-filter export"
-conda run -n "$CONDA_ENV_NAME" --live-stream earthdem-mosaic export-final-tifs $UTM_ZONE ./all_supertiles.txt --apply-slope-filter --slurm --dryrun
+sleep_for_duration
+earthdem-mosaic export-final-tifs $UTM_ZONE ./all_supertiles.txt --apply-slope-filter --slurm --dryrun
+
 
 echo "Processing complete."
 echo ""
 echo "Run the following commands to submit to the cluster:"
-echo "    conda run -n $CONDA_ENV_NAME --live-stream earthdem-mosaic export-final-tifs $UTM_ZONE ./all_supertiles.txt --slurm"
-echo "    conda run -n $CONDA_ENV_NAME --live-stream earthdem-mosaic export-final-tifs $UTM_ZONE ./all_supertiles.txt --slurm --apply-slope-filter"
+echo "    earthdem-mosaic export-final-tifs $UTM_ZONE ./all_supertiles.txt --slurm"
+echo "    earthdem-mosaic export-final-tifs $UTM_ZONE ./all_supertiles.txt --slurm --apply-slope-filter"
 exit 0

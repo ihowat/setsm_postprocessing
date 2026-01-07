@@ -2,8 +2,7 @@
 
 set -euo pipefail
 
-readonly CONDA_ENV_NAME="earthdem-mosaic"
-readonly SLEEP_DURATION="10s"
+readonly SLEEP_DURATION="5s"
 
 error() {
   local line=$1      # Line number from ${LINENO}
@@ -26,26 +25,30 @@ fi
 
 if [[ -v EARTHDEM_MOSAIC_ENV_FILE ]]; then
     echo "Using config: $EARTHDEM_MOSAIC_ENV_FILE"
-    conda run -n "$CONDA_ENV_NAME" earthdem-mosaic show-settings
+    earthdem-mosaic show-settings
 else
     echo "Environment variable EARTHDEM_MOSAIC_ENV_FILE not set"
     exit 1
 fi
 
-sleep_for_duration
-
 
 echo "Building 20-no-slope-filter VRT"
+sleep_for_duration
 cd 20-no-slope-filter/
 gdalbuildvrt ./20-no-slope-filter_browse.vrt $(find -type f -name "*_browse.tif" | paste -sd " ")
 cd ..
 
 echo "Building 30-yes-slope-filter VRT"
+sleep_for_duration
 cd 30-yes-slope-filter/
 gdalbuildvrt ./30-yes-slope-filter_browse.vrt $(find -type f -name "*_browse.tif" | paste -sd " ")
 cd ..
 
+
 echo "Building slope filter review GeoPackage"
-conda run -n "$CONDA_ENV_NAME" --live-stream earthdem-mosaic slope-filter-review "$UTM_ZONE" --verbose
+sleep_for_duration
+earthdem-mosaic slope-filter-review "$UTM_ZONE" --verbose
+
 
 echo "Processing complete."
+exit 0

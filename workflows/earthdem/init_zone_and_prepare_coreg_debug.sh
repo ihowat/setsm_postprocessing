@@ -2,8 +2,7 @@
 
 set -euo pipefail
 
-readonly CONDA_ENV_NAME="earthdem-mosaic"
-readonly SLEEP_DURATION="10s"
+readonly SLEEP_DURATION="5s"
 
 error() {
   local line=$1      # Line number from ${LINENO}
@@ -26,37 +25,45 @@ fi
 
 if [[ -v EARTHDEM_MOSAIC_ENV_FILE ]]; then
     echo "Using config: $EARTHDEM_MOSAIC_ENV_FILE"
-    conda run -n "$CONDA_ENV_NAME" earthdem-mosaic show-settings
+    earthdem-mosaic show-settings
 else
     echo "Environment variable EARTHDEM_MOSAIC_ENV_FILE not set"
     exit 1
 fi
 
-sleep_for_duration
 
 echo "Creating working directories"
-conda run -n "$CONDA_ENV_NAME" --live-stream earthdem-mosaic create-working-dirs "$UTM_ZONE" --verbose
 sleep_for_duration
+earthdem-mosaic create-working-dirs "$UTM_ZONE" --verbose
 
 
 echo "Linking source matfiles"
-conda run -n "$CONDA_ENV_NAME" --live-stream earthdem-mosaic link-source-matfiles "$UTM_ZONE" --verbose
 sleep_for_duration
+earthdem-mosaic link-source-matfiles "$UTM_ZONE" --verbose
+
 
 echo "Creating supertile list"
-find "./$UTM_ZONE/00-matfiles/" -maxdepth 1 -type d -name "utm*" | sed "s|./$UTM_ZONE/00-matfiles/||" | sort > "./$UTM_ZONE/all_supertiles.txt"
 sleep_for_duration
+find "./$UTM_ZONE/00-matfiles/" -maxdepth 1 -type d -name "utm*" | sed "s|./$UTM_ZONE/00-matfiles/||" | sort > "./$UTM_ZONE/all_supertiles.txt"
+
 
 echo "Linking matfiles to 10-coregistration-debug directory"
-conda run -n "$CONDA_ENV_NAME" --live-stream earthdem-mosaic link-files-to-stage --src "./$UTM_ZONE/00-matfiles" --dst "./$UTM_ZONE/10-coregistration-debug" --src-suffix ".mat" --verbose
+sleep_for_duration
+earthdem-mosaic link-files-to-stage --src "./$UTM_ZONE/00-matfiles" --dst "./$UTM_ZONE/10-coregistration-debug" \
+                                    --src-suffix ".mat" --verbose
+
 
 echo "Linking fin files to 10-coregistration-debug directory"
-conda run -n "$CONDA_ENV_NAME" --live-stream earthdem-mosaic link-files-to-stage --src "./$UTM_ZONE/00-matfiles" --dst "./$UTM_ZONE/10-coregistration-debug" --src-suffix ".fin" --verbose
 sleep_for_duration
+earthdem-mosaic link-files-to-stage --src "./$UTM_ZONE/00-matfiles" --dst "./$UTM_ZONE/10-coregistration-debug" \
+                                    --src-suffix ".fin" --verbose
+
 
 echo "Preforming dryrun for coreg-debug stage"
-conda run -n "$CONDA_ENV_NAME" --live-stream earthdem-mosaic coreg-debug "$UTM_ZONE" "./$UTM_ZONE/all_supertiles.txt" --slurm --dryrun
+sleep_for_duration
+earthdem-mosaic coreg-debug "$UTM_ZONE" "./$UTM_ZONE/all_supertiles.txt" --slurm --dryrun
+
 
 echo "Processing complete. Run the following command to submit to the cluster:"
-echo "cd $UTM_ZONE && conda run -n $CONDA_ENV_NAME --live-stream earthdem-mosaic coreg-debug $UTM_ZONE ./all_supertiles.txt --slurm"
+echo "cd $UTM_ZONE && earthdem-mosaic coreg-debug $UTM_ZONE ./all_supertiles.txt --slurm"
 exit 0
